@@ -1,0 +1,51 @@
+# 高责任岗位心理测评系统 · 本地基础设施
+# 启动: docker compose up -d   (自动读取同目录 .env)
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: psych-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-psych}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-psych}
+      POSTGRES_DB: ${POSTGRES_DB:-psych}
+      TZ: Asia/Shanghai
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - psych_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-psych} -d ${POSTGRES_DB:-psych}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: psych-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - psych_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 轻量 Web 数据库管理台 (后期"图题库后台"开发时很方便)
+  adminer:
+    image: adminer:latest
+    container_name: psych-adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  psych_pgdata:
+  psych_redisdata:

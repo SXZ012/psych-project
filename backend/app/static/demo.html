@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>心理状态快筛 · Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", system-ui, sans-serif; background: #F0F2F5; color: #333; }
+  #app { max-width: 720px; margin: 0 auto; min-height: 100vh; background: #fff; box-shadow: 0 0 24px rgba(0,0,0,.06); }
+  .screen { display: none; padding: 24px; } .screen.active { display: block; }
+  #start { text-align: center; padding-top: 20vh; }
+  #start h1 { font-size: 28px; margin-bottom: 10px; }
+  #start p { color: #888; margin-bottom: 28px; }
+  .primary { background: #2196F3; color: #fff; border: none; padding: 14px 42px; font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+  .primary:active { transform: scale(.98); }
+  .hdr { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #444; }
+  .progress { height: 5px; background: #e8e8e8; border-radius: 3px; margin-bottom: 18px; overflow: hidden; }
+  .progress > div { height: 100%; background: linear-gradient(90deg,#64B5F6,#2196F3); width: 0; }
+  .imgwrap { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+  .imgwrap img { width: 100%; height: 100%; object-fit: cover; }
+  .cam { position: absolute; right: 10px; bottom: 10px; width: 130px; height: 98px; border: 2px solid #fff; border-radius: 6px; overflow: hidden; background: #000; }
+  .cam video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+  .cam .tag { position: absolute; left: 4px; top: 4px; background: rgba(244,67,54,.9); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+  .camstatus { position: absolute; right: 10px; bottom: 112px; background: rgba(255,193,7,.92); color: #5d4e00; font-size: 11px; padding: 3px 7px; border-radius: 4px; max-width: 200px; }
+  .q { font-size: 20px; font-weight: bold; margin: 22px 0 16px; text-align: center; }
+  .opts { display: flex; gap: 14px; }
+  .opts button { flex: 1; padding: 16px; font-size: 17px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+  .optA { background: #E3F2FD; color: #1565C0; } .optB { background: #FFEBEE; color: #C62828; }
+  .optA.picked { background: #1565C0; color: #fff; } .optB.picked { background: #C62828; color: #fff; }
+  .opts button:disabled { opacity: .45; cursor: default; }
+  .dots { text-align: center; margin-top: 20px; }
+  .dots span { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #e0e0e0; margin: 0 5px; }
+  .dots span.on { background: #2196F3; }
+  #loading { text-align: center; padding-top: 32vh; }
+  .spin { width: 54px; height: 54px; border: 5px solid #e0e0e0; border-top-color: #2196F3; border-radius: 50%; margin: 0 auto 20px; animation: sp 1s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  #loading div { color: #666; }
+  #report h2 { font-size: 20px; margin-bottom: 14px; }
+  .card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 20px; }
+  .overall { text-align: center; padding: 6px 0 16px; border-bottom: 1px dashed #eee; margin-bottom: 16px; }
+  .bigscore { font-size: 52px; font-weight: bold; color: #1565C0; line-height: 1.1; }
+  .scorelabel { color: #999; font-size: 13px; margin-top: 2px; }
+  .leveltag { display: inline-block; margin-top: 8px; color: #fff; font-size: 13px; padding: 3px 16px; border-radius: 12px; }
+  .dim { display: flex; align-items: center; gap: 10px; margin: 11px 0; }
+  .dimname { width: 84px; font-size: 13px; color: #555; }
+  .bar { flex: 1; height: 14px; background: #f0f0f0; border-radius: 7px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 7px; transition: width .6s; }
+  .dimscore { width: 96px; font-size: 12px; color: #333; text-align: right; }
+  .dimscore em { color: #999; font-style: normal; font-size: 11px; margin-left: 4px; }
+  .screens { margin-top: 18px; text-align: center; }
+  .stag { display: inline-block; color: #fff; font-size: 13px; padding: 5px 16px; border-radius: 14px; margin: 0 6px; }
+  .sec-h { color: #1565C0; font-weight: bold; font-size: 16px; margin: 16px 0 6px; }
+  .rb { line-height: 1.75; font-size: 15px; }
+  .small { color: #999; font-size: 13px; margin-top: 14px; line-height: 1.6; }
+  .restart { margin-top: 22px; text-align: center; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="start" class="screen active">
+    <h1>心理状态快筛</h1>
+    <p>放松心情，跟随画面完成一次状态评估</p>
+    <button class="primary" onclick="startAssessment()">开始测评</button>
+  </div>
+
+  <div id="assess" class="screen">
+    <div class="hdr">心理状态快筛</div>
+    <div class="progress"><div id="bar"></div></div>
+    <div class="imgwrap">
+      <img id="img" alt="">
+      <div class="cam"><span class="tag">● 采集中</span><video id="video" autoplay playsinline muted></video></div>
+      <div class="camstatus" id="camstatus" style="display:none"></div>
+    </div>
+    <div class="q" id="q"></div>
+    <div class="opts">
+      <button class="optA" id="optA"></button>
+      <button class="optB" id="optB"></button>
+    </div>
+    <div class="dots" id="dots"></div>
+  </div>
+
+  <div id="loading" class="screen">
+    <div class="spin"></div>
+    <div>正在分析你的状态，请稍候…</div>
+  </div>
+
+  <div id="report" class="screen">
+    <h2>📊 你的心理状态评估报告</h2>
+    <div class="card" id="visCard">
+      <div class="overall">
+        <div class="bigscore" id="scoreNum">--</div>
+        <div class="scorelabel">综合状态负荷指数</div>
+        <div class="leveltag" id="levelTag">--</div>
+      </div>
+      <div id="dims"></div>
+      <div class="screens" id="screens"></div>
+    </div>
+    <div class="card" style="margin-top:14px"><div id="reportBody" class="rb"></div></div>
+    <div class="small" id="choices"></div>
+    <div class="restart"><button class="primary" onclick="location.reload()">再来一次</button></div>
+  </div>
+</div>
+
+<script>
+const API = "/api/v1";
+const PER = 15;
+let pairs = [], idx = 0, choices = [], picked = false, pairStart = 0, barH = null, cam = null;
+const $ = id => document.getElementById(id);
+function show(s) { document.querySelectorAll(".screen").forEach(e => e.classList.remove("active")); $(s).classList.add("active"); }
+
+async function initCamera() {
+  const st = $("camstatus");
+  if (!window.isSecureContext || !navigator.mediaDevices) { st.style.display="block"; st.textContent="⚠ 摄像头需用 localhost 访问"; return; }
+  try { cam = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false }); $("video").srcObject = cam; }
+  catch (e) { st.style.display="block"; const h = e.name==="NotAllowedError"?"（未授权）":e.name==="NotFoundError"?"（未找到）":""; st.textContent="⚠ 摄像头: "+(e.name||"不可用")+h; }
+}
+async function startAssessment() {
+  await initCamera();
+  const d = await (await fetch(`${API}/pairs/session`)).json();
+  pairs = d.pairs; idx = 0; choices = [];
+  show("assess"); showPair(0);
+}
+function renderDots() { $("dots").innerHTML = pairs.map((_, i) => `<span class="${i === idx ? "on" : ""}"></span>`).join(""); }
+function showPair(i) {
+  idx = i; picked = false; const p = pairs[i];
+  $("img").src = p.image_url; $("q").textContent = p.question;
+  $("optA").textContent = p.option_a; $("optB").textContent = p.option_b;
+  for (const id of ["optA","optB"]) { const b = $(id); b.disabled = false; b.className = id; }
+  renderDots(); pairStart = performance.now();
+  clearInterval(barH);
+  barH = setInterval(() => {
+    const el = (performance.now() - pairStart) / 1000;
+    $("bar").style.width = Math.min(100, el / PER * 100) + "%";
+    if (el >= PER) { clearInterval(barH); advance(); }
+  }, 100);
+  $("optA").onclick = () => pick("A"); $("optB").onclick = () => pick("B");
+}
+function pick(c) {
+  if (picked) return; picked = true;
+  choices.push({ pair_id: pairs[idx].pair_id, choice: c, reaction_ms: Math.round(performance.now() - pairStart) });
+  $(c === "A" ? "optA" : "optB").classList.add("picked");
+  $("optA").disabled = true; $("optB").disabled = true;
+}
+function advance() {
+  if (!picked) choices.push({ pair_id: pairs[idx].pair_id, choice: "无响应", reaction_ms: PER * 1000 });
+  if (idx + 1 < pairs.length) showPair(idx + 1); else finish();
+}
+async function finish() {
+  clearInterval(barH); if (cam) cam.getTracks().forEach(t => t.stop());
+  show("loading");
+  const r = await fetch(`${API}/assessments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subject_id: "demo" }) });
+  const { id } = await r.json();
+  let rep = null, res = null;
+  for (let k = 0; k < 60; k++) {
+    const g = await (await fetch(`${API}/assessments/${id}`)).json();
+    res = g.result || {};
+    if (res.qwen_report) { rep = res.qwen_report; break; }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  renderReport(rep, res);
+}
+
+function gradeColor(g) {
+  if (!g) return "#9e9e9e";
+  if (/偏高|明显偏高/.test(g)) return "#F59E0B";
+  if (/偏低|明显偏低|偏低/.test(g)) return "#3B82F6";
+  return "#10B981";
+}
+function screenColor(label) {
+  if (!label) return "#9e9e9e";
+  if (/无明显风险|正常/.test(label)) return "#10B981";
+  if (/高风险|关注/.test(label)) return "#EF4444";
+  if (/确认|待定/.test(label)) return "#F59E0B";
+  return "#9e9e9e";
+}
+function renderReport(rep, res) {
+  const sum = (res && res.summary_json) || {};
+  const ci = sum.core_indicators || {};
+  // 综合负荷
+  $("scoreNum").textContent = res.overall_score ?? "—";
+  $("levelTag").textContent = res.overall_level_label || "—";
+  $("levelTag").style.background = gradeColor(res.overall_level_label);
+  // 4 维度条形
+  const dims = [
+    { key: "stress_load", label: "压力/唤醒" },
+    { key: "fatigue_recovery", label: "疲劳恢复" },
+    { key: "physiological_arousal", label: "生理唤醒" },
+    { key: "attention_focus", label: "视觉注意" },
+  ];
+  $("dims").innerHTML = dims.map(d => {
+    const o = ci[d.key] || {};
+    const sc = o.score ?? 0;
+    const g = o.grade_label || (o.level || {}).label || "";
+    return `<div class="dim"><span class="dimname">${d.label}</span>` +
+      `<div class="bar"><div class="fill" style="width:${sc}%;background:${gradeColor(g)}"></div></div>` +
+      `<span class="dimscore">${sc || "—"} <em>${g}</em></span></div>`;
+  }).join("");
+  // 筛查标签
+  const cs = sum.clinical_screening || {};
+  const dep = cs.depression || {}, anx = cs.anxiety || {};
+  $("screens").innerHTML =
+    `<span class="stag" style="background:${screenColor(dep.classification_label)}">抑郁 · ${dep.classification_label || "—"}</span>` +
+    `<span class="stag" style="background:${screenColor(anx.classification_label)}">焦虑 · ${anx.classification_label || "—"}</span>`;
+  // Qwen 叙事（建议/免责等）
+  const html = (rep || "(报告生成中，请稍候…)")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .split("\n").map(l => {
+      const m = l.match(/^(【.+?】)(.*)$/);
+      if (m) return `<div class="sec-h">${m[1]}</div><div>${m[2]}</div>`;
+      return `<div>${l || "&nbsp;"}</div>`;
+    }).join("");
+  $("reportBody").innerHTML = html;
+  if (res) $("choices").textContent = `综合负荷 ${res.overall_score ?? "—"} ${res.overall_level_label || ""} ｜ 共记录 ${choices.length} 次选择与反应时`;
+  show("report");
+}
+</script>
+</body>
+</html>
