@@ -233,8 +233,8 @@
         {{ faceReady ? '当准备好的时候，轻轻开始。' : '请正对屏幕，让光线落在你脸上。' }}
       </p>
 
-      <button v-if="faceReady" @click="begin"
-              class="fade-up font-serif text-xl px-12 py-5 rounded-full transition-all duration-300 hover:scale-[1.03]"
+      <button v-if="faceReady" type="button" data-testid="start-exploration" @click="begin"
+              class="relative z-10 fade-up font-serif text-xl px-12 py-5 rounded-full transition-all duration-300 hover:scale-[1.03] focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/50"
               style="min-height:64px; background: linear-gradient(135deg, var(--accent), var(--warm)); color:#0b1020; box-shadow: 0 10px 40px rgba(157,178,236,.4);">
         开始探索内心
       </button>
@@ -244,7 +244,7 @@
         <span class="w-2.5 h-2.5 rounded-full breathe" style="background: var(--accent); animation-delay: .5s;"></span>
       </div>
 
-      <p class="absolute bottom-6 text-xs" style="color: var(--ink-dim); opacity:.6;">
+      <p class="fixed bottom-6 left-1/2 -translate-x-1/2 text-xs pointer-events-none" style="color: var(--ink-dim); opacity:.6;">
         体验性测评 · 非临床诊断
       </p>
     </div>
@@ -364,14 +364,24 @@
 
       <p class="text-xs leading-relaxed mb-8" style="color: var(--ink-dim); opacity:.7;">{{ report.notice }}</p>
 
-      <div class="mb-6 px-5 py-3 rounded-xl flex items-start gap-2.5 text-left" style="background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.25);">
-        <svg class="w-4 h-4 shrink-0 mt-0.5" style="color:#0EA5E9;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M9 12h6"/></svg>
-        <span class="text-xs leading-5" style="color:#475569;">为保护您的隐私，建议阅读完后点击下方「我已阅读，返回主页」，避免下一位测试者看到您的报告。</span>
+      <div class="mb-6 px-6 py-5 rounded-2xl flex items-start gap-4 text-left"
+           style="background:linear-gradient(135deg,rgba(14,165,233,.20),rgba(30,41,59,.74));border:1px solid rgba(125,211,252,.62);box-shadow:0 12px 36px rgba(2,132,199,.16),inset 0 1px 0 rgba(255,255,255,.08);">
+        <div class="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center"
+             style="background:rgba(14,165,233,.22);border:1px solid rgba(125,211,252,.48);box-shadow:0 0 24px rgba(14,165,233,.18);">
+          <svg class="w-6 h-6" style="color:#7DD3FC;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div>
+          <p class="text-base font-semibold tracking-wide mb-1.5" style="color:#F0F9FF;">报告阅后隐私提示</p>
+          <p class="text-sm leading-6" style="color:#DBEAFE;">
+            本报告包含您的个人心理状态信息。阅读完成后，请点击“结束查看并安全退出”。系统将清除本机身份信息并返回登录页，避免后续使用者查看本次报告。
+          </p>
+        </div>
       </div>
-      <button @click="finishToLogin"
-              class="font-serif text-lg px-10 py-4 rounded-full transition-all duration-300 hover:scale-[1.03]"
-              style="min-height:60px; border:1px solid rgba(255,255,255,.2); color: var(--ink);">
-        我已阅读，返回主页
+      <button type="button" @click="finishToLogin"
+              class="inline-flex items-center justify-center gap-2.5 font-medium text-base px-9 py-4 rounded-full transition-all duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/50"
+              style="min-height:60px;background:linear-gradient(135deg,#38BDF8,#6366F1);color:#fff;border:1px solid rgba(255,255,255,.28);box-shadow:0 12px 32px rgba(56,189,248,.28);">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="m10 16 1.5 1.5L15 14"/></svg>
+        结束查看并安全退出
       </button>
     </div>
   </section>
