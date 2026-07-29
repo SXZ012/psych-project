@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>登录 · 心理健康测评系统</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<style>
+  body{ font-family:-apple-system,"Microsoft YaHei","Segoe UI",system-ui,sans-serif; margin:0; }
+  .fade-enter-active{ transition:opacity .5s ease, transform .5s ease; }
+  .fade-enter-from{ opacity:0; transform:translateY(12px); }
+</style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden" style="background:linear-gradient(160deg,#F8FAFC 0%,#EFF6FF 50%,#E0F2FE 100%);">
+
+  <!-- 微弱医疗科技感光晕 -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-24 -left-24 w-[28rem] h-[28rem] rounded-full" style="background:radial-gradient(circle,rgba(14,165,233,.12),transparent 70%);"></div>
+    <div class="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full" style="background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);"></div>
+  </div>
+
+  <div id="app" class="relative w-full max-w-md px-4">
+    <Transition name="fade" appear>
+      <div class="bg-white rounded-2xl shadow-xl border border-gray-100 px-10 py-10">
+        <!-- 标题 -->
+        <div class="text-center mb-8">
+          <div class="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
+            <svg class="w-9 h-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10"/><path d="M9 11h2l1-2 2 4 1-2h2"/></svg>
+          </div>
+          <h1 class="text-xl font-bold" style="color:#1E3A8A;">心理健康测评管理系统</h1>
+          <p class="text-sm text-gray-400 mt-1.5">请录入身份信息，开始测评</p>
+        </div>
+
+        <!-- 表单 -->
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-2">真实姓名</label>
+            <input v-model="name" @blur="validateName" @input="errors.name=''" type="text" maxlength="20" placeholder="请输入您的姓名"
+                   class="w-full px-4 py-3 border rounded-xl text-sm transition focus:outline-none focus:ring-2"
+                   :class="errors.name ? 'border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-sky-400 focus:ring-sky-100'" />
+            <div v-if="errors.name" class="text-xs text-red-500 mt-1.5">{{ errors.name }}</div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-2">身份证号码</label>
+            <input :value="idCard" @input="onIdCardInput" @blur="validateIdCard" type="text" maxlength="18" placeholder="请输入 18 位身份证号码"
+                   class="w-full px-4 py-3 border rounded-xl text-sm tracking-wider transition focus:outline-none focus:ring-2"
+                   :class="errors.idCard ? 'border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-sky-400 focus:ring-sky-100'" />
+            <div v-if="errors.idCard" class="text-xs text-red-500 mt-1.5">{{ errors.idCard }}</div>
+          </div>
+        </div>
+
+        <!-- 登录按钮 -->
+        <button @click="submit" class="w-full mt-7 py-3 text-white rounded-xl text-sm font-medium hover:opacity-90 transition shadow-md" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
+          开始测评
+        </button>
+
+        <p class="text-center text-xs text-gray-300 mt-5">身份信息仅用于本次测评，严格保密</p>
+      </div>
+    </Transition>
+  </div>
+
+<script>
+  const { createApp, ref, reactive } = Vue;
+
+  createApp({
+    setup(){
+      // login 页始终可访问：支持重新登录 / 换被测者（提交时覆盖旧身份）
+      const name = ref("");
+      const idCard = ref("");
+      const errors = reactive({ name: "", idCard: "" });
+
+      // 身份证输入：限 18 位、小写 x → 大写 X、只保留数字和 X
+      function onIdCardInput(e){
+        idCard.value = e.target.value.toUpperCase().replace(/[^\dX]/g, "").slice(0, 18);
+        errors.idCard = "";
+      }
+      function validateName(){
+        const n = name.value.trim();
+        errors.name = (n.length < 2 || n.length > 20) ? "姓名需 2-20 字符" : "";
+      }
+      function validateIdCard(){
+        errors.idCard = /^\d{17}[\dX]$/.test(idCard.value) ? "" : "身份证号码必须为 18 位";
+      }
+      function submit(){
+        validateName();
+        validateIdCard();
+        if (errors.name || errors.idCard) return;                 // 校验不通过，留在本页
+        // 存身份信息，跳转测评端
+        localStorage.setItem("psych_user", JSON.stringify({ name: name.value.trim(), id_card: idCard.value }));
+        location.href = "/demo";
+      }
+
+      return { name, idCard, errors, onIdCardInput, validateName, validateIdCard, submit };
+    },
+  }).mount("#app");
+</script>
+</body>
+</html>

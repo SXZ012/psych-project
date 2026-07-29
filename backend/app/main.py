@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 
 # 导入模型，使其注册到 Base.metadata（供启动时 create_all）
 import app.models  # noqa: F401
-from app.api.routes import assessments, health, pairs, uploads
+from app.api.routes import admin, assessments, health, pairs, uploads
 from app.core.config import settings
 from app.core.log import setup_logging
 from app.db.base import Base, engine
@@ -20,6 +20,8 @@ setup_logging()
 logger = logging.getLogger("app.main")
 
 _DEMO_HTML = Path(__file__).resolve().parent / "static" / "demo.html"
+_ADMIN_HTML = Path(__file__).resolve().parent / "static" / "admin.html"
+_LOGIN_HTML = Path(__file__).resolve().parent / "static" / "login.html"
 
 
 @asynccontextmanager
@@ -90,17 +92,36 @@ app.include_router(
     tags=["pairs"],
 )
 
+app.include_router(
+    admin.router,
+    prefix=f"{settings.API_V1_PREFIX}/admin",
+    tags=["admin"],
+)
+
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def root() -> HTMLResponse:
     return HTMLResponse(
         f"<h3>{settings.APP_NAME}</h3>"
         f"<p>env={settings.ENV} | provider={settings.PROVIDER_MODE}</p>"
-        f"<p><a href='/demo'>▶ 打开测评 Demo</a> | "
-        f"<a href='/docs'>API 文档</a></p>"
+        f"<p><a href='/demo'>▶ 测评端</a> | "
+        f"<a href='/admin'>🛠 后台</a> | "
+        f"<a href='/docs'>API</a></p>"
     )
 
 
 @app.get("/demo", response_class=HTMLResponse, include_in_schema=False)
 async def demo_page() -> HTMLResponse:
     return HTMLResponse(_DEMO_HTML.read_text(encoding="utf-8"))
+
+
+@app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
+async def admin_page() -> HTMLResponse:
+    """后台：工作人员查看每个被测者的详细测评报告。"""
+    return HTMLResponse(_ADMIN_HTML.read_text(encoding="utf-8"))
+
+
+@app.get("/login", response_class=HTMLResponse, include_in_schema=False)
+async def login_page() -> HTMLResponse:
+    """测评入口：被测者录入身份信息后进入测评。"""
+    return HTMLResponse(_LOGIN_HTML.read_text(encoding="utf-8"))

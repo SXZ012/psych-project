@@ -25,6 +25,8 @@ class Assessment(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     subject_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    name: Mapped[str | None] = mapped_column(String(64), nullable=True)  # 姓名（API 必填）
+    id_card: Mapped[str | None] = mapped_column(String(18), index=True, nullable=True)  # 身份证号
     status: Mapped[AssessmentStatus] = mapped_column(
         Enum(AssessmentStatus, name="assessment_status"),
         default=AssessmentStatus.pending,
@@ -38,6 +40,11 @@ class Assessment(Base):
     sds_score: Mapped[float | None] = mapped_column(nullable=True)
     sas_score: Mapped[float | None] = mapped_column(nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # —— 后台管理字段（仅管理员可见/操作，不进入用户报告）——
+    review_status: Mapped[str] = mapped_column(
+        String(16), default="pending", nullable=False, index=True
+    )  # pending 待查看 / following 跟进中 / closed 已结案
+    admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)  # 内部回访备注
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
