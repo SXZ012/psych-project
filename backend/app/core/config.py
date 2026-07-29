@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     SQL_ECHO: bool = False  # 打印 SQL（调试用；默认关，保持日志清爽）
     SECRET_KEY: str = "change-me"
+    ADMIN_PASSWORD: str = "psych-admin"  # 后台 /admin 登录口令（生产改强密码，走 .env）
     CORS_ORIGINS: str = "*"
     API_V1_PREFIX: str = "/api/v1"
     ASSESSMENT_DURATION_SECONDS: int = 60  # 方案：60秒快筛

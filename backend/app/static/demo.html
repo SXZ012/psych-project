@@ -1,219 +1,712 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>心理状态快筛 · Demo</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>心象 · 内心探索</title>
+
+<!-- Tailwind CSS (CDN) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Vue 3 (Global Build, CDN) -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<!-- 字体：文学性衬线 + UI 无衬线 -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          serif: ['"Noto Serif SC"', '"Songti SC"', '"STSong"', 'serif'],
+          sans: ['"Noto Sans SC"', 'system-ui', 'sans-serif'],
+        },
+      },
+    },
+  };
+</script>
+
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Microsoft YaHei", system-ui, sans-serif; background: #F0F2F5; color: #333; }
-  #app { max-width: 720px; margin: 0 auto; min-height: 100vh; background: #fff; box-shadow: 0 0 24px rgba(0,0,0,.06); }
-  .screen { display: none; padding: 24px; } .screen.active { display: block; }
-  #start { text-align: center; padding-top: 20vh; }
-  #start h1 { font-size: 28px; margin-bottom: 10px; }
-  #start p { color: #888; margin-bottom: 28px; }
-  .primary { background: #2196F3; color: #fff; border: none; padding: 14px 42px; font-size: 18px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-  .primary:active { transform: scale(.98); }
-  .hdr { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #444; }
-  .progress { height: 5px; background: #e8e8e8; border-radius: 3px; margin-bottom: 18px; overflow: hidden; }
-  .progress > div { height: 100%; background: linear-gradient(90deg,#64B5F6,#2196F3); width: 0; }
-  .imgwrap { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
-  .imgwrap img { width: 100%; height: 100%; object-fit: cover; }
-  .cam { position: absolute; right: 10px; bottom: 10px; width: 130px; height: 98px; border: 2px solid #fff; border-radius: 6px; overflow: hidden; background: #000; }
-  .cam video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-  .cam .tag { position: absolute; left: 4px; top: 4px; background: rgba(244,67,54,.9); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 3px; }
-  .camstatus { position: absolute; right: 10px; bottom: 112px; background: rgba(255,193,7,.92); color: #5d4e00; font-size: 11px; padding: 3px 7px; border-radius: 4px; max-width: 200px; }
-  .q { font-size: 20px; font-weight: bold; margin: 22px 0 16px; text-align: center; }
-  .opts { display: flex; gap: 14px; }
-  .opts button { flex: 1; padding: 16px; font-size: 17px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
-  .optA { background: #E3F2FD; color: #1565C0; } .optB { background: #FFEBEE; color: #C62828; }
-  .optA.picked { background: #1565C0; color: #fff; } .optB.picked { background: #C62828; color: #fff; }
-  .opts button:disabled { opacity: .45; cursor: default; }
-  .dots { text-align: center; margin-top: 20px; }
-  .dots span { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #e0e0e0; margin: 0 5px; }
-  .dots span.on { background: #2196F3; }
-  #loading { text-align: center; padding-top: 32vh; }
-  .spin { width: 54px; height: 54px; border: 5px solid #e0e0e0; border-top-color: #2196F3; border-radius: 50%; margin: 0 auto 20px; animation: sp 1s linear infinite; }
-  @keyframes sp { to { transform: rotate(360deg); } }
-  #loading div { color: #666; }
-  #report h2 { font-size: 20px; margin-bottom: 14px; }
-  .card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; padding: 20px; }
-  .overall { text-align: center; padding: 6px 0 16px; border-bottom: 1px dashed #eee; margin-bottom: 16px; }
-  .bigscore { font-size: 52px; font-weight: bold; color: #1565C0; line-height: 1.1; }
-  .scorelabel { color: #999; font-size: 13px; margin-top: 2px; }
-  .leveltag { display: inline-block; margin-top: 8px; color: #fff; font-size: 13px; padding: 3px 16px; border-radius: 12px; }
-  .dim { display: flex; align-items: center; gap: 10px; margin: 11px 0; }
-  .dimname { width: 84px; font-size: 13px; color: #555; }
-  .bar { flex: 1; height: 14px; background: #f0f0f0; border-radius: 7px; overflow: hidden; }
-  .fill { height: 100%; border-radius: 7px; transition: width .6s; }
-  .dimscore { width: 96px; font-size: 12px; color: #333; text-align: right; }
-  .dimscore em { color: #999; font-style: normal; font-size: 11px; margin-left: 4px; }
-  .screens { margin-top: 18px; text-align: center; }
-  .stag { display: inline-block; color: #fff; font-size: 13px; padding: 5px 16px; border-radius: 14px; margin: 0 6px; }
-  .sec-h { color: #1565C0; font-weight: bold; font-size: 16px; margin: 16px 0 6px; }
-  .rb { line-height: 1.75; font-size: 15px; }
-  .small { color: #999; font-size: 13px; margin-top: 14px; line-height: 1.6; }
-  .restart { margin-top: 22px; text-align: center; }
+  :root {
+    --bg-0: #070a16;
+    --bg-1: #0e1430;
+    --ink: #eef2fb;
+    --ink-dim: #aab3cc;
+    --accent: #9db2ec;
+    --warm: #e0bf9a;
+    --glow: rgba(157, 178, 236, 0.32);
+    --glow-warm: rgba(224, 191, 154, 0.22);
+    --ok: #5fe2a8;
+  }
+  html, body {
+    height: 100%; margin: 0;
+    background: radial-gradient(1200px 800px at 70% -10%, var(--bg-1), var(--bg-0) 60%);
+    color: var(--ink);
+    font-family: "Noto Sans SC", system-ui, sans-serif;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+
+  @keyframes breathe { 0%,100% { transform: scale(1); opacity: .55; } 50% { transform: scale(1.18); opacity: .95; } }
+  @keyframes drift   { 0% { transform: translate(0,0); } 50% { transform: translate(4%,-3%); } 100% { transform: translate(0,0); } }
+  @keyframes fadeUp  { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes pulseRing { 0% { transform: scale(.9); opacity:.7;} 70%{ transform: scale(1.25); opacity:0;} 100%{opacity:0;} }
+  @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  /* 开场呼吸光晕（瞳孔缩放，4s 循环，诱导注视+调息） */
+  @keyframes pupil-breathe {
+    0%, 100% { transform: scale(.82); opacity: .55; box-shadow: 0 0 40px rgba(157,178,236,.35); }
+    50% { transform: scale(1.18); opacity: 1; box-shadow: 0 0 90px rgba(157,178,236,.7); }
+  }
+  @keyframes line-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  /* 收尾对勾浮现（紧张态 → 轻松态） */
+  @keyframes check-pop {
+    0% { transform: scale(.3); opacity: 0; }
+    60% { transform: scale(1.12); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .drift { animation: drift 22s ease-in-out infinite; }
+  .fade-up { animation: fadeUp .9s cubic-bezier(.22,.61,.36,1) both; }
+  .breathe { animation: breathe 3.6s ease-in-out infinite; }
+
+  .slide-enter-active, .slide-leave-active { transition: opacity .4s ease, transform .5s cubic-bezier(.22,.61,.36,1); }
+  .slide-enter-from { opacity: 0; transform: scale(1.06); }
+  .slide-leave-to   { opacity: 0; transform: scale(0.985); }
+
+  .q-enter-active { transition: opacity .7s ease, transform .7s cubic-bezier(.22,.61,.36,1); transition-delay: .12s; }
+  .q-enter-from { opacity: 0; transform: translateY(16px); }
+
+  .face-frame {
+    width: 220px; height: 280px;
+    border: 2px solid rgba(255,255,255,.28);
+    border-radius: 46% / 50%;
+    box-shadow: 0 0 0 9999px rgba(7,10,22,.45) inset, 0 0 60px rgba(0,0,0,.4);
+    transition: border-color .8s ease, box-shadow .8s ease, transform .8s ease;
+    position: relative;
+  }
+  .face-frame.detected {
+    border-color: var(--ok);
+    box-shadow: 0 0 0 9999px rgba(7,10,22,.45) inset, 0 0 70px rgba(95,226,168,.45);
+    transform: scale(1.02);
+  }
+  .face-frame.detected::after {
+    content: ""; position: absolute; inset: -2px;
+    border: 2px solid var(--ok); border-radius: inherit;
+    animation: pulseRing 2s ease-out infinite;
+  }
+
+  .tag {
+    transition: transform .25s cubic-bezier(.22,.61,.36,1), background .35s ease, border-color .35s ease, color .35s ease;
+  }
+  .tag:active { transform: scale(.97); }
+  .tag-active {
+    background: linear-gradient(135deg, rgba(157,178,236,.22), rgba(224,191,154,.18));
+    border-color: rgba(157,178,236,.7) !important;
+    color: #fff !important;
+    box-shadow: 0 0 30px rgba(157,178,236,.25), inset 0 0 0 1px rgba(157,178,236,.4);
+  }
+  /* 玻璃态选项：毛玻璃 + hover 上浮 + 选中主题边框 */
+  .glass-idle{
+    background: rgba(255,255,255,.06) !important;
+    border: 1px solid rgba(255,255,255,.12) !important;
+    color: rgba(255,255,255,.80) !important;
+    border-radius: 12px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 16px rgba(0,0,0,.10);
+  }
+  .glass-idle:hover{
+    background: rgba(255,255,255,.12) !important;
+    border-color: rgba(255,255,255,.30) !important;
+    color: #fff !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  }
+  .glass-idle:active{ transform: scale(.97); }
+  .glass-active{
+    background: rgba(255,255,255,.16) !important;
+    border: 1px solid transparent !important;
+    color: #fff !important;
+    border-radius: 12px;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.40), inset 0 0 20px rgba(157,178,236,.28), 0 6px 22px rgba(0,0,0,.18);
+  }
+
+  .qbar { transition: width .08s linear; }
+
+  .halo { border-radius: 50%; border: 2px solid var(--glow); }
+  .shimmer-text {
+    background: linear-gradient(90deg, var(--ink-dim) 0%, #fff 50%, var(--ink-dim) 100%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 2.4s linear infinite;
+  }
+
+  .dim-fill { transition: width 1s cubic-bezier(.22,.61,.36,1); }
 </style>
 </head>
+
 <body>
-<div id="app">
-  <div id="start" class="screen active">
-    <h1>心理状态快筛</h1>
-    <p>放松心情，跟随画面完成一次状态评估</p>
-    <button class="primary" onclick="startAssessment()">开始测评</button>
+<div id="app" class="relative w-screen h-screen overflow-hidden select-none">
+
+  <!-- 全局背景光晕 -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="drift absolute -top-1/4 -left-1/4 w-[55%] h-[55%] rounded-full"
+         style="background: radial-gradient(circle, var(--glow), transparent 70%); filter: blur(50px);"></div>
+    <div class="drift absolute -bottom-1/4 -right-1/4 w-[55%] h-[55%] rounded-full"
+         style="background: radial-gradient(circle, var(--glow-warm), transparent 70%); filter: blur(60px); animation-delay: -8s;"></div>
   </div>
 
-  <div id="assess" class="screen">
-    <div class="hdr">心理状态快筛</div>
-    <div class="progress"><div id="bar"></div></div>
-    <div class="imgwrap">
-      <img id="img" alt="">
-      <div class="cam"><span class="tag">● 采集中</span><video id="video" autoplay playsinline muted></video></div>
-      <div class="camstatus" id="camstatus" style="display:none"></div>
-    </div>
-    <div class="q" id="q"></div>
-    <div class="opts">
-      <button class="optA" id="optA"></button>
-      <button class="optB" id="optB"></button>
-    </div>
-    <div class="dots" id="dots"></div>
-  </div>
-
-  <div id="loading" class="screen">
-    <div class="spin"></div>
-    <div>正在分析你的状态，请稍候…</div>
-  </div>
-
-  <div id="report" class="screen">
-    <h2>📊 你的心理状态评估报告</h2>
-    <div class="card" id="visCard">
-      <div class="overall">
-        <div class="bigscore" id="scoreNum">--</div>
-        <div class="scorelabel">综合状态负荷指数</div>
-        <div class="leveltag" id="levelTag">--</div>
+  <!-- ========== Phase 1 · 待机与人脸检测 ========== -->
+  <!-- 知情同意书（点开始后先弹，依据 PIPL 取得敏感个人信息单独同意） -->
+  <div v-if="phase === 'consent'" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(7,10,22,.78);backdrop-filter:blur(6px);">
+    <div class="bg-white rounded-2xl w-[500px] max-h-[88vh] flex flex-col shadow-2xl">
+      <div class="px-7 py-5 border-b border-gray-100">
+        <div class="text-lg font-semibold text-gray-800">知情同意书</div>
+        <div class="text-xs text-gray-400 mt-0.5">开始测评前，请完整阅读并同意以下条款</div>
       </div>
-      <div id="dims"></div>
-      <div class="screens" id="screens"></div>
+      <div class="px-7 py-5 overflow-y-auto text-[13px] text-gray-600 leading-6 space-y-4" style="max-height:52vh;">
+        <div>
+          <div class="font-medium text-gray-800 mb-1">一、测评目的与适用范围</div>
+          <p>面向高责任岗位（飞行员、轨道交通、应急救援、安检等）从业者，通过面部微表情与生理信号采集，对您当前心理生理状态进行辅助评估，输出压力负荷、情绪状态、注意与恢复等维度参考指标。本测评不构成任何医学或精神障碍诊断。</p>
+        </div>
+        <div>
+          <div class="font-medium text-gray-800 mb-1">二、敏感个人信息处理</div>
+          <p>依据《中华人民共和国个人信息保护法》第二十八、二十九条，本测评将处理以下<b>敏感个人信息</b>，需取得您的<b>单独同意</b>：面部影像（生物识别信息）——用于微表情与生理信号分析；姓名、身份证号——用于身份核验与记录关联。</p>
+        </div>
+        <div>
+          <div class="font-medium text-gray-800 mb-1">三、数据采集方式</div>
+          <p>通过设备摄像头录制约 60 秒面部视频；需在登录页录入真实姓名与 18 位身份证号；需授予摄像头权限，您可随时拒绝或关闭。</p>
+        </div>
+        <div>
+          <div class="font-medium text-gray-800 mb-1">四、数据处理与第三方共享</div>
+          <p>视频经加密传输，由合作方心理生理评估算法（V3）分析、人工智能模型生成解读报告；遵循最小必要、目的限制原则；未经同意不用于上述目的之外。</p>
+        </div>
+        <div>
+          <div class="font-medium text-gray-800 mb-1">五、存储与保密</div>
+          <p>评估结果加密存储于受控数据库，仅授权管理人员可查阅；<b>面部原始视频经加密传输至评估算法处理，本系统不长期保留原始视频文件，测评结束后即刻从本地缓存清除</b>；未经您书面同意，不向岗位评估无关的第三方披露。</p>
+        </div>
+        <div>
+          <div class="font-medium text-gray-800 mb-1">六、结果用途与限制</div>
+          <p>本测评结果仅作为心理状态维度的参考数据，<b>严禁直接作为录用、晋升或淘汰的唯一依据</b>。本系统不具备医疗资质，输出结果<b>绝不构成任何医学诊断或精神障碍鉴定</b>。如需专业诊断，请前往正规医疗机构就诊。</p>
+        </div>
+        <div>
+          <div class="font-medium text-gray-800 mb-1">七、您的权利</div>
+          <p>依据《个人信息保护法》第四十四至五十条，您享有查阅、复制、更正、补充、删除个人信息的权利，及撤回同意的权利（撤回不影响此前基于同意的处理）；可联系管理方行使。</p>
+        </div>
+        <div>
+          <div class="font-medium text-gray-800 mb-1">八、自愿参与</div>
+          <p>本测评面向成年从业者，遵循自愿原则，您可在任何阶段中止且不受不利对待。若您未满 18 周岁，请在监护人陪同下进行。</p>
+        </div>
+      </div>
+      <div class="px-7 py-4 border-t border-gray-100">
+        <label class="flex items-center gap-2.5 cursor-pointer mb-4">
+          <input type="checkbox" v-model="agreed" class="w-4 h-4 accent-sky-500" />
+          <span class="text-sm text-gray-600">我已完整阅读、理解并同意上述全部条款</span>
+        </label>
+        <button @click="confirmConsent" :disabled="!agreed"
+                class="w-full py-2.5 rounded-xl text-sm font-medium transition"
+                :class="agreed ? 'text-white' : 'text-gray-400 bg-gray-100 cursor-not-allowed'"
+                :style="agreed ? 'background:linear-gradient(135deg,#0EA5E9,#6366F1);' : ''">
+          确认进入测评
+        </button>
+      </div>
     </div>
-    <div class="card" style="margin-top:14px"><div id="reportBody" class="rb"></div></div>
-    <div class="small" id="choices"></div>
-    <div class="restart"><button class="primary" onclick="location.reload()">再来一次</button></div>
   </div>
+
+  <section v-if="phase === 'detect'" class="relative z-10 w-full h-full flex flex-col items-center justify-center px-8">
+    <div class="flex flex-col items-center fade-up">
+      <div class="relative flex items-center justify-center mb-12" style="width:320px;height:360px;">
+        <video v-if="cameraOn" ref="videoEl" autoplay muted playsinline
+               class="absolute inset-0 w-full h-full object-cover rounded-3xl opacity-90"
+               style="filter: brightness(.8) contrast(1.05);"></video>
+        <div v-else class="absolute inset-0 rounded-3xl"
+             style="background: linear-gradient(160deg, #131a38, #0a0f22);"></div>
+        <div class="face-frame" :class="{ detected: faceReady }"></div>
+      </div>
+
+      <p class="font-serif text-2xl tracking-wide mb-2" style="color: var(--ink);">
+        {{ faceReady ? '已捕捉到你的存在' : '正在寻找你的面容…' }}
+      </p>
+      <p class="text-base mb-10" style="color: var(--ink-dim);">
+        {{ faceReady ? '当准备好的时候，轻轻开始。' : '请正对屏幕，让光线落在你脸上。' }}
+      </p>
+
+      <button v-if="faceReady" @click="begin"
+              class="fade-up font-serif text-xl px-12 py-5 rounded-full transition-all duration-300 hover:scale-[1.03]"
+              style="min-height:64px; background: linear-gradient(135deg, var(--accent), var(--warm)); color:#0b1020; box-shadow: 0 10px 40px rgba(157,178,236,.4);">
+        开始探索内心
+      </button>
+      <div v-else class="flex gap-2">
+        <span class="w-2.5 h-2.5 rounded-full breathe" style="background: var(--accent); animation-delay: 0s;"></span>
+        <span class="w-2.5 h-2.5 rounded-full breathe" style="background: var(--accent); animation-delay: .25s;"></span>
+        <span class="w-2.5 h-2.5 rounded-full breathe" style="background: var(--accent); animation-delay: .5s;"></span>
+      </div>
+
+      <p class="absolute bottom-6 text-xs" style="color: var(--ink-dim); opacity:.6;">
+        体验性测评 · 非临床诊断
+      </p>
+    </div>
+  </section>
+
+  <!-- ========== Phase 1.5 · 开场引导（0-5s，开场语音 + 欢迎语）========== -->
+  <section v-else-if="phase === 'intro'" class="relative z-10 w-full h-full flex flex-col items-center justify-center text-center px-10">
+    <!-- 呼吸光晕锚点（4s 瞳孔缩放，诱导注视+调息） -->
+    <div class="rounded-full mb-10" style="width:130px;height:130px;background:radial-gradient(circle, rgba(157,178,236,.95), rgba(157,178,236,.25) 60%, transparent 80%);animation:pupil-breathe 4s ease-in-out infinite;"></div>
+    <p class="font-serif text-3xl md:text-4xl text-white mb-7" style="text-shadow:0 2px 16px rgba(0,0,0,.5);">您好，欢迎参加心理状态评估</p>
+    <p class="text-lg text-white/70 leading-relaxed" style="animation:line-rise .8s ease .6s both;">请保持头部位于框内…</p>
+    <p class="text-lg text-white/70 leading-relaxed mt-2" style="animation:line-rise .8s ease 1.5s both;">跟随光点，放松注视…</p>
+  </section>
+
+  <!-- ========== Phase 2 · 沉浸式测评 ========== -->
+  <section v-else-if="phase === 'assess'" class="relative z-10 w-full h-full flex flex-col">
+
+    <!-- 全屏图片 -->
+    <Transition name="slide" mode="out-in">
+      <div :key="current.id" class="absolute inset-0">
+        <img :src="current.image"
+             @error="onImgErr($event, current.id)"
+             @load="imgLoaded[current.id] = true"
+             alt=""
+             class="w-full h-full object-cover"
+             :class="currentIndex===0 ? 'transition-opacity duration-[1500ms] ease-out' : 'transition-opacity duration-700'"
+             :style="{ filter: 'brightness(.80) saturate(1.05)', opacity: imgLoaded[current.id] ? 1 : 0 }" />
+      </div>
+    </Transition>
+
+    <!-- 全屏柔光（仅顶部微暗，保留图片质感） -->
+    <div class="absolute inset-0 pointer-events-none"
+         style="background:linear-gradient(to bottom, rgba(0,0,0,.22) 0%, transparent 30%, transparent 100%);"></div>
+    <!-- 文字区保护遮罩（从中部往下渐深，保证白字在明亮天空等背景下清晰） -->
+    <div class="absolute inset-x-0 pointer-events-none" style="top:40%; bottom:0; background:linear-gradient(to bottom, transparent 0%, rgba(0,0,0,.42) 22%, rgba(0,0,0,.55) 100%);"></div>
+
+    <!-- 题号指示器（顶部） -->
+    <div class="absolute top-5 left-0 right-0 flex justify-center gap-2 z-10">
+      <span v-for="(q,i) in questions" :key="q.id"
+            class="rounded-full transition-all duration-500"
+            :style="{ width: i===currentIndex ? '28px' : '8px', height: '8px',
+                      background: i < currentIndex ? 'rgba(255,255,255,.85)' : (i===currentIndex ? '#fff' : 'rgba(255,255,255,.35)') }"></span>
+    </div>
+
+    <!-- 题目 + 选项（底部叠加，玻璃态镶嵌在画面里） -->
+    <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-8">
+      <Transition name="q" mode="out-in">
+        <div :key="current.id" class="w-full max-w-2xl">
+          <p class="font-serif text-2xl mb-6 font-medium" style="letter-spacing:1px; color:rgba(255,255,255,.95); text-shadow:0 2px 16px rgba(0,0,0,.6);">
+            {{ current.question }}
+          </p>
+          <div class="flex flex-col items-stretch gap-3 max-w-lg mx-auto">
+            <button v-for="opt in current.options" :key="opt.id"
+                    @click="toggle(opt.id)"
+                    class="tag px-5 py-4 font-serif text-[17px] leading-relaxed text-center"
+                    :class="isSelected(opt.id) ? 'glass-active' : 'glass-idle'"
+                    style="min-height:60px;">
+              <span class="inline-block mr-2 font-semibold" :style="{color: isSelected(opt.id) ? '#9db2ec' : 'rgba(255,255,255,.35)'}">{{ isSelected(opt.id) ? '✓' : '○' }}</span>{{ opt.text }}
+            </button>
+          </div>
+        </div>
+      </Transition>
+    </div>
+
+    <!-- 单题极细进度条（最底） -->
+    <div class="absolute left-0 right-0 bottom-0 h-[3px] z-10" style="background: rgba(255,255,255,.10);">
+      <div class="qbar h-full" :style="{ width: qProgress + '%', background: 'linear-gradient(90deg, var(--accent), var(--warm))' }"></div>
+    </div>
+  </section>
+
+  <!-- ========== Phase 3 · 缓冲与生成 ========== -->
+  <section v-else-if="phase === 'loading'" class="relative z-10 w-full h-full flex flex-col items-center justify-center">
+    <!-- 对勾浮现（紧张态 → 轻松态） -->
+    <div class="rounded-full flex items-center justify-center mb-9" style="width:104px;height:104px;background:linear-gradient(135deg,rgba(95,226,168,.28),rgba(157,178,236,.20));border:2px solid rgba(95,226,168,.60);box-shadow:0 0 48px rgba(95,226,168,.40);animation:check-pop .8s cubic-bezier(.22,.61,.36,1) both;">
+      <svg class="w-12 h-12 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    </div>
+    <p class="font-serif text-2xl text-white mb-2">评估已完成</p>
+    <p class="text-sm text-white/60">{{ loadingHint }}</p>
+  </section>
+
+  <!-- ========== Phase 4 · 报告 ========== -->
+  <section v-else-if="phase === 'report'" class="relative z-10 w-full h-full overflow-y-auto">
+    <!-- 右上角无操作倒计时 -->
+    <div class="fixed top-5 right-5 z-30 flex items-center gap-2 px-4 py-2 rounded-full text-sm" style="background:rgba(30,41,59,.88);color:#fff;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.2);">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span><b>{{ reportCountdown }}</b> 秒无操作将返回主页</span>
+      <button @click="finishToLogin" class="ml-1 pl-2 border-l border-white/20 text-sky-300 hover:text-white transition">立即返回</button>
+    </div>
+    <div class="max-w-3xl mx-auto px-8 py-12 fade-up">
+      <p class="text-sm tracking-[.3em] mb-2" style="color: var(--accent);">内心画像</p>
+      <h1 class="font-serif text-4xl mb-1">{{ report.title }}</h1>
+      <p class="text-lg mb-8" style="color: var(--warm);">{{ report.level }} · 综合 {{ report.score }}</p>
+
+      <div class="rounded-3xl p-7 mb-8"
+           style="background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); backdrop-filter: blur(8px);">
+        <p class="font-serif text-lg leading-loose" style="color: var(--ink);">{{ report.summary }}</p>
+      </div>
+
+      <div class="space-y-5 mb-8">
+        <div v-for="d in report.dimensions" :key="d.name">
+          <div class="flex justify-between text-sm mb-2">
+            <span style="color: var(--ink);">{{ d.name }}</span>
+            <span style="color: var(--ink-dim);">{{ d.value }}</span>
+          </div>
+          <div class="h-2 rounded-full" style="background: rgba(255,255,255,.08);">
+            <div class="dim-fill h-full rounded-full"
+                 :style="{ width: d.value + '%', background: 'linear-gradient(90deg, var(--accent), var(--warm))' }"></div>
+          </div>
+          <p class="text-xs mt-1.5" style="color: var(--ink-dim);">{{ d.desc }}</p>
+        </div>
+      </div>
+
+      <div class="rounded-3xl p-7 mb-6" style="background: rgba(157,178,236,.08); border:1px solid rgba(157,178,236,.2);">
+        <p class="text-sm tracking-widest mb-3" style="color: var(--accent);">给你的留白</p>
+        <p class="font-serif text-base leading-loose" style="color: var(--ink);">{{ report.suggestion }}</p>
+      </div>
+
+      <p class="text-xs leading-relaxed mb-8" style="color: var(--ink-dim); opacity:.7;">{{ report.notice }}</p>
+
+      <div class="mb-6 px-5 py-3 rounded-xl flex items-start gap-2.5 text-left" style="background:rgba(14,165,233,.08);border:1px solid rgba(14,165,233,.25);">
+        <svg class="w-4 h-4 shrink-0 mt-0.5" style="color:#0EA5E9;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="M9 12h6"/></svg>
+        <span class="text-xs leading-5" style="color:#475569;">为保护您的隐私，建议阅读完后点击下方「我已阅读，返回主页」，避免下一位测试者看到您的报告。</span>
+      </div>
+      <button @click="finishToLogin"
+              class="font-serif text-lg px-10 py-4 rounded-full transition-all duration-300 hover:scale-[1.03]"
+              style="min-height:60px; border:1px solid rgba(255,255,255,.2); color: var(--ink);">
+        我已阅读，返回主页
+      </button>
+    </div>
+  </section>
+
 </div>
 
 <script>
-const API = "/api/v1";
-const PER = 15;
-let pairs = [], idx = 0, choices = [], picked = false, pairStart = 0, barH = null, cam = null;
-const $ = id => document.getElementById(id);
-function show(s) { document.querySelectorAll(".screen").forEach(e => e.classList.remove("active")); $(s).classList.add("active"); }
+  const { createApp, ref, reactive, computed, onMounted, onBeforeUnmount } = Vue;
 
-async function initCamera() {
-  const st = $("camstatus");
-  if (!window.isSecureContext || !navigator.mediaDevices) { st.style.display="block"; st.textContent="⚠ 摄像头需用 localhost 访问"; return; }
-  try { cam = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false }); $("video").srcObject = cam; }
-  catch (e) { st.style.display="block"; const h = e.name==="NotAllowedError"?"（未授权）":e.name==="NotFoundError"?"（未找到）":""; st.textContent="⚠ 摄像头: "+(e.name||"不可用")+h; }
-}
-async function startAssessment() {
-  await initCamera();
-  const d = await (await fetch(`${API}/pairs/session`)).json();
-  pairs = d.pairs; idx = 0; choices = [];
-  show("assess"); showPair(0);
-}
-function renderDots() { $("dots").innerHTML = pairs.map((_, i) => `<span class="${i === idx ? "on" : ""}"></span>`).join(""); }
-function showPair(i) {
-  idx = i; picked = false; const p = pairs[i];
-  $("img").src = p.image_url; $("q").textContent = p.question;
-  $("optA").textContent = p.option_a; $("optB").textContent = p.option_b;
-  for (const id of ["optA","optB"]) { const b = $(id); b.disabled = false; b.className = id; }
-  renderDots(); pairStart = performance.now();
-  clearInterval(barH);
-  barH = setInterval(() => {
-    const el = (performance.now() - pairStart) / 1000;
-    $("bar").style.width = Math.min(100, el / PER * 100) + "%";
-    if (el >= PER) { clearInterval(barH); advance(); }
-  }, 100);
-  $("optA").onclick = () => pick("A"); $("optB").onclick = () => pick("B");
-}
-function pick(c) {
-  if (picked) return; picked = true;
-  choices.push({ pair_id: pairs[idx].pair_id, choice: c, reaction_ms: Math.round(performance.now() - pairStart) });
-  $(c === "A" ? "optA" : "optB").classList.add("picked");
-  $("optA").disabled = true; $("optB").disabled = true;
-}
-function advance() {
-  if (!picked) choices.push({ pair_id: pairs[idx].pair_id, choice: "无响应", reaction_ms: PER * 1000 });
-  if (idx + 1 < pairs.length) showPair(idx + 1); else finish();
-}
-async function finish() {
-  clearInterval(barH); if (cam) cam.getTracks().forEach(t => t.stop());
-  show("loading");
-  const r = await fetch(`${API}/assessments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ subject_id: "demo" }) });
-  const { id } = await r.json();
-  let rep = null, res = null;
-  for (let k = 0; k < 60; k++) {
-    const g = await (await fetch(`${API}/assessments/${id}`)).json();
-    res = g.result || {};
-    if (res.qwen_report) { rep = res.qwen_report; break; }
-    await new Promise(r => setTimeout(r, 1000));
-  }
-  renderReport(rep, res);
-}
-
-function gradeColor(g) {
-  if (!g) return "#9e9e9e";
-  if (/偏高|明显偏高/.test(g)) return "#F59E0B";
-  if (/偏低|明显偏低|偏低/.test(g)) return "#3B82F6";
-  return "#10B981";
-}
-function screenColor(label) {
-  if (!label) return "#9e9e9e";
-  if (/无明显风险|正常/.test(label)) return "#10B981";
-  if (/高风险|关注/.test(label)) return "#EF4444";
-  if (/确认|待定/.test(label)) return "#F59E0B";
-  return "#9e9e9e";
-}
-function renderReport(rep, res) {
-  const sum = (res && res.summary_json) || {};
-  const ci = sum.core_indicators || {};
-  // 综合负荷
-  $("scoreNum").textContent = res.overall_score ?? "—";
-  $("levelTag").textContent = res.overall_level_label || "—";
-  $("levelTag").style.background = gradeColor(res.overall_level_label);
-  // 4 维度条形
-  const dims = [
-    { key: "stress_load", label: "压力/唤醒" },
-    { key: "fatigue_recovery", label: "疲劳恢复" },
-    { key: "physiological_arousal", label: "生理唤醒" },
-    { key: "attention_focus", label: "视觉注意" },
+  // —— 4 套文学性文案（通用版，配任何 OSS 图都成立，避免图文违和）——
+  const QUESTION_TEMPLATES = [
+    {
+      id: 'q1',
+      question: '凝视这幅画面，你此刻的内心更贴近哪一种？',
+      options: [
+        { id: 'q1a', text: '一种久违的松弛，仿佛连呼吸都放慢了节拍。' },
+        { id: 'q1b', text: '隐隐的紧绷藏在深处，像被什么轻轻攥住。' },
+      ],
+    },
+    {
+      id: 'q2',
+      question: '与这幅画面相对时，哪一种感受更先涌上心头？',
+      options: [
+        { id: 'q2a', text: '想要靠近的温柔，对眼前的一切生出柔软。' },
+        { id: 'q2b', text: '想要抽离的疏远，心悄悄飘到了画面之外。' },
+      ],
+    },
+    {
+      id: 'q3',
+      question: '看着它，你的思绪更愿意停留在？',
+      options: [
+        { id: 'q3a', text: '此刻的安宁里，允许自己什么都不去想。' },
+        { id: 'q3b', text: '某个遥远的念头上，被回忆轻轻牵走。' },
+      ],
+    },
+    {
+      id: 'q4',
+      question: '若这幅画面是一种情绪，你与它的距离是？',
+      options: [
+        { id: 'q4a', text: '近得能被它浸润，甘愿就此沉浸其中。' },
+        { id: 'q4b', text: '远得像隔着一层薄雾，触不到也放不下。' },
+      ],
+    },
+    {
+      id: 'q5',
+      question: '此刻与这幅画面共处，你更倾向于？',
+      options: [
+        { id: 'q5a', text: '安静地停留，让感受在心底慢慢沉淀。' },
+        { id: 'q5b', text: '轻轻移开目光，需要一点距离与喘息。' },
+      ],
+    },
   ];
-  $("dims").innerHTML = dims.map(d => {
-    const o = ci[d.key] || {};
-    const sc = o.score ?? 0;
-    const g = o.grade_label || (o.level || {}).label || "";
-    return `<div class="dim"><span class="dimname">${d.label}</span>` +
-      `<div class="bar"><div class="fill" style="width:${sc}%;background:${gradeColor(g)}"></div></div>` +
-      `<span class="dimscore">${sc || "—"} <em>${g}</em></span></div>`;
-  }).join("");
-  // 筛查标签
-  const cs = sum.clinical_screening || {};
-  const dep = cs.depression || {}, anx = cs.anxiety || {};
-  $("screens").innerHTML =
-    `<span class="stag" style="background:${screenColor(dep.classification_label)}">抑郁 · ${dep.classification_label || "—"}</span>` +
-    `<span class="stag" style="background:${screenColor(anx.classification_label)}">焦虑 · ${anx.classification_label || "—"}</span>`;
-  // Qwen 叙事（建议/免责等）
-  const html = (rep || "(报告生成中，请稍候…)")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .split("\n").map(l => {
-      const m = l.match(/^(【.+?】)(.*)$/);
-      if (m) return `<div class="sec-h">${m[1]}</div><div>${m[2]}</div>`;
-      return `<div>${l || "&nbsp;"}</div>`;
-    }).join("");
-  $("reportBody").innerHTML = html;
-  if (res) $("choices").textContent = `综合负荷 ${res.overall_score ?? "—"} ${res.overall_level_label || ""} ｜ 共记录 ${choices.length} 次选择与反应时`;
-  show("report");
-}
+
+  // —— OSS 不可达时的兜底图（已缩尺寸，避免完全无图）——
+  const FALLBACK_IMAGES = [
+    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1024&h=640&fit=crop&q=70',
+    'https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=1024&h=640&fit=crop&q=70',
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1024&h=640&fit=crop&q=70',
+    'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=1024&h=640&fit=crop&q=70',
+  ];
+
+  // —— Mock 报告（后端不可达 / 校验失败时使用） ——
+  const MOCK_REPORT = {
+    title: '你的内心画像',
+    score: 76,
+    level: '温和内省型',
+    summary:
+      '你的内心像一片被晨雾轻抚的湖面——表层安宁，深处却涌动着细腻的感受力。你对周遭的细微变化始终保持着敏锐，愿意在喧嚣中为每一种情绪留出安放的角落。这份柔软并非脆弱，而是一种缓慢而坚定的自我修复能力。',
+    dimensions: [
+      { name: '情绪开放度', value: 82, desc: '愿意觉察并接纳复杂的内心感受。' },
+      { name: '内在平静感', value: 70, desc: '整体安定，偶有波澜也能慢慢平复。' },
+      { name: '压力韧性',   value: 66, desc: '在消耗与恢复之间，正在寻找节奏。' },
+      { name: '联结渴望',   value: 75, desc: '在独处与陪伴之间寻求平衡。' },
+    ],
+    suggestion:
+      '试着为这份敏锐留出固定的「留白时间」——哪怕每天十分钟，闭上眼睛，允许所有感受自然地来去，不必评判，也不必急于赶走它们。',
+    notice: '本报告基于体验性测评生成，仅供自我觉察参考，不构成任何临床诊断或医疗建议。',
+  };
+
+  const LOADING_HINTS = [
+    '正在整理你的情绪痕迹…',
+    '让数据安静地沉淀一会儿…',
+    '几乎好了，再等一下…',
+  ];
+
+  createApp({
+    setup() {
+      const phase = ref('consent');         // consent | detect | intro | assess | loading | report
+      const currentIndex = ref(0);
+      const qProgress = ref(0);             // 单题 0~100
+      // 动态题目：先用兜底图，fetch 到 OSS 后替换 image_url
+      const questions = ref(QUESTION_TEMPLATES.map((t, i) => ({ ...t, image: FALLBACK_IMAGES[i] })));
+      const selections = reactive(questions.value.map(() => [])); // 每题选中的 option id
+      const faceReady = ref(false);
+      const cameraOn = ref(false);
+      const consentOpen = ref(false);   // 知情同意弹窗
+      const agreed = ref(false);        // 是否勾选同意
+      const reportCountdown = ref(0);   // 报告页无操作倒计时
+      const videoEl = ref(null);
+      const report = ref(null);
+      const loadingHint = ref(LOADING_HINTS[0]);
+      const imgLoaded = reactive({});        // 各题图片是否已缓存，控制淡入
+
+      const PER_Q = 10;                     // 每题停留秒数（5张 × 10s = 50s，即 5~55s）
+      let qTimer = null;
+      let hintTimer = null;
+      let stream = null;
+
+      const current = computed(() => questions.value[currentIndex.value]);
+
+      // —— 从项目 OSS 图库加载 4 张图 ——
+      async function loadPairs() {
+        try {
+          const res = await fetch('/api/v1/pairs/session?count=5');
+          if (!res.ok) throw new Error('session ' + res.status);
+          const data = await res.json();
+          let pairs = data.pairs || [];
+          const _seen = new Set();                                   // 防御性 url 去重：保证单场 4 张视觉不同
+          pairs = pairs.filter(p => p && p.image_url && !_seen.has(p.image_url) && _seen.add(p.image_url));
+          if (!pairs.length) throw new Error('empty pairs');
+          questions.value = QUESTION_TEMPLATES.map((t, i) => ({
+            ...t,
+            image: (pairs[i] && pairs[i].image_url) || FALLBACK_IMAGES[i],
+          }));
+          console.log('[demo] 已加载 OSS 图片库 · ' + pairs.length + ' 张');
+        } catch (e) {
+          console.log('[demo] OSS 加载失败，使用兜底图 →', e);
+        }
+      }
+
+      // —— 图片加载失败兜底 ——
+      function onImgErr(e, qid) {
+        const idx = questions.value.findIndex((q) => q.id === qid);
+        e.target.src = 'https://picsum.photos/seed/psy' + idx + '/1024/640';
+      }
+
+      // —— 预加载全部图片：测评开始前后台缓存，轮播秒切 ——
+      function preload() {
+        questions.value.forEach((q) => {
+          const im = new Image();
+          im.onload = () => { imgLoaded[q.id] = true; };
+          im.onerror = () => {
+            const fb = 'https://picsum.photos/seed/psy' + q.id + '/1024/640';
+            q.image = fb;
+            const im2 = new Image();
+            im2.onload = () => { imgLoaded[q.id] = true; };
+            im2.src = fb;
+          };
+          im.src = q.image;
+        });
+      }
+
+      // —— 人脸检测：尝试摄像头，2s 后标记就绪（计时独立于摄像头，绝不阻塞按钮）——
+      async function tryCamera() {
+        setTimeout(() => { faceReady.value = true; }, 2000);
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+          cameraOn.value = true;
+          requestAnimationFrame(() => {
+            if (videoEl.value) videoEl.value.srcObject = stream;
+          });
+        } catch (e) {
+          console.log('[demo] 摄像头不可用，使用占位画面', e);
+        }
+      }
+
+      let introTimer = null;
+      let reportTimer = null;
+      function speak(text) {                          // TTS 语音引导（浏览器 speechSynthesis）
+        try {
+          if (!window.speechSynthesis) return;
+          speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = 'zh-CN'; u.rate = 0.95;
+          speechSynthesis.speak(u);
+        } catch (e) {}
+      }
+      function begin() {                              // detect 的「开始探索内心」→ 开场引导
+        startIntro();
+      }
+      function confirmConsent() {                     // 知情同意「确认」→ 开启摄像头 + 人脸检测
+        if (!agreed.value) return;
+        phase.value = 'detect';
+        tryCamera();                                  // 同意后才采集人脸
+      }
+      function startIntro() {                         // 0-5s 开场引导
+        phase.value = 'intro';
+        speak('您好，欢迎参加心理状态评估。请保持头部位于框内，跟随光点，放松注视。');
+        if (introTimer) clearTimeout(introTimer);
+        introTimer = setTimeout(() => {
+          phase.value = 'assess';                     // 5-55s 图片轮播
+          currentIndex.value = 0;
+          startQuestion();
+        }, 5000);
+      }
+
+      function startQuestion() {
+        qProgress.value = 0;
+        if (currentIndex.value === 0) imgLoaded[questions.value[0].id] = false;  // 第一张：从呼吸球柔和过渡（重新淡入）
+        const tick = 50;
+        const started = performance.now();
+        if (qTimer) clearInterval(qTimer);
+        qTimer = setInterval(() => {
+          const elapsed = (performance.now() - started) / 1000;
+          qProgress.value = Math.min(100, (elapsed / PER_Q) * 100);
+          if (elapsed >= PER_Q) {
+            clearInterval(qTimer);
+            qTimer = null;
+            nextSlide();
+          }
+        }, tick);
+      }
+
+      function nextSlide() {
+        if (currentIndex.value < questions.value.length - 1) {
+          currentIndex.value += 1;
+          startQuestion();
+        } else {
+          submit();
+        }
+      }
+
+      // —— 单选（互斥）：选另一个自动替换前者，点已选的则取消（可不选）——
+      function toggle(optId) {
+        const arr = selections[currentIndex.value];
+        if (arr[0] === optId) {
+          arr.splice(0, arr.length);            // 再点已选 → 取消
+        } else {
+          arr.splice(0, arr.length, optId);     // 选新的 → 替换前者
+        }
+      }
+      function isSelected(optId) {
+        return selections[currentIndex.value].includes(optId);
+      }
+
+      const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      // —— 提交：真实后端优先，失败 fallback Mock ——
+      async function submit() {
+        phase.value = 'loading';
+        speak('评估完成，感谢您的配合。');              // 55-60s 收尾语音
+        let hi = 0;
+        loadingHint.value = LOADING_HINTS[0];
+        hintTimer = setInterval(() => {
+          hi = (hi + 1) % LOADING_HINTS.length;
+          loadingHint.value = LOADING_HINTS[hi];
+        }, 1300);
+
+        const user = JSON.parse(localStorage.getItem('psych_user') || '{}');
+        const payload = {
+          name: user.name,            // 来自登录页录入
+          id_card: user.id_card,      // 18 位身份证（后端校验通过即真实落库）
+          selections: selections.map((ids, i) => ({ question_id: questions.value[i].id, picked: ids })),
+          duration_seconds: PER_Q * questions.value.length,
+          submitted_at: new Date().toISOString(),
+        };
+
+        // 聆听心声仪式期：至少 5.5s（POST 落库并行，完整 V3 报告由后台异步生成、在 /admin 查看）
+        const minWait = delay(5000);  // 55-60s 收尾（5s）
+        try {
+          await fetch('/api/v1/assessments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          console.log('[demo] 已提交落库，报告由后台异步生成');
+        } catch (e) {
+          console.log('[demo] 后端不可达，仅本地展示', e);
+        }
+        await minWait;                      // 保证聆听心声时长（不再秒出）
+        report.value = MOCK_REPORT;         // demo 端即时展示；完整 V3 报告在 /admin 查看
+        if (hintTimer) clearInterval(hintTimer);
+        phase.value = 'report';
+        // 报告生成后立即清除本机身份，防止下一位看到残留报告 / 复用身份
+        localStorage.removeItem('psych_user');
+        // 60s 无操作自动回登录页（带可见倒计时）
+        reportCountdown.value = 60;
+        if (reportTimer) clearInterval(reportTimer);
+        reportTimer = setInterval(() => {
+          reportCountdown.value -= 1;
+          if (reportCountdown.value <= 0) finishToLogin();
+        }, 1000);
+      }
+
+      function adaptReport(data) {
+        try {
+          const r = data.result || data;
+          return {
+            title: (r.qwen_report && r.qwen_report.title) || MOCK_REPORT.title,
+            score: (r.summary && (r.summary.total_score ?? r.summary.score)) || MOCK_REPORT.score,
+            level: (r.qwen_report && r.qwen_report.level) || MOCK_REPORT.level,
+            summary: (r.qwen_report && (r.qwen_report.summary || r.qwen_report.text)) || MOCK_REPORT.summary,
+            dimensions: (r.qwen_report && r.qwen_report.dimensions) || MOCK_REPORT.dimensions,
+            suggestion: (r.qwen_report && r.qwen_report.suggestion) || MOCK_REPORT.suggestion,
+            notice: MOCK_REPORT.notice,
+          };
+        } catch {
+          return MOCK_REPORT;
+        }
+      }
+
+      function finishToLogin() {
+        if (reportTimer) clearInterval(reportTimer);
+        // 每份报告生成后强制重新登录：下一位被测者需重新录入身份
+        localStorage.removeItem('psych_user');
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        location.href = '/login';
+      }
+
+      onMounted(async () => {
+        // 路由守卫：未录入身份 → 跳登录页
+        if (!localStorage.getItem('psych_user')) {
+          location.href = '/login';
+          return;
+        }
+        // 摄像头延后到「同意知情同意书」后才开启（confirmConsent → tryCamera）
+        await loadPairs();   // consent/detect/intro 期间预加载 5 张图（前端缓存，assess 直接展现）
+        preload();
+      });
+      onBeforeUnmount(() => {
+        if (qTimer) clearInterval(qTimer);
+        if (hintTimer) clearInterval(hintTimer);
+        if (introTimer) clearTimeout(introTimer);
+        if (reportTimer) clearInterval(reportTimer);
+        try { speechSynthesis.cancel(); } catch(e) {}
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+      });
+
+      return {
+        phase, current, currentIndex, qProgress, questions,
+        selections, faceReady, cameraOn, consentOpen, agreed, videoEl, report, loadingHint, imgLoaded,
+        begin, confirmConsent, toggle, isSelected, onImgErr, finishToLogin, reportCountdown,
+      };
+    },
+  }).mount('#app');
 </script>
 </body>
 </html>

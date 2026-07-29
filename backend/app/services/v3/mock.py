@@ -6,8 +6,10 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import logging
+import random
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +33,35 @@ class MockV3Provider(V3Provider):
     def _load_fixture(self) -> dict[str, Any]:
         with open(self.fixture_path, encoding="utf-8") as f:
             return json.load(f)
+
+    def _load_result(self) -> dict[str, Any]:
+        """加载样例并对数值做小幅随机扰动（Demo 用，让每次结果不同）。
+
+        仅扰动分数（综合负荷 / 4 核心维度 / 筛查分）；结构、分类标签、
+        免责声明保持不变 —— 等价于真实接口"不同视频→不同分数"。
+        """
+        data = copy.deepcopy(self._load_fixture())
+        summary = data.get("summary") or {}
+
+        def jit(value: Any, scale: float = 0.12) -> Any:
+            try:
+                base = float(value)
+            except (TypeError, ValueError):
+                return value
+            delta = base * scale
+            return round(max(0.0, min(100.0, base + random.uniform(-delta, delta))), 2)
+
+        ov = summary.get("overall") or {}
+        if isinstance(ov.get("score"), (int, float)):
+            ov["score"] = jit(ov["score"])
+        for o in (summary.get("core_indicators") or {}).values():
+            if isinstance(o, dict) and isinstance(o.get("score"), (int, float)):
+                o["score"] = jit(o["score"])
+        for key in ("depression", "anxiety"):
+            o = (summary.get("clinical_screening") or {}).get(key) or {}
+            if isinstance(o.get("score"), (int, float)):
+                o["score"] = jit(o["score"], scale=0.15)
+        return data
 
     async def upload_video(
         self,
@@ -68,7 +99,7 @@ class MockV3Provider(V3Provider):
                 self.poll_steps,
             )
         logger.info("mock task completed | task=%s", task_id)
-        return {"id": task_id, "status": 0, "result": self._load_fixture()}
+        return {"id": task_id, "status": 0, "result": self._load_result()}
 
     async def get_result(self, task_record: dict[str, Any]) -> dict[str, Any]:
         result = task_record.get("result")

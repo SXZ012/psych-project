@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>报告管理 · 心理测评后台</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<style>
+  :root{ --bg:#F8FAFC; --ink-1:#1E293B; --ink-2:#475569; --ink-3:#64748B; }
+  body{ font-family:-apple-system,"Microsoft YaHei","Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--ink-2); margin:0; }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:#CBD5E1; border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover{ background:#94A3B8; }
+  .card-row{ box-shadow:0 1px 2px rgba(15,23,42,.04); transition:background-color .25s ease, box-shadow .25s ease, transform .25s ease; }
+  .card-row:hover{ background-color:#F8FAFC; box-shadow:0 10px 28px -10px rgba(15,23,42,.10); transform:translateY(-1px); }
+  .ring-fill{ transition:stroke-dasharray .9s cubic-bezier(.22,.61,.36,1), stroke .35s ease; }
+  .barfill{ transition:width .9s cubic-bezier(.22,.61,.36,1); }
+  .badge{ display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:500; line-height:1.5; white-space:nowrap; }
+  .b-green{ background:#DCFCE7; color:#166534; }
+  .b-amber{ background:#FEF3C7; color:#92400E; }
+  .b-red  { background:#FEE2E2; color:#991B1B; }
+  .b-gray { background:#F1F5F9; color:#64748B; }
+  .badge.dot{ background:#F1F5F9; color:#64748B; font-weight:400; }
+  .badge.dot .dot{ display:inline-block; width:6px; height:6px; border-radius:50%; }
+  .note-quote{ border-left:3px solid #FBBF24; background:transparent; }
+  .stsel{ appearance:none; -webkit-appearance:none; border:none; cursor:pointer; padding:3px 24px 3px 10px; border-radius:999px; font-size:12px; font-weight:500; line-height:1.5; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>"); background-repeat:no-repeat; background-position:right 7px center; }
+  .stsel.st-pending{ background-color:#F1F5F9; color:#94A3B8; }
+  .stsel.st-following{ background-color:#FEF3C7; color:#92400E; }
+  .stsel.st-closed{ background-color:#DCFCE7; color:#166534; }
+  .nav-item{ position:relative; }
+  .nav-item.active{ background:#F0F9FF; }
+  .nav-item.active::before{ content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:#0EA5E9; }
+  .tab-btn{ position:relative; padding:14px 4px; margin-right:24px; font-size:14px; color:#94A3B8; transition:color .2s; }
+  .tab-btn:hover{ color:#475569; }
+  .tab-btn.active{ color:#0EA5E9; font-weight:600; }
+  .tab-btn.active::after{ content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:#0EA5E9; border-radius:2px; }
+  .fade-enter-active,.fade-leave-active{ transition:opacity .3s ease; }
+  .fade-enter-from,.fade-leave-to{ opacity:0; }
+  .modal-enter-active{ transition:opacity .3s ease; }
+  .modal-enter-active > div{ transition:transform .35s cubic-bezier(.22,.61,.36,1), opacity .3s ease; }
+  .modal-enter-from,.modal-leave-to{ opacity:0; }
+  .modal-enter-from > div{ transform:scale(.96) translateY(10px); opacity:0; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- 登录门禁 -->
+  <Transition name="fade">
+  <div v-if="!loginOk" class="fixed inset-0 z-50 flex items-center justify-center" style="background:linear-gradient(160deg,#F8FAFC 0%,#EFF6FF 100%);">
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 w-96 px-10 py-10 text-center">
+      <div class="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
+        <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10"/><path d="M9 11h2l1-2 2 4 1-2h2"/></svg>
+      </div>
+      <div class="text-lg font-semibold text-gray-800 mb-1">心理测评后台</div>
+      <div class="text-xs text-gray-400 mb-6">请输入管理口令以继续</div>
+      <input v-model="pw" type="password" placeholder="管理口令" @keydown.enter="doLogin" class="w-full px-4 py-2.5 mb-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100 transition" />
+      <div class="text-xs text-red-500 h-4 mb-2">{{ loginErr }}</div>
+      <button @click="doLogin" class="w-full py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90 transition" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">进入后台</button>
+    </div>
+  </div>
+  </Transition>
+
+  <!-- 主界面 -->
+  <div v-if="loginOk" class="flex min-h-screen">
+    <status-filter :date="date" :status-filter="statusFilter" :dates="dates" :records="records"
+                   @set-date="setDate" @set-status="setStatusFilter"></status-filter>
+
+    <main class="flex-1 flex flex-col min-w-0">
+      <header class="bg-white/80 backdrop-blur border-b border-gray-100 px-8 h-16 flex items-center gap-6 sticky top-0 z-10">
+        <div class="shrink-0">
+          <div class="text-base font-semibold text-gray-800">{{ date || '全部记录' }}</div>
+          <div class="text-xs text-gray-400">{{ filtered.length }} 份报告</div>
+        </div>
+        <div class="flex-1 flex justify-center">
+          <div class="relative w-full max-w-md">
+            <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input v-model="search" placeholder="搜索 姓名 / 工号 / 编号" class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-full text-sm transition focus:outline-none focus:bg-white focus:border-sky-300 focus:ring-2 focus:ring-sky-100" />
+          </div>
+        </div>
+        <button @click="allOpen=true" class="shrink-0 px-4 py-2 text-sm text-sky-600 border border-sky-200 rounded-full hover:bg-sky-50 transition flex items-center gap-1.5">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          全部报告
+        </button>
+      </header>
+
+      <report-list :records="filtered"
+        @open-report="openReport" @open-edit="openEdit" @save-status="saveStatus"
+        @open-note="openNote" @delete-note="deleteNote"></report-list>
+    </main>
+  </div>
+
+  <!-- 模态：完整报告（5 Tab：V3 完整分析） -->
+  <Transition name="modal">
+  <div v-if="reportOpen && current" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background:rgba(15,23,42,.45);backdrop-filter:blur(3px);" @click.self="closeReport">
+    <div class="bg-white rounded-2xl w-[860px] max-h-[92vh] flex flex-col shadow-2xl">
+      <!-- 头部 -->
+      <div class="px-7 py-5 flex items-center justify-between border-b border-gray-100">
+        <div class="flex items-center gap-4 min-w-0">
+          <div class="w-11 h-11 rounded-full flex items-center justify-center font-medium shrink-0" :style="avatarBg(current)">{{ (current.name||'?').charAt(0) }}</div>
+          <div class="min-w-0">
+            <div class="text-base font-semibold text-gray-800 truncate">{{ current.name }} · {{ current.role }}</div>
+            <div class="text-xs text-gray-400 mt-0.5 truncate">{{ maskId(current.idcard) }} · {{ current.date }} {{ current.time }} · 编号 {{ current.id }} · <span class="text-amber-600">完整 V3 分析报告</span></div>
+          </div>
+        </div>
+        <button @click="closeReport" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition shrink-0">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <!-- Tab 导航 -->
+      <div class="px-7 border-b border-gray-100 flex">
+        <button v-for="t in TABS" :key="t.k" @click="activeTab=t.k" class="tab-btn" :class="{active:activeTab===t.k}">{{ t.label }}</button>
+      </div>
+      <!-- Tab 内容（滚动区，滚到底触发状态流转） -->
+      <div class="flex-1 overflow-y-auto px-7 py-6">
+
+        <!-- ① 总览 -->
+        <div v-if="activeTab==='overview'">
+          <div class="flex items-center gap-7 mb-6">
+            <div class="relative w-28 h-28 shrink-0">
+              <svg class="w-28 h-28" style="transform:rotate(-90deg)" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F0F2F5" stroke-width="2.5"/>
+                <circle class="ring-fill" cx="18" cy="18" r="15.9155" fill="none" :stroke="ovColor(current.summary)" stroke-width="2.5" stroke-linecap="round" :stroke-dasharray="(ovScore(current.summary)||0) + ' 100'" />
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="text-3xl font-semibold text-gray-800 leading-none">{{ ovScore(current.summary) ?? '--' }}</span>
+                <span class="text-[10px] text-gray-400 mt-1">{{ ovName(current.summary) }}</span>
+              </div>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="badge" :style="{background:ovColor(current.summary)+'22', color:ovColor(current.summary)}">{{ ovLabel(current.summary) }}</span>
+                <span class="badge b-gray">{{ plLabel(current.summary) }}</span>
+              </div>
+              <div class="text-xs text-gray-500 leading-6">{{ plPositioning(current.summary) }}</div>
+            </div>
+          </div>
+          <!-- 临床方向 -->
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="bg-gray-50 rounded-xl px-5 py-4">
+              <div class="text-xs text-gray-400 mb-2">抑郁方向线索</div>
+              <span class="badge" :class="dirBadge(current.summary,'depression')">{{ dirLabel(current.summary,'depression') }}</span>
+            </div>
+            <div class="bg-gray-50 rounded-xl px-5 py-4">
+              <div class="text-xs text-gray-400 mb-2">焦虑方向线索</div>
+              <span class="badge" :class="dirBadge(current.summary,'anxiety')">{{ dirLabel(current.summary,'anxiety') }}</span>
+            </div>
+          </div>
+          <!-- 6维度迷你预览 -->
+          <div class="text-xs text-gray-400 tracking-wide mb-3">核心维度概览</div>
+          <div class="space-y-2.5">
+            <div v-for="dim in dimsOf(current.summary)" :key="dim.name" class="flex items-center gap-3">
+              <div class="w-20 text-sm text-gray-500 shrink-0">{{ dim.name }}</div>
+              <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="barfill h-full rounded-full" :style="{width:(dim.score||0)+'%',background:scoreColor(dim.score)}"></div></div>
+              <div class="w-10 text-sm text-right text-gray-600">{{ fmt1(dim.score) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ② 核心维度 -->
+        <div v-else-if="activeTab==='dims'">
+          <div class="text-xs text-gray-400 tracking-wide mb-4">六大核心维度（V3 新版分类）</div>
+          <div class="space-y-5">
+            <div v-for="dim in dimsOf(current.summary)" :key="dim.name" class="border border-gray-100 rounded-xl px-5 py-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="font-medium text-gray-800">{{ dim.name }}</div>
+                <div class="flex items-center gap-2">
+                  <span class="badge" :class="badgeByLabel(dim.classification_label || dim.grade_label)">{{ dim.classification_label || dim.grade_label || '—' }}</span>
+                  <span class="text-2xl font-semibold" :style="{color:scoreColor(dim.score)}">{{ fmt1(dim.score) }}</span>
+                </div>
+              </div>
+              <div class="h-2 bg-gray-100 rounded-full overflow-hidden mb-2"><div class="barfill h-full rounded-full" :style="{width:(dim.score||0)+'%',background:scoreColor(dim.score)}"></div></div>
+              <div class="flex items-center gap-4 text-xs text-gray-400">
+                <span>档位：{{ dim.grade_display || '—' }}</span>
+                <span>置信：{{ dim.classification_confidence_label || '—' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ③ 临床筛查 -->
+        <div v-else-if="activeTab==='screening'">
+          <div class="text-xs text-gray-400 tracking-wide mb-4">抑郁 / 焦虑 临床筛查（量表辅助，非诊断）</div>
+          <div class="space-y-4">
+            <div v-for="key in ['depression','anxiety']" :key="key" class="border border-gray-100 rounded-xl px-6 py-5">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <div class="font-medium text-gray-800">{{ screenOf(current.summary, key).name || (key==='depression'?'抑郁筛查':'焦虑筛查') }}</div>
+                  <div class="text-xs text-gray-400 mt-0.5">阈值 {{ fmt3(screenOf(current.summary, key).threshold) }}</div>
+                </div>
+                <span class="badge text-sm" :class="badgeByLabel(screenOf(current.summary, key).classification_label)">{{ screenOf(current.summary, key).classification_label || '—' }}</span>
+              </div>
+              <div class="flex items-center gap-6">
+                <div><div class="text-xs text-gray-400">得分</div><div class="text-xl font-semibold text-gray-800">{{ fmt1(screenOf(current.summary, key).score) }}</div></div>
+                <div><div class="text-xs text-gray-400">概率</div><div class="text-xl font-semibold text-gray-800">{{ pct(screenOf(current.summary, key).probability) }}</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 px-4 py-3 rounded-lg flex items-start gap-2" style="background:#FEF3C7;">
+            <svg class="w-4 h-4 shrink-0 mt-0.5" style="color:#92400E;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            <span class="text-xs leading-5" style="color:#92400E;">筛查结果仅作参考，不构成临床诊断；高风险需结合专业量表与访谈复核。</span>
+          </div>
+        </div>
+
+        <!-- ④ 质量·置信 -->
+        <div v-else-if="activeTab==='quality'">
+          <div class="flex items-center gap-5 mb-6 pb-5 border-b border-gray-100">
+            <div class="relative w-20 h-20 shrink-0">
+              <svg class="w-20 h-20" style="transform:rotate(-90deg)" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F0F2F5" stroke-width="2.5"/>
+                <circle class="ring-fill" cx="18" cy="18" r="15.9155" fill="none" :stroke="confColor(current.summary)" stroke-width="2.5" stroke-linecap="round" :stroke-dasharray="confPct(current.summary) + ' 100'" />
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center"><span class="text-xl font-semibold text-gray-800 leading-none">{{ confPct(current.summary) }}%</span><span class="text-[10px] text-gray-400 mt-1">置信度</span></div>
+            </div>
+            <div>
+              <div class="text-sm text-gray-500 mb-1">整体置信度</div>
+              <span class="badge" :class="badgeByLabel(confLabel(current.summary))">{{ confLabel(current.summary) }}</span>
+            </div>
+          </div>
+          <div class="text-xs text-gray-400 tracking-wide mb-3">置信分量</div>
+          <div class="grid grid-cols-2 gap-x-8 gap-y-3 mb-6">
+            <div v-for="(v,k) in confComps(current.summary)" :key="k" class="flex items-center gap-3">
+              <div class="w-28 text-xs text-gray-500 truncate">{{ confCompName(k) }}</div>
+              <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="barfill h-full rounded-full" :style="{width:(v*100)+'%',background:scoreColor(v*100)}"></div></div>
+              <div class="w-10 text-xs text-right text-gray-600">{{ pct(v) }}</div>
+            </div>
+          </div>
+          <div class="text-xs text-gray-400 tracking-wide mb-3">视频质量</div>
+          <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
+            <div class="flex justify-between"><span class="text-gray-500">人脸有效率</span><span class="text-gray-700">{{ pct(qOf(current.summary,'face_valid_ratio')) }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">平均亮度</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'brightness_mean')) }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">清晰度</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'sharpness_mean')) }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">人脸质量</span><span class="text-gray-700">{{ pct(qOf(current.summary,'face_quality')) }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">运动噪声</span><span class="text-gray-700">{{ fmt3(qOf(current.summary,'motion_noise_index')) }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">rPPG 置信</span><span class="text-gray-700">{{ pct(qOf(current.summary,'rppg_confidence')) }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">丢帧率</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'drop_rate_percent')) }}%</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">rPPG 可用</span><span class="text-gray-700">{{ qOf(current.summary,'rppg_window_usable') ? '是' : '否' }}</span></div>
+          </div>
+        </div>
+
+        <!-- ⑤ 时间线 -->
+        <div v-else-if="activeTab==='timeline'">
+          <div class="text-xs text-gray-400 tracking-wide mb-4">分时段事件（derived_state_clue，非诊断）</div>
+          <div v-if="eventsOf(current).length" class="space-y-3">
+            <div v-for="(e,i) in eventsOf(current)" :key="i" class="flex items-center gap-4 border border-gray-100 rounded-xl px-5 py-3.5">
+              <div class="w-1.5 h-10 rounded-full shrink-0" :style="{background:severityColor(e.severity)}"></div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-gray-800">{{ e.label }}</span>
+                  <span class="badge" :class="sevBadge(e.severity)">{{ sevLabel(e.severity) }}</span>
+                </div>
+                <div class="text-xs text-gray-400 mt-1">{{ e.t_start }}–{{ e.t_end }}s · {{ e.source }}</div>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="text-lg font-semibold" :style="{color:severityColor(e.severity)}">{{ fmt1(e.value) }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-center text-gray-400 py-12 text-sm">暂无时间线事件</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </Transition>
+
+  <!-- 模态：编辑基础信息 -->
+  <Transition name="modal">
+  <div v-if="editOpen" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background:rgba(15,23,42,.45);backdrop-filter:blur(3px);" @click.self="editOpen=false">
+    <div class="bg-white rounded-2xl w-[480px] shadow-2xl">
+      <div class="px-7 py-5 flex items-center justify-between border-b border-gray-100">
+        <div class="text-lg font-semibold text-gray-800">编辑基础信息</div>
+        <button @click="editOpen=false" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="px-7 py-6 space-y-4">
+        <div><label class="block text-xs text-gray-400 mb-1.5">姓名</label><input v-model="editForm.name" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-sky-400 focus:bg-white" /></div>
+        <div><label class="block text-xs text-gray-400 mb-1.5">部门 / 工号</label><input v-model="editForm.subject_id" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-sky-400 focus:bg-white" /></div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1.5">身份证号</label>
+          <input v-model="editForm.id_card" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-sky-400 focus:bg-white" />
+          <div class="text-xs text-gray-400 mt-1.5">年龄 / 性别由身份证自动派生：<span class="text-gray-600">{{ ageText(editForm.id_card) || 'N/A' }} · {{ genderFromId(editForm.id_card) }}</span></div>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-2 rounded-lg" style="background:#F1F5F9;">
+          <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+          <span class="text-xs text-gray-500">仅可修改身份信息，<b>分数与结果标签受保护，不可改动</b>。</span>
+        </div>
+      </div>
+      <div class="px-7 py-4 border-t border-gray-100 flex justify-end gap-2">
+        <button @click="editOpen=false" class="px-4 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 transition">取消</button>
+        <button @click="saveInfo" class="px-4 py-2 text-sm text-white rounded-lg hover:opacity-90 transition" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">保存修改</button>
+      </div>
+    </div>
+  </div>
+  </Transition>
+
+  <!-- 模态：内部备注 -->
+  <Transition name="modal">
+  <div v-if="noteModalOpen && noteTarget" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background:rgba(15,23,42,.45);backdrop-filter:blur(3px);" @click.self="noteModalOpen=false">
+    <div class="bg-white rounded-2xl w-[480px] shadow-2xl">
+      <div class="px-7 py-5 flex items-center justify-between border-b border-gray-100">
+        <div>
+          <div class="text-lg font-semibold text-gray-800">管理员备注</div>
+          <div class="text-xs text-gray-400 mt-0.5">{{ noteTarget.name }} · 仅后台可见，不会出现在用户报告</div>
+        </div>
+        <button @click="noteModalOpen=false" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="px-7 py-6">
+        <textarea v-model="noteDraft" rows="4" placeholder="记录回访情况、沟通要点、后续安排…"
+                  class="w-full px-3 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:border-sky-400 resize-none leading-6"></textarea>
+      </div>
+      <div class="px-7 py-4 border-t border-gray-100 flex justify-end gap-2">
+        <button @click="noteModalOpen=false" class="px-4 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 transition">取消</button>
+        <button @click="saveNote" class="px-4 py-2 text-sm text-white rounded-lg hover:opacity-90 transition" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">保存备注</button>
+      </div>
+    </div>
+  </div>
+  </Transition>
+
+  <!-- 模态：所有报告 -->
+  <Transition name="modal">
+  <div v-if="allOpen" class="fixed inset-0 z-40 flex items-start justify-center p-8 overflow-y-auto" style="background:rgba(15,23,42,.45);backdrop-filter:blur(3px);" @click.self="allOpen=false">
+    <div class="bg-white rounded-2xl w-[840px] shadow-2xl">
+      <div class="px-8 py-5 flex items-center justify-between border-b border-gray-100">
+        <div class="text-lg font-semibold text-gray-800">所有报告 <span class="text-sm text-gray-400 font-normal ml-1">{{ filtered.length }} 份</span></div>
+        <button @click="allOpen=false" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"><svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="px-8 py-6 grid grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
+        <div v-for="r in filtered" :key="r.id" @click="openReport(r.id); allOpen=false" class="border border-gray-100 rounded-xl p-4 hover:border-sky-300 hover:shadow-sm cursor-pointer transition">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2.5"><div class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-medium" :style="avatarBg(r)">{{ (r.name||'?').charAt(0) }}</div><span class="font-medium text-gray-800">{{ r.name }}</span></div>
+            <span class="text-xs text-gray-400">{{ r.date }}</span>
+          </div>
+          <div class="text-xs text-gray-400 mb-3">{{ r.role }} · {{ maskId(r.idcard) }}</div>
+          <div class="flex items-center justify-between"><div class="text-sm">综合负荷 <b class="text-lg text-gray-700">{{ ovScore(r.summary) ?? '--' }}</b></div><span class="badge" :class="badgeByLabel(ovLabel(r.summary))">{{ ovLabel(r.summary) }}</span></div>
+        </div>
+        <div v-if="!filtered.length" class="col-span-2 text-center text-gray-400 py-10">暂无报告</div>
+      </div>
+    </div>
+  </div>
+  </Transition>
+
+  <!-- Toast -->
+  <Transition name="fade">
+  <div v-if="toastVisible" class="fixed top-6 left-1/2 -translate-x-1/2 z-[60] px-5 py-3 rounded-xl text-sm text-white shadow-lg flex items-center gap-2" style="background:#1E293B;">
+    <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+    {{ toastMsg }}
+  </div>
+  </Transition>
+
+</div>
+
+<!-- ================= 组件模板 ================= -->
+<template id="tpl-status-filter">
+  <aside class="w-64 shrink-0 bg-white border-r border-gray-100 flex flex-col">
+    <div class="px-6 h-16 flex items-center gap-2.5 border-b border-gray-100">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10"/></svg>
+      </div>
+      <span class="font-semibold text-gray-800">报告管理</span>
+    </div>
+    <div class="px-3 pt-3">
+      <button @click="$emit('set-date',null)" class="nav-item w-full text-left px-4 py-2.5 rounded-lg text-sm transition hover:bg-gray-50" :class="{active:!date}" :style="!date?'color:#0369A1':'color:#475569'">全部记录</button>
+    </div>
+    <div class="px-6 pt-5 pb-2 text-xs text-gray-400 tracking-wide">按日期</div>
+    <nav class="px-3 space-y-0.5 overflow-y-auto" style="max-height:28vh;">
+      <button v-for="d in dates" :key="d" @click="$emit('set-date',d)" class="nav-item w-full text-left px-4 py-2.5 rounded-lg text-sm transition hover:bg-gray-50" :class="{active:date===d}">
+        <div :style="date===d?'color:#0369A1':'color:#475569'">{{ d }}</div>
+        <div class="text-xs text-gray-400 mt-0.5">{{ countByDate(d) }} 份</div>
+      </button>
+    </nav>
+    <div class="px-6 pt-5 pb-2 text-xs text-gray-400 tracking-wide border-t border-gray-100 mt-3">处理状态</div>
+    <nav class="px-3 pb-3 space-y-0.5">
+      <button @click="$emit('set-status',null)" class="nav-item w-full text-left px-4 py-2 rounded-lg text-sm transition hover:bg-gray-50" :class="{active:!statusFilter}" :style="!statusFilter?'color:#0369A1':'color:#475569'">
+        全部 <span class="text-xs text-gray-400 ml-1">{{ records.length }}</span></button>
+      <button v-for="s in STATUS_OPTS" :key="s.v" @click="$emit('set-status',s.v)" class="nav-item w-full text-left px-4 py-2 rounded-lg text-sm transition hover:bg-gray-50" :class="{active:statusFilter===s.v}">
+        <span class="inline-flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full" :style="{background:s.color}"></span>
+          <span :style="statusFilter===s.v?'color:#0369A1':'color:#475569'">{{ s.label }}</span>
+          <span class="text-xs text-gray-400">{{ countByStatus(s.v) }}</span>
+        </span>
+      </button>
+    </nav>
+    <div class="mt-auto px-6 py-4 border-t border-gray-100 text-xs text-gray-400">心理测评终端 · v1.5</div>
+  </aside>
+</template>
+
+<template id="tpl-report-card">
+  <div class="card-row group bg-white rounded-xl overflow-hidden" :style="{borderLeft:'4px solid '+statusColor(report.review_status)}">
+    <div class="flex items-center gap-5 px-7 py-5">
+      <div class="flex items-center gap-3 min-w-0 w-52 shrink-0">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center font-medium text-base shrink-0" :style="avatarBg(report)">{{ (report.name||'?').charAt(0) }}</div>
+        <div class="min-w-0 flex flex-col justify-center">
+          <div class="font-medium truncate text-gray-800 text-base">{{ report.name }}</div>
+          <div class="text-xs text-gray-400 truncate mt-0.5">{{ report.role }} · {{ maskId(report.idcard) }}</div>
+        </div>
+      </div>
+      <div class="hidden lg:block w-24 shrink-0">
+        <div class="text-sm" :class="ageText(report.idcard)?'text-gray-500':'text-gray-300'">{{ ageText(report.idcard) || 'N/A' }}</div>
+        <div class="text-xs text-gray-400 mt-0.5">{{ genderFromId(report.idcard) }}</div>
+      </div>
+      <div class="flex-1 flex items-center justify-center gap-3">
+        <div class="relative w-11 h-11 shrink-0">
+          <svg class="w-11 h-11" style="transform:rotate(-90deg)" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F0F2F5" stroke-width="2.5"/>
+            <circle class="ring-fill" cx="18" cy="18" r="15.9155" fill="none" :stroke="ovColor(report.summary)" stroke-width="2.5" stroke-linecap="round" :stroke-dasharray="(ovScore(report.summary)||0) + ' 100'" />
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center"><span class="text-[13px] font-semibold leading-none text-gray-700">{{ ovScore(report.summary) ?? report.overall ?? '--' }}</span></div>
+        </div>
+        <span class="badge" :class="badgeByLabel(ovLabel(report.summary))">{{ ovLabel(report.summary) || levelLabel(report.overall) }}</span>
+      </div>
+      <div class="flex flex-col items-end gap-1.5 shrink-0">
+        <div class="flex gap-1.5">
+          <span class="badge dot" :title="'抑郁筛查：'+dirLabel(report.summary,'depression')"><span class="dot" :style="{background:dotColor(dirLabel(report.summary,'depression'))}"></span>抑</span>
+          <span class="badge dot" :title="'焦虑筛查：'+dirLabel(report.summary,'anxiety')"><span class="dot" :style="{background:dotColor(dirLabel(report.summary,'anxiety'))}"></span>焦</span>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs text-gray-400">{{ report.date }} {{ report.time }}</span>
+          <select :value="report.review_status" @change="onStatus" class="stsel" :class="'st-'+report.review_status">
+            <option value="pending">待查看</option>
+            <option value="following">跟进中</option>
+            <option value="closed">已结案</option>
+          </select>
+          <button @click="$emit('open-edit', report)" class="w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-sky-600 hover:bg-sky-50 transition" title="编辑基础信息">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button @click="$emit('open-report', report.id)" class="text-sm font-medium px-2 py-1 rounded transition text-gray-500 group-hover:text-sky-600 whitespace-nowrap inline-flex items-center gap-0.5">查看报告<svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div v-if="report.admin_note" class="note-quote flex items-center gap-2 pl-3 py-2 mx-7 mb-4">
+      <svg class="w-3.5 h-3.5 shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/></svg>
+      <span class="text-xs text-gray-500 flex-1 leading-5">{{ report.admin_note }}</span>
+      <button @click="$emit('open-note', report)" class="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition" title="编辑备注">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      </button>
+      <button @click="$emit('delete-note', report)" class="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition" title="删除备注">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+      </button>
+    </div>
+  </div>
+</template>
+
+<template id="tpl-report-list">
+  <section class="p-8 flex-1 overflow-auto">
+    <div class="max-w-6xl mx-auto space-y-4">
+      <report-card v-for="r in records" :key="r.id" :report="r"
+        @open-report="$emit('open-report',$event)"
+        @open-edit="$emit('open-edit',$event)"
+        @save-status="$emit('save-status',$event)"
+        @open-note="$emit('open-note',$event)"
+        @delete-note="$emit('delete-note',$event)"></report-card>
+      <div v-if="!records.length" class="text-center text-gray-400 py-24">
+        <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        没有匹配的记录
+      </div>
+    </div>
+  </section>
+</template>
+
+<script>
+  const { createApp, ref, reactive, computed } = Vue;
+
+  /* ===== 完整 V3 summary 样例（FAKE 离线 / 演示用，结构同真实接口） ===== */
+  const FAKE_SUMMARY = {
+    overall: { name:"综合状态负荷指数", score:64.61, level:{label:"偏高", color:"#F59E0B"} },
+    core_dimensions: {
+      "情绪状态": {name:"情绪状态", score:14.8, grade_display:"2档", grade_label:"偏低", classification_label:"偏低", classification_confidence_label:"中"},
+      "安定状态": {name:"安定状态", score:42.1, grade_display:"3档", grade_label:"参考范围", classification_label:"参考范围", classification_confidence_label:"中"},
+      "唤醒状态": {name:"唤醒状态", score:71.2, grade_display:"4档", grade_label:"偏高", classification_label:"偏高", classification_confidence_label:"高"},
+      "恢复状态": {name:"恢复状态", score:35.6, grade_display:"2档", grade_label:"偏低", classification_label:"偏低", classification_confidence_label:"中"},
+      "注意状态": {name:"注意状态", score:58.3, grade_display:"3档", grade_label:"参考范围", classification_label:"参考范围", classification_confidence_label:"中"},
+      "功能状态": {name:"功能状态", score:49.0, grade_display:"3档", grade_label:"参考范围", classification_label:"参考范围", classification_confidence_label:"低"},
+    },
+    clinical_screening: {
+      depression: {name:"抑郁筛查", classification:"no_obvious_risk", classification_label:"无明显风险", score:4.27, threshold:0.56, probability:0.12},
+      anxiety: {name:"焦虑筛查", classification:"attention_needed", classification_label:"需量表确认", score:28.3, threshold:0.50, probability:0.34},
+    },
+    confidence: { score:0.814, level:{label:"高", color:"#16A34A"}, components:{video_quality:0.715,effective_duration:1.0,modality_completeness:1.0,signal_stability:0.8,modality_consistency:0.65,history_stability:0.5} },
+    quality: { face_valid_ratio:1.0, brightness_mean:168.9, sharpness_mean:12.56, face_quality:0.715, motion_noise_index:0.224, rppg_confidence:0.782, rppg_window_usable:true, drop_rate_percent:0.0 },
+    product_logic_summary: { primary_classification_label:"无明显风险", positioning:"scale_assisted_video_state_reference_not_diagnosis",
+      clinical_directions:{ depression:{classification_label:"无明显风险"}, anxiety:{classification_label:"需量表确认"} } },
+  };
+  const FAKE_TIMELINE = [
+    {t_start:0, t_end:60.7, label:"焦虑紧张线索", value:93.87, severity:"high", source:"core.anxiety_tension"},
+    {t_start:0, t_end:60.7, label:"压力/唤醒负荷", value:86.59, severity:"high", source:"core.stress_load"},
+    {t_start:0, t_end:60.7, label:"AU 事件率", value:100.0, severity:"peak", source:"small.au.au_event_rate_per_min"},
+    {t_start:0, t_end:60.7, label:"AU 紧张事件率", value:100.0, severity:"peak", source:"small.au.au_tension_event_rate_per_min"},
+  ];
+
+  const FAKE = [
+    {id:"001", full_id:"", name:"张伟", role:"飞行员",   idcard:"110101199003077890", date:"2026-07-28", time:"10:30", overall:72, review_status:"following", admin_note:"已电话回访，情绪平稳，建议两周后复测。", summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"002", full_id:"", name:"李娜", role:"心理测评", idcard:"310101199507184422", date:"2026-07-26", time:"15:20", overall:55, review_status:"closed", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"003", full_id:"", name:"王强", role:"应急救援", idcard:"440101198812126033", date:"2026-07-26", time:"09:15", overall:88, review_status:"following", admin_note:"高危预警，已转介心理咨询师，下周面谈。", summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"004", full_id:"", name:"刘洋", role:"轨道交通", idcard:"120101199201056045", date:"2026-07-25", time:"14:00", overall:48, review_status:"closed", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"005", full_id:"", name:"陈静", role:"飞行员",   idcard:"510101199611225862", date:"2026-07-25", time:"11:30", overall:63, review_status:"pending", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"006", full_id:"", name:"赵磊", role:"心理测评", idcard:"320101198905093974", date:"2026-07-24", time:"16:45", overall:58, review_status:"pending", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"007", full_id:"", name:"孙悦", role:"轨道交通", idcard:"350101199408302846", date:"2026-07-24", time:"10:00", overall:67, review_status:"pending", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+  ];
+
+  const DIM_DEFS = [["stress","压力负荷"],["fatigue","疲劳恢复"],["arousal","生理唤醒"],["attention","视觉注意"]];
+  const NOW_YEAR = new Date().getFullYear();
+  const STATUS_OPTS = [
+    {v:"pending",  label:"待查看", color:"#94A3B8"},
+    {v:"following",label:"跟进中", color:"#F59E0B"},
+    {v:"closed",   label:"已结案", color:"#10B981"},
+  ];
+  const TABS = [
+    {k:"overview", label:"总览"},
+    {k:"dims",     label:"核心维度"},
+    {k:"screening",label:"临床筛查"},
+    {k:"quality",  label:"质量·置信"},
+    {k:"timeline", label:"时间线"},
+  ];
+  const CONF_COMP_NAMES = {video_quality:"视频质量", effective_duration:"有效时长", modality_completeness:"模态完整性", signal_stability:"信号稳定性", modality_consistency:"模态一致性", history_stability:"历史稳定性"};
+
+  /* 基础工具 */
+  function ageFromId(id){ if(!/^\d{17}[\dXx]$/.test(id||"")) return null; const y=+id.slice(6,10); const a=NOW_YEAR-y; if(a<0||a>150) return null; return a; }
+  function genderFromId(id){ if(!/^\d{17}[\dXx]$/.test(id||"")) return "—"; return (+id[16])%2?"男":"女"; }
+  function maskId(id){ if(!id||id.length!==18) return id||"—"; return id.slice(0,6)+"********"+id.slice(14); }
+  function ageText(id){ const a=ageFromId(id); return a==null?null:(a+" 岁"); }
+  function scoreColor(s){
+    if(s==null) return "#CBD5E1";
+    if(s>70) return "#F87171"; if(s>=60) return "#F59E0B"; return "#14B8A8";
+  }
+  function levelLabel(s){ if(s==null) return "未评估"; if(s>70) return "高风险"; if(s>=60) return "偏高"; return "正常"; }
+  function badgeByLabel(t){
+    if(/高风险|偏高|关注|确认|待定/.test(t||"")) return /高风险|关注/.test(t||"") ? "b-red" : "b-amber";
+    if(/偏低/.test(t||"")) return "b-amber";
+    if(/正常|参考|无明/.test(t||"")) return "b-green";
+    return "b-gray";
+  }
+  function dotColor(t){ if(/高风险|关注|偏高/.test(t||"")) return "#F87171"; if(/确认|待定|偏低/.test(t||"")) return "#F59E0B"; return "#14B8A8"; }
+  function statusColor(s){ if(s==="following") return "#F59E0B"; if(s==="closed") return "#10B981"; return "#E2E8F0"; }
+  function avatarBg(report){ if(report && report.overall > 70) return {background:"#FEE2E2", color:"#B91C1C"}; return {background:"#F1F5F9", color:"#475569"}; }
+  function fmt1(v){ return (v==null||v===undefined) ? "—" : (+v).toFixed(1); }
+  function fmt3(v){ return (v==null||v===undefined) ? "—" : (+v).toFixed(3); }
+  function pct(v){ return (v==null||v===undefined) ? "—" : Math.round((+v)*100)+"%"; }
+
+  /* ===== V3 summary 取值器（容错：字段缺失不崩） ===== */
+  function ovScore(s){ return s && s.overall ? s.overall.score : null; }
+  function ovName(s){ return s && s.overall ? s.overall.name : "综合负荷"; }
+  function ovLabel(s){ const lv = s && s.overall && s.overall.level; return lv ? lv.label : null; }
+  function ovColor(s){ const lv = s && s.overall && s.overall.level; return (lv && lv.color) || scoreColor(ovScore(s)); }
+  function plLabel(s){ return s && s.product_logic_summary ? s.product_logic_summary.primary_classification_label : null; }
+  function plPositioning(s){ const m={scale_assisted_video_state_reference_not_diagnosis:"量表辅助的视频状态参考，不作为独立诊断依据。"}; const p=s&&s.product_logic_summary?s.product_logic_summary.positioning:""; return m[p]||p||"—"; }
+  function dimsOf(s){ return (s && s.core_dimensions) ? Object.values(s.core_dimensions) : []; }
+  function screenOf(s,k){ return (s && s.clinical_screening && s.clinical_screening[k]) || {}; }
+  function dirLabel(s,k){ const cd = s && s.product_logic_summary && s.product_logic_summary.clinical_directions; return (cd && cd[k] && cd[k].classification_label) || screenOf(s,k).classification_label || "—"; }
+  function confScore(s){ return s && s.confidence ? s.confidence.score : null; }
+  function confPct(s){ const v=confScore(s); return v==null?"—":Math.round(v*100); }
+  function confLabel(s){ const lv=s&&s.confidence&&s.confidence.level; return lv?lv.label:"—"; }
+  function confColor(s){ const lv=s&&s.confidence&&s.confidence.level; return (lv&&lv.color)||scoreColor((confScore(s)||0)*100); }
+  function confComps(s){ return (s&&s.confidence&&s.confidence.components)||{}; }
+  function confCompName(k){ return CONF_COMP_NAMES[k]||k; }
+  function qOf(s,k){ return s && s.quality ? s.quality[k] : undefined; }
+  function eventsOf(r){ return (r && r.timeline) || []; }
+  function severityColor(sev){ if(/peak|high/.test(sev||"")) return "#EF4444"; if(/medium/.test(sev||"")) return "#F59E0B"; if(/low/.test(sev||"")) return "#10B981"; return "#CBD5E1"; }
+  function sevLabel(sev){ return {peak:"峰值",high:"偏高",medium:"中等",low:"偏低"}[sev]||sev||"—"; }
+  function sevBadge(sev){ if(/peak|high/.test(sev||"")) return "b-red"; if(/medium/.test(sev||"")) return "b-amber"; return "b-gray"; }
+
+  const app = createApp({
+    setup(){
+      const loginOk = ref(sessionStorage.getItem("admin_ok")==="1");
+      const pw = ref(""); const loginErr = ref("");
+      const records = ref([]);
+      const date = ref(null);
+      const statusFilter = ref(null);
+      const search = ref("");
+      const reportOpen = ref(false); const allOpen = ref(false); const currentId = ref(null);
+      const activeTab = ref("overview");
+      const editOpen = ref(false); const editId = ref(null);
+      const editForm = reactive({name:"", subject_id:"", id_card:""});
+      const noteModalOpen = ref(false); const noteTarget = ref(null); const noteDraft = ref("");
+      const toastMsg = ref(""); const toastVisible = ref(false);
+      let toastTimer = null;
+
+      function showToast(msg){ toastMsg.value=msg; toastVisible.value=true; if(toastTimer) clearTimeout(toastTimer); toastTimer=setTimeout(()=>toastVisible.value=false,3000); }
+      const current = computed(()=> records.value.find(r=>r.id===currentId.value));
+      const dates = computed(()=> [...new Set(records.value.map(r=>r.date))].sort().reverse());
+      const filtered = computed(()=>{
+        let rs = records.value.slice();
+        if(date.value) rs = rs.filter(r=>r.date===date.value);
+        if(statusFilter.value) rs = rs.filter(r=>r.review_status===statusFilter.value);
+        const q = search.value.trim().toLowerCase();
+        if(q) rs = rs.filter(r=> (r.name||"").toLowerCase().includes(q)||(r.idcard||"").toLowerCase().includes(q)||(r.id||"").toLowerCase().includes(q));
+        rs.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+        return rs;
+      });
+
+      function setDate(d){ date.value = (date.value===d ? null : d); }
+      function setStatusFilter(s){ statusFilter.value = s; }
+      let reportOpenAt = 0;
+      function openReport(id){ currentId.value=id; reportOpen.value=true; activeTab.value="overview"; reportOpenAt=Date.now(); }
+      async function closeReport(){
+        const r = current.value;
+        reportOpen.value = false;
+        if(!r || r.review_status !== "pending") return;        // 仅「待查看」才流转
+        if(Date.now() - reportOpenAt < 1500) return;           // 停留<1.5s 视为误触，不流转
+        try{
+          const res = await fetch(`/api/v1/admin/assessments/${r.full_id||r.id}/review-status`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({review_status:"following"})});
+          if(!res.ok) throw new Error("status "+res.status);
+          r.review_status = "following";                       // 关闭报告=浏览完毕 → 计数/筛选/标签自动联动
+        }catch(e){ showToast("状态更新失败，请检查网络后重试"); }
+      }
+      async function doLogin(){
+        try{
+          const r = await fetch("/api/v1/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw.value})});
+          if(r.ok){ sessionStorage.setItem("admin_ok","1"); loginOk.value=true; } else loginErr.value="口令错误";
+        }catch(e){ loginErr.value="离线演示模式，直接进入"; sessionStorage.setItem("admin_ok","1"); setTimeout(()=>loginOk.value=true,500); }
+      }
+      async function saveStatus({id, status}){
+        const r = records.value.find(x=>x.id===id); if(!r) return;
+        r.review_status = status;
+        try{ await fetch(`/api/v1/admin/assessments/${r.full_id||r.id}/review-status`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({review_status:status})}); }catch(e){}
+      }
+      function openNote(r){ noteTarget.value=r; noteDraft.value=r.admin_note||""; noteModalOpen.value=true; }
+      async function saveNote(){
+        const r = noteTarget.value; if(!r) return;
+        r.admin_note = noteDraft.value.trim()||null; noteModalOpen.value=false;
+        try{ await fetch(`/api/v1/admin/assessments/${r.full_id||r.id}/note`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({admin_note:r.admin_note})}); }catch(e){}
+      }
+      async function deleteNote(r){
+        r.admin_note = null;
+        try{ await fetch(`/api/v1/admin/assessments/${r.full_id||r.id}/note`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({admin_note:null})}); }catch(e){}
+      }
+      function openEdit(r){ editId.value=r.id; editForm.name=r.name; editForm.subject_id=r.role; editForm.id_card=r.idcard; editOpen.value=true; }
+      async function saveInfo(){
+        const r = records.value.find(x=>x.id===editId.value); if(!r) return;
+        r.name=editForm.name; r.role=editForm.subject_id; r.idcard=editForm.id_card; editOpen.value=false;
+        try{ await fetch(`/api/v1/admin/assessments/${r.full_id||r.id}/info`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:r.name,subject_id:r.role,id_card:r.idcard})}); }catch(e){}
+      }
+      async function loadData(){
+        try{
+          const lst = await (await fetch("/api/v1/assessments?limit=50")).json();
+          if(lst && lst.length){
+            const recs = [];
+            for(const a of lst){
+              try{
+                const d = await (await fetch(`/api/v1/assessments/${a.id}`)).json();
+                const r = d.result||{};
+                recs.push({
+                  id:(d.id||"").slice(0,8), full_id:d.id||"",
+                  name:d.name||d.subject_id||"—", role:d.subject_id||"受测者", idcard:d.id_card||"",
+                  date:(d.created_at||"").slice(0,10)||"—", time:(d.created_at||"").slice(11,16)||"",
+                  overall:r.overall_score,
+                  review_status:d.review_status||"pending", admin_note:d.admin_note||null,
+                  summary:r.summary_json||null,                                   // V3 完整 summary（管理员专属）
+                  timeline:(r.timeline_json && r.timeline_json.events) || [],     // 分时段事件
+                });
+              }catch(e){}
+            }
+            if(recs.length){ records.value=recs; return; }
+          }
+        }catch(e){}
+        records.value = FAKE;
+      }
+      loadData();
+      return {
+        loginOk,pw,loginErr,records,date,statusFilter,search,
+        reportOpen,allOpen,currentId,activeTab,editOpen,editForm,noteModalOpen,noteTarget,noteDraft,toastMsg,toastVisible,
+        current,dates,filtered,TABS,
+        setDate,setStatusFilter,openReport,closeReport,doLogin,saveStatus,openNote,saveNote,deleteNote,openEdit,saveInfo,
+        ageText,genderFromId,maskId,scoreColor,levelLabel,badgeByLabel,dotColor,statusColor,avatarBg,fmt1,fmt3,pct,
+        ovScore,ovName,ovLabel,ovColor,plLabel,plPositioning,dimsOf,screenOf,dirLabel,dirBadge:function(s,k){return badgeByLabel(dirLabel(s,k));},
+        confScore,confPct,confLabel,confColor,confComps,confCompName,qOf,eventsOf,severityColor,sevLabel,sevBadge,
+      };
+    },
+  });
+
+  app.component("status-filter", {
+    template: "#tpl-status-filter",
+    props: { date:{default:null}, statusFilter:{default:null}, dates:{type:Array,default:()=>[]}, records:{type:Array,default:()=>[]} },
+    emits: ["set-date","set-status"],
+    setup(props){
+      const countByDate = d => props.records.filter(r=>r.date===d).length;
+      const countByStatus = s => props.records.filter(r=>r.review_status===s).length;
+      return { countByDate, countByStatus, STATUS_OPTS };
+    },
+  });
+  app.component("report-card", {
+    template: "#tpl-report-card",
+    props: { report:{type:Object,required:true} },
+    emits: ["open-report","open-edit","save-status","open-note","delete-note"],
+    setup(props, { emit }){
+      const onStatus = e => emit("save-status", { id: props.report.id, status: e.target.value });
+      return { onStatus, maskId, ageText, genderFromId, avatarBg, statusColor, ovScore, ovColor, ovLabel, levelLabel, badgeByLabel, dotColor, dirLabel };
+    },
+  });
+  app.component("report-list", {
+    template: "#tpl-report-list",
+    props: { records:{type:Array,default:()=>[]} },
+    emits: ["open-report","open-edit","save-status","open-note","delete-note"],
+  });
+
+  app.mount("#app");
+</script>
+</body>
+</html>

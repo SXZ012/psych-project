@@ -29,6 +29,8 @@ async def create_assessment(
     """创建测评，立即返回；后台异步执行 Provider 全流程并落库。"""
     assessment = Assessment(
         subject_id=payload.subject_id,
+        name=payload.name,
+        id_card=payload.id_card,
         sds_score=payload.sds_score,
         sas_score=payload.sas_score,
         status=AssessmentStatus.pending,
