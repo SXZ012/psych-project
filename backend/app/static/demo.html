@@ -325,60 +325,125 @@
     <p class="text-sm text-white/60">{{ loadingHint }}</p>
   </section>
 
-  <!-- ========== Phase 4 · 报告 ========== -->
-  <section v-else-if="phase === 'report'" class="relative z-10 w-full h-full overflow-y-auto">
-    <!-- 右上角无操作倒计时 -->
-    <div class="fixed top-5 right-5 z-30 flex items-center gap-2 px-4 py-2 rounded-full text-sm" style="background:rgba(30,41,59,.88);color:#fff;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.2);">
-      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span><b>{{ reportCountdown }}</b> 秒无操作将返回主页</span>
-      <button @click="finishToLogin" class="ml-1 pl-2 border-l border-white/20 text-sky-300 hover:text-white transition">立即返回</button>
-    </div>
-    <div class="max-w-3xl mx-auto px-8 py-12 fade-up">
-      <p class="text-sm tracking-[.3em] mb-2" style="color: var(--accent);">内心画像</p>
-      <h1 class="font-serif text-4xl mb-1">{{ report.title }}</h1>
-      <p class="text-lg mb-8" style="color: var(--warm);">{{ report.level }} · 综合 {{ report.score }}</p>
+  <!-- ========== Phase 4 · 报告（V3 对齐版） ========== -->
+  <section v-else-if="phase === 'report'" data-testid="report-page" class="relative z-10 w-full h-full overflow-y-auto"
+           @scroll.passive="resetReportCountdown" @pointerdown="resetReportCountdown">
+    <div class="max-w-3xl mx-auto px-5 sm:px-8 py-7 sm:py-10 fade-up">
 
-      <div class="rounded-3xl p-7 mb-8"
-           style="background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); backdrop-filter: blur(8px);">
-        <p class="font-serif text-lg leading-loose" style="color: var(--ink);">{{ report.summary }}</p>
+      <!-- 倒计时属于报告工具栏，避免悬浮遮挡正文 -->
+      <div class="sticky top-3 z-30 mb-6 flex justify-end">
+        <div class="flex items-center gap-2 px-4 py-2 rounded-full text-sm"
+             style="background:rgba(30,41,59,.94);color:#fff;backdrop-filter:blur(10px);box-shadow:0 4px 16px rgba(0,0,0,.24);border:1px solid rgba(255,255,255,.10);">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span><b>{{ reportCountdown }}</b> 秒无操作将返回登录页</span>
+          <button @click="finishToLogin" class="ml-1 pl-2 border-l border-white/20 text-sky-300 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-200 rounded-sm">立即返回</button>
+        </div>
       </div>
 
-      <div class="space-y-5 mb-8">
-        <div v-for="d in report.dimensions" :key="d.name">
-          <div class="flex justify-between text-sm mb-2">
-            <span style="color: var(--ink);">{{ d.name }}</span>
-            <span style="color: var(--ink-dim);">{{ d.value }}</span>
+      <!-- 标题 -->
+      <div class="flex flex-wrap items-center gap-3 mb-2">
+        <h1 class="font-serif text-2xl sm:text-3xl" style="color: var(--ink);">本次心理生理状态快筛结果</h1>
+        <span class="text-sm font-medium px-3 py-1 rounded-full"
+              :style="report.is_demo ? 'background:rgba(245,158,11,.18);color:#FBBF24;border:1px solid rgba(245,158,11,.35);' : 'background:rgba(16,185,129,.14);color:#6EE7B7;border:1px solid rgba(16,185,129,.30);'">
+          {{ report.is_demo ? '演示数据' : '真实评估结果' }}
+        </span>
+      </div>
+      <p class="text-sm sm:text-base leading-6 mb-6" style="color:#AEBBD0;">以下结果基于本次采集的面部影像及合作方算法输出，仅反映测评时段内的状态趋势。</p>
+
+      <div v-if="report.is_demo" class="rounded-2xl px-5 py-4 mb-6 flex items-start gap-3"
+           style="background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.35);color:#FDE68A;">
+        <svg class="w-5 h-5 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 2.9 1.8 17a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 2.9a2 2 0 0 0-3.4 0Z"/></svg>
+        <p class="text-sm leading-6">{{ report.demo_notice }}</p>
+      </div>
+
+      <!-- 第一部分：数据是否有效 -->
+      <div class="rounded-2xl p-5 mb-6" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">
+        <p class="text-sm tracking-widest mb-3" style="color:#AEBBD0;">① 数据质量</p>
+        <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full" :style="{background:report.quality.status_color}"></div>
+            <span class="text-sm sm:text-base font-medium" style="color: var(--ink);">{{ report.quality.status_label }}</span>
           </div>
-          <div class="h-2 rounded-full" style="background: rgba(255,255,255,.08);">
-            <div class="dim-fill h-full rounded-full"
-                 :style="{ width: d.value + '%', background: 'linear-gradient(90deg, var(--accent), var(--warm))' }"></div>
+          <span class="text-sm" style="color:#AEBBD0;">人脸有效率 {{ Math.round(report.quality.face_valid_ratio * 100) }}%</span>
+          <span class="text-sm" style="color:#AEBBD0;">置信度 {{ report.quality.confidence_label }}</span>
+        </div>
+      </div>
+
+      <!-- 第二部分：状态总览 -->
+      <div class="rounded-2xl p-6 mb-6" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px);">
+        <p class="text-sm tracking-widest mb-4" style="color:#AEBBD0;">② 状态总览</p>
+        <div class="flex items-end gap-4 mb-4">
+          <span class="text-5xl font-bold" :style="{color: report.overall.level_color}">{{ report.overall.score }}</span>
+          <div class="pb-2">
+            <span class="inline-block px-3 py-1 rounded-full text-sm font-medium" :style="{background: report.overall.level_color + '22', color: report.overall.level_color}">{{ report.overall.level }}</span>
+            <p class="text-sm mt-1" style="color:#AEBBD0;">综合状态负荷指数</p>
           </div>
-          <p class="text-xs mt-1.5" style="color: var(--ink-dim);">{{ d.desc }}</p>
+        </div>
+        <p class="text-sm leading-7" style="color: var(--ink);">{{ report.overall.summary }}</p>
+        <p class="text-sm mt-2" style="color:#AEBBD0;">※ 此结果反映本次测评时段的状态，不代表长期人格特征。</p>
+      </div>
+
+      <!-- 第三部分：四项核心指标 -->
+      <div class="rounded-2xl p-6 mb-6" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">
+        <p class="text-sm tracking-widest mb-4" style="color:#AEBBD0;">③ 核心指标</p>
+        <div class="space-y-4">
+          <div v-for="ind in report.indicators" :key="ind.name">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm sm:text-base" style="color: var(--ink);">{{ ind.name }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs px-2 py-0.5 rounded-full" :style="{background: ind.color + '22', color: ind.color}">{{ ind.level }}</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5" :aria-label="ind.name + '，5档中的第' + ind.grade + '档'">
+              <div v-for="n in 5" :key="n" class="h-2 rounded-full"
+                   :style="{background: n <= ind.grade ? ind.color : 'rgba(255,255,255,.08)'}"></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="rounded-3xl p-7 mb-6" style="background: rgba(157,178,236,.08); border:1px solid rgba(157,178,236,.2);">
-        <p class="text-sm tracking-widest mb-3" style="color: var(--accent);">给你的留白</p>
-        <p class="font-serif text-base leading-loose" style="color: var(--ink);">{{ report.suggestion }}</p>
+      <!-- 第四部分：筛查提示 -->
+      <div class="rounded-2xl p-6 mb-6" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);">
+        <p class="text-sm tracking-widest mb-4" style="color:#AEBBD0;">④ 风险提示（算法输出）</p>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="rounded-xl px-4 py-3" style="background:rgba(255,255,255,.03);">
+            <p class="text-sm mb-1" style="color:#AEBBD0;">情绪低落风险提示</p>
+            <span class="text-base font-medium" :style="{color: screenColor(report.screening.depression.label)}">{{ report.screening.depression.label }}</span>
+            <p class="text-sm mt-1" style="color:#AEBBD0;">算法参考分 {{ report.screening.depression.score }} / 100 · 置信度 {{ report.screening.depression.confidence_label }}</p>
+          </div>
+          <div class="rounded-xl px-4 py-3" style="background:rgba(255,255,255,.03);">
+            <p class="text-sm mb-1" style="color:#AEBBD0;">紧张焦虑风险提示</p>
+            <span class="text-base font-medium" :style="{color: screenColor(report.screening.anxiety.label)}">{{ report.screening.anxiety.label }}</span>
+            <p class="text-sm mt-1" style="color:#AEBBD0;">算法参考分 {{ report.screening.anxiety.score }} / 100 · 置信度 {{ report.screening.anxiety.confidence_label }}</p>
+          </div>
+        </div>
+        <p class="text-sm leading-6 mt-3" style="color:#AEBBD0;">该分值为合作方算法的 0–100 参考分，并非临床量表分。风险提示仅供筛查参考，不构成临床诊断；“需量表确认”或“高风险关注”应结合专业量表与访谈。</p>
       </div>
 
-      <p class="text-xs leading-relaxed mb-8" style="color: var(--ink-dim); opacity:.7;">{{ report.notice }}</p>
+      <!-- 第五部分：行动建议 -->
+      <div class="rounded-2xl p-6 mb-6" style="background:rgba(157,178,236,.08);border:1px solid rgba(157,178,236,.2);">
+        <p class="text-sm tracking-widest mb-3" style="color: var(--accent);">⑤ 行动建议</p>
+        <ul class="space-y-2">
+          <li v-for="(s, si) in report.suggestions" :key="si" class="flex items-start gap-2 text-sm sm:text-base leading-7" style="color: var(--ink);">
+            <span class="shrink-0 mt-0.5" style="color: var(--accent);">•</span>
+            <span>{{ s }}</span>
+          </li>
+        </ul>
+      </div>
 
-      <div class="mb-6 px-6 py-5 rounded-2xl flex items-start gap-4 text-left"
-           style="background:linear-gradient(135deg,rgba(14,165,233,.20),rgba(30,41,59,.74));border:1px solid rgba(125,211,252,.62);box-shadow:0 12px 36px rgba(2,132,199,.16),inset 0 1px 0 rgba(255,255,255,.08);">
-        <div class="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center"
-             style="background:rgba(14,165,233,.22);border:1px solid rgba(125,211,252,.48);box-shadow:0 0 24px rgba(14,165,233,.18);">
-          <svg class="w-6 h-6" style="color:#7DD3FC;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
-        </div>
-        <div>
-          <p class="text-base font-semibold tracking-wide mb-1.5" style="color:#F0F9FF;">报告阅后隐私提示</p>
-          <p class="text-sm leading-6" style="color:#DBEAFE;">
-            本报告包含您的个人心理状态信息。阅读完成后，请点击“结束查看并安全退出”。系统将清除本机身份信息并返回登录页，避免后续使用者查看本次报告。
-          </p>
-        </div>
+      <!-- 第六部分：使用边界 -->
+      <div class="rounded-xl p-4 mb-6" style="background:rgba(255,255,255,.02);border-left:3px solid var(--ink-dim);">
+        <p class="text-sm leading-6" style="color:#AEBBD0;">{{ report.notice }}</p>
+      </div>
+
+      <!-- 隐私提示 + 退出 -->
+      <div class="mb-6 px-5 py-4 rounded-2xl flex items-start gap-3 text-left"
+           style="background:linear-gradient(135deg,rgba(14,165,233,.15),rgba(30,41,59,.6));border:1px solid rgba(125,211,252,.4);">
+        <svg class="w-5 h-5 shrink-0 mt-0.5" style="color:#7DD3FC;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+        <p class="text-sm leading-6" style="color:#DBEAFE;">为防止下一位使用者查看本次结果，请在阅读完成后选择“结束查看并安全退出”。退出后，系统将清除本终端保存的身份缓存和报告展示状态，并返回登录页；后台测评记录将按照数据管理规则保存。</p>
       </div>
       <button type="button" @click="finishToLogin"
-              class="inline-flex items-center justify-center gap-2.5 font-medium text-base px-9 py-4 rounded-full transition-all duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/50"
+              class="inline-flex items-center justify-center gap-2.5 font-medium text-base px-9 py-4 rounded-full transition-all duration-300 hover:scale-[1.02] focus:outline-none focus-visible:ring-4 focus-visible:ring-sky-200/60"
               style="min-height:60px;background:linear-gradient(135deg,#38BDF8,#6366F1);color:#fff;border:1px solid rgba(255,255,255,.28);box-shadow:0 12px 32px rgba(56,189,248,.28);">
         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><path d="m10 16 1.5 1.5L15 14"/></svg>
         结束查看并安全退出
@@ -389,7 +454,7 @@
 </div>
 
 <script>
-  const { createApp, ref, reactive, computed, onMounted, onBeforeUnmount } = Vue;
+  const { createApp, ref, reactive, computed, nextTick, onMounted, onBeforeUnmount } = Vue;
 
   // —— 4 套文学性文案（通用版，配任何 OSS 图都成立，避免图文违和）——
   const QUESTION_TEMPLATES = [
@@ -443,22 +508,45 @@
     'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=1024&h=640&fit=crop&q=70',
   ];
 
-  // —— Mock 报告（后端不可达 / 校验失败时使用） ——
+  // —— Mock 报告（结构对齐 V3 真实输出，后端不可达时使用） ——
   const MOCK_REPORT = {
-    title: '你的内心画像',
-    score: 76,
-    level: '温和内省型',
-    summary:
-      '你的内心像一片被晨雾轻抚的湖面——表层安宁，深处却涌动着细腻的感受力。你对周遭的细微变化始终保持着敏锐，愿意在喧嚣中为每一种情绪留出安放的角落。这份柔软并非脆弱，而是一种缓慢而坚定的自我修复能力。',
-    dimensions: [
-      { name: '情绪开放度', value: 82, desc: '愿意觉察并接纳复杂的内心感受。' },
-      { name: '内在平静感', value: 70, desc: '整体安定，偶有波澜也能慢慢平复。' },
-      { name: '压力韧性',   value: 66, desc: '在消耗与恢复之间，正在寻找节奏。' },
-      { name: '联结渴望',   value: 75, desc: '在独处与陪伴之间寻求平衡。' },
+    is_demo: true,
+    demo_notice: '当前系统处于演示模式，以下内容仅用于展示报告结构，不代表您的实际心理状态。',
+    // 第一部分：数据是否有效
+    quality: {
+      face_valid_ratio: 1.0,
+      confidence_score: 0.81,
+      confidence_label: '高',
+      status: 'qualified',   // qualified | suggest_retest
+      status_label: '演示样例',
+      status_color: '#F59E0B',
+    },
+    // 第二部分：状态总览
+    overall: {
+      score: 64.6,
+      level: '偏高',
+      level_color: '#F59E0B',
+      summary: '本次测评时段内，综合状态负荷处于偏高水平，主要受压力负荷与生理唤醒驱动。此结果反映的是测评当下的即时状态，不代表长期人格特征。',
+    },
+    // 第三部分：四项核心指标（与 report.py:12 Qwen prompt 对齐）
+    indicators: [
+      { name: '压力负荷',   score: 88, grade: 4, level: '偏高',     color: '#EF4444' },
+      { name: '疲劳与恢复', score: 35, grade: 2, level: '偏低',     color: '#3B82F6' },
+      { name: '生理唤醒', score: 75, grade: 4, level: '偏高',     color: '#F59E0B' },
+      { name: '注意专注', score: 48, grade: 3, level: '参考范围', color: '#10B981' },
     ],
-    suggestion:
-      '试着为这份敏锐留出固定的「留白时间」——哪怕每天十分钟，闭上眼睛，允许所有感受自然地来去，不必评判，也不必急于赶走它们。',
-    notice: '本报告基于体验性测评生成，仅供自我觉察参考，不构成任何临床诊断或医疗建议。',
+    // 第四部分：筛查提示（V3 原始分类，非诊断）
+    screening: {
+      depression: { label: '无明显风险', score: 4.3, confidence_label: '中' },
+      anxiety:    { label: '需量表确认', score: 28.3, confidence_label: '中' },
+    },
+    // 第五部分：行动建议
+    suggestions: [
+      '保证充足睡眠，尝试每天 10 分钟深呼吸或正念放松',
+      '建议两周后复测，观察状态变化趋势',
+    ],
+    // 第六部分：使用边界
+    notice: '本结果用于心理生理状态快筛和自我觉察，不构成临床诊断，不应单独作为录用、淘汰或纪律处理依据。如持续感到不适，建议咨询持证心理工作者。',
   };
 
   const LOADING_HINTS = [
@@ -492,15 +580,19 @@
 
       const current = computed(() => questions.value[currentIndex.value]);
 
-      // —— 从项目 OSS 图库加载 4 张图 ——
+      // —— 从项目 OSS 图库加载 5 张图 ——
       async function loadPairs() {
         try {
           const res = await fetch('/api/v1/pairs/session?count=5');
           if (!res.ok) throw new Error('session ' + res.status);
           const data = await res.json();
           let pairs = data.pairs || [];
-          const _seen = new Set();                                   // 防御性 url 去重：保证单场 4 张视觉不同
-          pairs = pairs.filter(p => p && p.image_url && !_seen.has(p.image_url) && _seen.add(p.image_url));
+          const _seen = new Set();                                   // 防御性 url 去重：保证单场 5 张视觉不同
+          pairs = pairs.filter((p) => {
+            if (!p || !p.image_url || _seen.has(p.image_url)) return false;
+            _seen.add(p.image_url);
+            return true;
+          });
           if (!pairs.length) throw new Error('empty pairs');
           questions.value = QUESTION_TEMPLATES.map((t, i) => ({
             ...t,
@@ -619,7 +711,116 @@
 
       const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
-      // —— 提交：真实后端优先，失败 fallback Mock ——
+      function clampScore(value, fallback = 0) {
+        const n = Number(value);
+        return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n * 10) / 10)) : fallback;
+      }
+
+      function normalizeColor(value, fallback = '#94A3B8') {
+        return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value) ? value : fallback;
+      }
+
+      function adaptReport(data) {
+        const result = data && data.result;
+        const summary = (result && result.summary_json) || {};
+        const quality = summary.quality || {};
+        const confidence = summary.confidence || {};
+        const confidenceLevel = confidence.level || {};
+        const overall = summary.overall || {};
+        const overallLevel = overall.level || {};
+        const core = summary.core_indicators || {};
+        const screening = summary.clinical_screening || {};
+        const notice = summary.clinical_notice || {};
+        const isDemo = data.provider_mode !== 'real';
+
+        const indicatorKeys = ['stress_load', 'fatigue_recovery', 'physiological_arousal', 'attention_focus'];
+        const fallbackNames = ['压力负荷', '疲劳与恢复', '生理唤醒', '注意专注'];
+        const indicators = indicatorKeys.map((key, index) => {
+          const item = core[key] || {};
+          const level = item.level || {};
+          return {
+            name: item.name || fallbackNames[index],
+            score: clampScore(item.score),
+            grade: Math.max(1, Math.min(5, Number(item.grade_1_5) || 3)),
+            level: item.grade_label || level.label || '待评估',
+            color: normalizeColor(level.color),
+          };
+        });
+
+        const validRatio = Math.max(0, Math.min(1, Number(quality.face_valid_ratio) || 0));
+        const confidenceScore = Math.max(0, Math.min(1, Number(confidence.score) || 0));
+        const qualityPassed = validRatio >= 0.8 && confidenceScore >= 0.6;
+        const drivers = indicators
+          .filter((item) => item.level && !['参考范围', '正常', '负荷较低'].includes(item.level))
+          .slice(0, 2)
+          .map((item) => item.name);
+        const overallScore = clampScore(overall.score);
+        const overallLabel = overallLevel.label || result.overall_level_label || '待评估';
+        const driverText = drivers.length ? `，主要需关注${drivers.join('与')}` : '';
+
+        const makeScreening = (key) => {
+          const item = screening[key] || {};
+          return {
+            label: item.classification_label || (key === 'depression' ? result.depression_label : result.anxiety_label) || '待评估',
+            score: clampScore(item.score ?? (key === 'depression' ? result.depression_score : result.anxiety_score)),
+            confidence_label: item.classification_confidence_label || '待评估',
+          };
+        };
+
+        const suggestions = [];
+        if (indicators.some((item) => item.name.includes('压力') && item.grade >= 4)) {
+          suggestions.push('今天安排 10 分钟缓慢呼吸或正念放松，并减少连续高负荷任务。');
+        }
+        if (indicators.some((item) => item.name.includes('疲劳') && item.level.includes('高'))) {
+          suggestions.push('优先保证睡眠与短时休息，状态未恢复前避免长时间连续作业。');
+        }
+        if (indicators.some((item) => item.name.includes('注意') && item.level.includes('低'))) {
+          suggestions.push('在需要持续专注前先短暂休息，并减少同时处理多项任务。');
+        }
+        if (!suggestions.length) suggestions.push('保持规律作息，并留意近期压力、睡眠和注意状态的变化。');
+        suggestions.push('建议约两周后在相近条件下复测，用于观察状态变化趋势。');
+
+        return {
+          is_demo: isDemo,
+          demo_notice: isDemo ? '当前系统使用演示算法数据，以下内容仅用于验证报告流程与版式，不代表您的实际心理状态。' : '',
+          quality: {
+            face_valid_ratio: validRatio,
+            confidence_score: confidenceScore,
+            confidence_label: confidenceLevel.label || '待评估',
+            status: qualityPassed ? 'qualified' : 'suggest_retest',
+            status_label: qualityPassed ? '数据合格' : '建议重新测评',
+            status_color: qualityPassed ? '#10B981' : '#F59E0B',
+          },
+          overall: {
+            score: overallScore,
+            level: overallLabel,
+            level_color: normalizeColor(overallLevel.color, '#F59E0B'),
+            summary: `本次测评时段内，综合状态负荷为${overallScore}分（${overallLabel}）${driverText}。该结果反映测评当下的状态趋势，不代表长期人格特征。`,
+          },
+          indicators,
+          screening: {
+            depression: makeScreening('depression'),
+            anxiety: makeScreening('anxiety'),
+          },
+          suggestions: suggestions.slice(0, 3),
+          notice: notice.positioning || '本结果用于心理生理状态快筛和自我觉察，不构成临床诊断，不应单独作为录用、淘汰或纪律处理依据。如持续感到不适，建议咨询持证心理工作者。',
+        };
+      }
+
+      async function waitForAssessment(assessmentId, timeoutMs = 90000) {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+          const response = await fetch(`/api/v1/assessments/${assessmentId}`, { cache: 'no-store' });
+          if (!response.ok) throw new Error(`查询报告失败（${response.status}）`);
+          const detail = await response.json();
+          if (detail.status === 'completed' && detail.result) return adaptReport(detail);
+          if (detail.status === 'failed') throw new Error(detail.error_message || '评估任务失败');
+          await delay(1800);
+        }
+        throw new Error('等待真实报告超时');
+      }
+
+      // —— 提交：优先读取本次真实报告；不可用时明确标识演示数据 ——
       async function submit() {
         phase.value = 'loading';
         speak('评估完成，感谢您的配合。');              // 55-60s 收尾语音
@@ -639,26 +840,36 @@
           submitted_at: new Date().toISOString(),
         };
 
-        // 聆听心声仪式期：至少 5.5s（POST 落库并行，完整 V3 报告由后台异步生成、在 /admin 查看）
-        const minWait = delay(5000);  // 55-60s 收尾（5s）
+        // 聆听心声仪式期：至少 5s；真实报告生成时继续显示加载提示
+        const minWait = delay(5000);
+        let finalReport = null;
         try {
-          await fetch('/api/v1/assessments', {
+          const response = await fetch('/api/v1/assessments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           });
-          console.log('[demo] 已提交落库，报告由后台异步生成');
+          if (!response.ok) throw new Error(`提交失败（${response.status}）`);
+          const created = await response.json();
+          await minWait;
+          finalReport = await waitForAssessment(created.id);
         } catch (e) {
-          console.log('[demo] 后端不可达，仅本地展示', e);
+          console.warn('[demo] 真实报告不可用，改为带标识的演示数据', e);
+          await minWait;
+          finalReport = { ...MOCK_REPORT, is_demo: true };
         }
-        await minWait;                      // 保证聆听心声时长（不再秒出）
-        report.value = MOCK_REPORT;         // demo 端即时展示；完整 V3 报告在 /admin 查看
+        report.value = finalReport;
         if (hintTimer) clearInterval(hintTimer);
         phase.value = 'report';
+        await nextTick();
+        const appRoot = document.querySelector('#app');
+        if (appRoot) appRoot.scrollTop = 0;
+        const reportPage = document.querySelector('[data-testid="report-page"]');
+        if (reportPage) reportPage.scrollTop = 0;
         // 报告生成后立即清除本机身份，防止下一位看到残留报告 / 复用身份
         localStorage.removeItem('psych_user');
-        // 60s 无操作自动回登录页（带可见倒计时）
-        reportCountdown.value = 60;
+        // 180s 真正的无操作倒计时；阅读、滚动或触摸都会重置
+        resetReportCountdown();
         if (reportTimer) clearInterval(reportTimer);
         reportTimer = setInterval(() => {
           reportCountdown.value -= 1;
@@ -666,21 +877,19 @@
         }, 1000);
       }
 
-      function adaptReport(data) {
-        try {
-          const r = data.result || data;
-          return {
-            title: (r.qwen_report && r.qwen_report.title) || MOCK_REPORT.title,
-            score: (r.summary && (r.summary.total_score ?? r.summary.score)) || MOCK_REPORT.score,
-            level: (r.qwen_report && r.qwen_report.level) || MOCK_REPORT.level,
-            summary: (r.qwen_report && (r.qwen_report.summary || r.qwen_report.text)) || MOCK_REPORT.summary,
-            dimensions: (r.qwen_report && r.qwen_report.dimensions) || MOCK_REPORT.dimensions,
-            suggestion: (r.qwen_report && r.qwen_report.suggestion) || MOCK_REPORT.suggestion,
-            notice: MOCK_REPORT.notice,
-          };
-        } catch {
-          return MOCK_REPORT;
-        }
+      function resetReportCountdown() {
+        if (phase.value === 'report') reportCountdown.value = 180;
+      }
+
+      function listenForReportActivity() {
+        resetReportCountdown();
+      }
+
+      function screenColor(label) {
+        if (!label) return '#94A3B8';
+        if (label.indexOf('高风险') >= 0 || label.indexOf('关注') >= 0) return '#EF4444';
+        if (label.indexOf('确认') >= 0 || label.indexOf('待定') >= 0) return '#F59E0B';
+        return '#10B981';
       }
 
       function finishToLogin() {
@@ -692,6 +901,10 @@
       }
 
       onMounted(async () => {
+        window.addEventListener('scroll', listenForReportActivity, true);
+        window.addEventListener('pointerdown', listenForReportActivity, { passive: true });
+        window.addEventListener('touchstart', listenForReportActivity, { passive: true });
+        window.addEventListener('keydown', listenForReportActivity);
         // 路由守卫：未录入身份 → 跳登录页
         if (!localStorage.getItem('psych_user')) {
           location.href = '/login';
@@ -702,6 +915,10 @@
         preload();
       });
       onBeforeUnmount(() => {
+        window.removeEventListener('scroll', listenForReportActivity, true);
+        window.removeEventListener('pointerdown', listenForReportActivity);
+        window.removeEventListener('touchstart', listenForReportActivity);
+        window.removeEventListener('keydown', listenForReportActivity);
         if (qTimer) clearInterval(qTimer);
         if (hintTimer) clearInterval(hintTimer);
         if (introTimer) clearTimeout(introTimer);
@@ -713,7 +930,7 @@
       return {
         phase, current, currentIndex, qProgress, questions,
         selections, faceReady, cameraOn, consentOpen, agreed, videoEl, report, loadingHint, imgLoaded,
-        begin, confirmConsent, toggle, isSelected, onImgErr, finishToLogin, reportCountdown,
+        begin, confirmConsent, toggle, isSelected, onImgErr, finishToLogin, reportCountdown, screenColor, resetReportCountdown,
       };
     },
   }).mount('#app');

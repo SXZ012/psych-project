@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "*"
     API_V1_PREFIX: str = "/api/v1"
     ASSESSMENT_DURATION_SECONDS: int = 60  # 方案：60秒快筛
-    SESSION_PAIR_COUNT: int = 4  # 单次测评轮播图片数（每张~12-13s）
+    SESSION_PAIR_COUNT: int = 5  # 单次测评轮播图片数（5 张 × 10s = 50s，即 5~55s）
     CREATE_TABLES_ON_START: bool = True  # dev 便捷：启动即建表（生产改用 Alembic）
 
     # ---- 路线开关 (方案 Demo 路线 A/B) ----
