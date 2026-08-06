@@ -2,7 +2,15 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer
+
+
+def mask_id_card(value: str | None) -> str | None:
+    if not value:
+        return value
+    if len(value) == 18:
+        return f"{value[:3]}{'*' * 11}{value[-4:]}"
+    return "*" * len(value)
 
 
 class AssessmentCreate(BaseModel):
@@ -38,9 +46,22 @@ class AssessmentOut(BaseModel):
     provider_mode: str
     created_at: datetime
     completed_at: datetime | None = None
+    video_status: str | None = None
+    backup_status: str | None = None
+    partner_upload_status: str | None = None
+    duration_seconds: int | None = None
+    retry_count: int = 0
+    error_code: str | None = None
     error_message: str | None = None
+    submitted_at: datetime | None = None
+    processing_started_at: datetime | None = None
+    report_generated_at: datetime | None = None
     review_status: str = "pending"  # 后台处理状态
     admin_note: str | None = None  # 管理员内部备注
+
+    @field_serializer("id_card")
+    def serialize_id_card(self, value: str | None) -> str | None:
+        return mask_id_card(value)
 
 
 class AssessmentDetail(AssessmentOut):

@@ -6,7 +6,9 @@ Demo 阶段以 FastAPI BackgroundTasks 驱动（单进程内 asyncio）。
 from __future__ import annotations
 
 import logging
+import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import select
@@ -14,7 +16,9 @@ from sqlalchemy import select
 from app.db.base import AsyncSessionLocal
 from app.models.assessment import Assessment, AssessmentResult, AssessmentStatus
 from app.services.qwen.report import generate_report
+from app.services.oss.client import OSSClient
 from app.services.v3.provider import get_v3_provider
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +32,46 @@ async def run_assessment(assessment_id: UUID) -> None:
             logger.warning("assessment %s 不存在", assessment_id)
             return
 
-        assessment.status = AssessmentStatus.processing
+        assessment.status = AssessmentStatus.video_processing
+        assessment.processing_started_at = datetime.now(timezone.utc)
         await db.commit()
 
         try:
+            if not assessment.video_storage_key:
+                raise ValueError("测评视频缺失，无法开始分析")
+            video_path = Path(__file__).resolve().parents[3] / "data" / assessment.video_storage_key
+            if not video_path.is_file():
+                raise FileNotFoundError(f"测评视频不存在: {assessment.video_storage_key}")
+
+            # 我方保留一份私有OSS备份；本地文件只作为临时中转。
+            if settings.OSS_ACCESS_KEY_ID and settings.OSS_ACCESS_KEY_SECRET and settings.OSS_BUCKET_NAME:
+                backup_key = OSSClient.gen_object_key("assessment-videos", video_path.name)
+                await asyncio.to_thread(
+                    OSSClient().upload_file, video_path, backup_key, "video/webm"
+                )
+                assessment.backup_storage_key = backup_key
+                assessment.backup_status = "completed"
+                logger.info("assessment %s 我方视频备份完成: %s", assessment_id, backup_key)
+            else:
+                # Demo未配置我方OSS时保留本地文件，避免误删唯一副本。
+                assessment.backup_status = "local_only"
+                logger.warning("assessment %s 未配置我方OSS，视频仅保留本地临时副本", assessment_id)
+            assessment.partner_upload_status = "pending"
+            await db.commit()
+
             provider = get_v3_provider()
+            assessment.status = AssessmentStatus.uploading
+            assessment.video_status = "ready"
+            await db.commit()
+            # Provider.run encapsulates upload/create/poll; expose the long
+            # running part as processing to the administrator UI.
+            assessment.status = AssessmentStatus.processing
+            assessment.partner_upload_status = "uploading"
+            await db.commit()
             result = await provider.run(
-                sds_score=assessment.sds_score,
-                sas_score=assessment.sas_score,
+                video_path=video_path,
             )
+            assessment.partner_upload_status = "completed"
 
             summary = result.get("summary") or {}
             cs = summary.get("clinical_screening") or {}
@@ -66,18 +101,32 @@ async def run_assessment(assessment_id: UUID) -> None:
                 timeline_url=timeline_url,
             )
             db.add(ar)
-            assessment.status = AssessmentStatus.completed
+            assessment.status = AssessmentStatus.report_generating
+            assessment.report_generated_at = datetime.now(timezone.utc)
             assessment.completed_at = datetime.now(timezone.utc)
             await db.commit()
-            logger.info("assessment %s 完成", assessment_id)
 
-            # 生成 Qwen 个性化解读报告（失败不影响 V3 测评结果）
+            # 1.0保留QwenPlus：仅将V3事实层整理为供管理员复核的专业报告，
+            # 不重算/新增任何分数，也不在用户端展示。Qwen不可用时仍保留V3结果。
             try:
                 ar.qwen_report = await generate_report(summary)
                 await db.commit()
-                logger.info("assessment %s Qwen 报告已生成", assessment_id)
+                logger.info("assessment %s QwenPlus后台报告已生成", assessment_id)
             except Exception:  # noqa: BLE001
-                logger.exception("assessment %s Qwen 报告生成失败（不影响测评结果）", assessment_id)
+                logger.exception("assessment %s QwenPlus报告生成失败，保留V3结构化结果", assessment_id)
+
+            assessment.status = AssessmentStatus.completed
+            try:
+                if assessment.backup_status == "completed":
+                    video_path.unlink(missing_ok=True)
+                    assessment.video_status = "deleted"
+                else:
+                    assessment.video_status = "retained_local_only"
+            except OSError:
+                assessment.video_status = "cleanup_failed"
+                logger.exception("assessment %s 临时视频清理失败", assessment_id)
+            await db.commit()
+            logger.info("assessment %s 完成", assessment_id)
         except Exception as e:  # noqa: BLE001
             logger.exception("assessment %s 失败", assessment_id)
             await db.rollback()
@@ -86,6 +135,8 @@ async def run_assessment(assessment_id: UUID) -> None:
             ).scalar_one_or_none()
             if assessment is not None:
                 assessment.status = AssessmentStatus.failed
+                assessment.partner_upload_status = "failed" if assessment.partner_upload_status in {"pending", "uploading"} else assessment.partner_upload_status
+                assessment.error_code = type(e).__name__
                 assessment.error_message = str(e)[:500]
                 assessment.completed_at = datetime.now(timezone.utc)
                 await db.commit()

@@ -51,12 +51,12 @@ class Settings(BaseSettings):
     V3_POLL_INTERVAL: int = 5
     V3_POLL_TIMEOUT: int = 600
 
-    # ---- 阿里云百炼 / QwenPlus（个性化报告解读）----
+    # ---- 阿里云百炼 / QwenPlus（1.0后台报告专业化表达，不重算V3分数）----
     DASHSCOPE_API_KEY: str = ""
     QWEN_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     QWEN_MODEL: str = "qwen-plus"
 
-    # ---- 阿里云 OSS（诱发图片库；视频走合作方 OSS，不在此）----
+    # ---- 阿里云 OSS（诱发图片库 + 我方视频备份，私有Bucket）----
     OSS_ACCESS_KEY_ID: str = ""
     OSS_ACCESS_KEY_SECRET: str = ""
     OSS_ENDPOINT: str = ""

@@ -14,6 +14,12 @@
   ::-webkit-scrollbar-thumb:hover{ background:#94A3B8; }
   .card-row{ box-shadow:0 1px 2px rgba(15,23,42,.04); transition:background-color .25s ease, box-shadow .25s ease, transform .25s ease; }
   .card-row:hover{ background-color:#F8FAFC; box-shadow:0 10px 28px -10px rgba(15,23,42,.10); transform:translateY(-1px); }
+  .record-grid{ display:grid; grid-template-columns:minmax(220px,1.25fr) 96px minmax(390px,2fr) minmax(315px,1.35fr); align-items:center; column-gap:20px; }
+  .record-result{ display:grid; grid-template-columns:52px minmax(150px,auto); align-items:center; justify-content:center; column-gap:14px; min-width:0; }
+  .record-result .failure-reason{ grid-column:1 / -1; width:100%; margin-top:8px; line-height:1.45; white-space:normal; overflow-wrap:anywhere; }
+  .record-actions{ min-width:315px; }
+  @media (max-width:1100px){ .record-grid{ grid-template-columns:220px 78px minmax(330px,1fr) 280px; column-gap:12px; } .record-actions{ min-width:280px; } }
+  @media (max-width:900px){ .record-grid{ display:flex; flex-wrap:wrap; gap:14px; } .record-result{ flex:1 1 390px; } .record-actions{ margin-left:auto; } }
   .ring-fill{ transition:stroke-dasharray .9s cubic-bezier(.22,.61,.36,1), stroke .35s ease; }
   .barfill{ transition:width .9s cubic-bezier(.22,.61,.36,1); }
   .badge{ display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:999px; font-size:12px; font-weight:500; line-height:1.5; white-space:nowrap; }
@@ -76,7 +82,7 @@
         <div class="flex-1 flex justify-center">
           <div class="relative w-full max-w-md">
             <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-            <input v-model="search" placeholder="搜索 姓名 / 工号 / 编号" class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-full text-sm transition focus:outline-none focus:bg-white focus:border-sky-300 focus:ring-2 focus:ring-sky-100" />
+            <input v-model="search" @keyup.enter="loadData" placeholder="搜索姓名或身份证号，回车查询" class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-full text-sm transition focus:outline-none focus:bg-white focus:border-sky-300 focus:ring-2 focus:ring-sky-100" />
           </div>
         </div>
         <button @click="allOpen=true" class="shrink-0 px-4 py-2 text-sm text-sky-600 border border-sky-200 rounded-full hover:bg-sky-50 transition flex items-center gap-1.5">
@@ -386,32 +392,38 @@
 
 <template id="tpl-report-card">
   <div class="card-row group bg-white rounded-xl overflow-hidden" :style="{borderLeft:'4px solid '+statusColor(report.review_status)}">
-    <div class="flex items-center gap-5 px-7 py-5">
-      <div class="flex items-center gap-3 min-w-0 w-52 shrink-0">
+    <div class="record-grid px-7 py-5">
+      <div class="flex items-center gap-3 min-w-0">
         <div class="w-10 h-10 rounded-full flex items-center justify-center font-medium text-base shrink-0" :style="avatarBg(report)">{{ (report.name||'?').charAt(0) }}</div>
         <div class="min-w-0 flex flex-col justify-center">
           <div class="font-medium truncate text-gray-800 text-base">{{ report.name }}</div>
           <div class="text-xs text-gray-400 truncate mt-0.5">{{ report.role }} · {{ maskId(report.idcard) }}</div>
         </div>
       </div>
-      <div class="hidden lg:block w-24 shrink-0">
+      <div class="hidden lg:block">
         <div class="text-sm" :class="ageText(report.idcard)?'text-gray-500':'text-gray-300'">{{ ageText(report.idcard) || 'N/A' }}</div>
         <div class="text-xs text-gray-400 mt-0.5">{{ genderFromId(report.idcard) }}</div>
       </div>
-      <div class="flex-1 flex items-center justify-center gap-3">
-        <div class="relative w-11 h-11 shrink-0">
+      <div class="record-result">
+        <div class="relative w-11 h-11 shrink-0 justify-self-center">
           <svg class="w-11 h-11" style="transform:rotate(-90deg)" viewBox="0 0 36 36">
             <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F0F2F5" stroke-width="2.5"/>
             <circle class="ring-fill" cx="18" cy="18" r="15.9155" fill="none" :stroke="ovColor(report.summary)" stroke-width="2.5" stroke-linecap="round" :stroke-dasharray="(ovScore(report.summary)||0) + ' 100'" />
           </svg>
           <div class="absolute inset-0 flex items-center justify-center"><span class="text-[13px] font-semibold leading-none text-gray-700">{{ ovScore(report.summary) ?? report.overall ?? '--' }}</span></div>
         </div>
-        <span class="badge" :class="badgeByLabel(ovLabel(report.summary))">{{ ovLabel(report.summary) || levelLabel(report.overall) }}</span>
+        <div class="flex flex-col items-start gap-1 min-w-0">
+          <span class="badge" :class="badgeByLabel(ovLabel(report.summary))">{{ resultLabel(report) }}</span>
+          <span v-if="report.status && report.status !== 'completed'" class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" :style="{background: procStatusColor(report.status) + '22', color: procStatusColor(report.status)}">{{ procStatusLabel(report.status) }}</span>
+          <span v-if="report.provider_mode === 'mock'" class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style="background:#FEF3C7;color:#92400E;">模拟数据</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" :title="'我方备份：'+(report.backup_status||'未完成')+'；合作方：'+(report.partner_upload_status||'未开始')" :style="{background: videoStatusColor(report.video_status) + '22', color: videoStatusColor(report.video_status)}">视频：{{ videoStatusLabel(report.video_status) }}</span>
+        </div>
+        <div v-if="report.status === 'failed'" class="failure-reason text-[11px] text-red-600" :title="friendlyError(report.error_message)">失败原因：{{ friendlyError(report.error_message) }}</div>
       </div>
-      <div class="flex flex-col items-end gap-1.5 shrink-0">
+      <div class="record-actions flex flex-col items-end gap-1.5">
         <div class="flex gap-1.5">
-          <span class="badge dot" :title="'抑郁筛查：'+dirLabel(report.summary,'depression')"><span class="dot" :style="{background:dotColor(dirLabel(report.summary,'depression'))}"></span>抑</span>
-          <span class="badge dot" :title="'焦虑筛查：'+dirLabel(report.summary,'anxiety')"><span class="dot" :style="{background:dotColor(dirLabel(report.summary,'anxiety'))}"></span>焦</span>
+          <span class="badge dot" :title="'抑郁方向筛查：'+dirLabel(report.summary,'depression')+'（仅作风险线索，不代表临床诊断）'"><span class="dot" :style="{background:dotColor(dirLabel(report.summary,'depression'))}"></span>抑郁</span>
+          <span class="badge dot" :title="'焦虑方向筛查：'+dirLabel(report.summary,'anxiety')+'（仅作风险线索，不代表临床诊断）'"><span class="dot" :style="{background:dotColor(dirLabel(report.summary,'anxiety'))}"></span>焦虑</span>
         </div>
         <div class="flex items-center gap-2.5">
           <span class="text-xs text-gray-400">{{ report.date }} {{ report.time }}</span>
@@ -488,13 +500,13 @@
   ];
 
   const FAKE = [
-    {id:"001", full_id:"", name:"张伟", role:"飞行员",   idcard:"110101199003077890", date:"2026-07-28", time:"10:30", overall:72, review_status:"following", admin_note:"已电话回访，情绪平稳，建议两周后复测。", summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
-    {id:"002", full_id:"", name:"李娜", role:"心理测评", idcard:"310101199507184422", date:"2026-07-26", time:"15:20", overall:55, review_status:"closed", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
-    {id:"003", full_id:"", name:"王强", role:"应急救援", idcard:"440101198812126033", date:"2026-07-26", time:"09:15", overall:88, review_status:"following", admin_note:"高危预警，已转介心理咨询师，下周面谈。", summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
-    {id:"004", full_id:"", name:"刘洋", role:"轨道交通", idcard:"120101199201056045", date:"2026-07-25", time:"14:00", overall:48, review_status:"closed", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
-    {id:"005", full_id:"", name:"陈静", role:"飞行员",   idcard:"510101199611225862", date:"2026-07-25", time:"11:30", overall:63, review_status:"pending", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
-    {id:"006", full_id:"", name:"赵磊", role:"心理测评", idcard:"320101198905093974", date:"2026-07-24", time:"16:45", overall:58, review_status:"pending", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
-    {id:"007", full_id:"", name:"孙悦", role:"轨道交通", idcard:"350101199408302846", date:"2026-07-24", time:"10:00", overall:67, review_status:"pending", admin_note:null, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"001", full_id:"", name:"张伟", role:"飞行员",   idcard:"110101199003077890", date:"2026-07-28", time:"10:30", overall:72, review_status:"following", admin_note:"已电话回访，情绪平稳，建议两周后复测。", status:"completed", provider_mode:"mock", video_status:"received", error_message:null, retry_count:0, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"002", full_id:"", name:"李娜", role:"心理测评", idcard:"310101199507184422", date:"2026-07-26", time:"15:20", overall:55, review_status:"closed", admin_note:null, status:"completed", provider_mode:"mock", video_status:"received", error_message:null, retry_count:0, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"003", full_id:"", name:"王强", role:"应急救援", idcard:"440101198812126033", date:"2026-07-26", time:"09:15", overall:88, review_status:"following", admin_note:"高危预警，已转介心理咨询师，下周面谈。", status:"processing", provider_mode:"mock", video_status:"transcoding", error_message:null, retry_count:0, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"004", full_id:"", name:"刘洋", role:"轨道交通", idcard:"120101199201056045", date:"2026-07-25", time:"14:00", overall:48, review_status:"closed", admin_note:null, status:"completed", provider_mode:"mock", video_status:"received", error_message:null, retry_count:0, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"005", full_id:"", name:"陈静", role:"飞行员",   idcard:"510101199611225862", date:"2026-07-25", time:"11:30", overall:63, review_status:"pending", admin_note:null, status:"failed", provider_mode:"real", video_status:"received", error_message:"V3任务超时（10分钟）", retry_count:2, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"006", full_id:"", name:"赵磊", role:"心理测评", idcard:"320101198905093974", date:"2026-07-24", time:"16:45", overall:58, review_status:"pending", admin_note:null, status:"pending", provider_mode:"mock", video_status:null, error_message:null, retry_count:0, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
+    {id:"007", full_id:"", name:"孙悦", role:"轨道交通", idcard:"350101199408302846", date:"2026-07-24", time:"10:00", overall:67, review_status:"pending", admin_note:null, status:"pending", provider_mode:"mock", video_status:"received", error_message:null, retry_count:0, summary:FAKE_SUMMARY, timeline:FAKE_TIMELINE},
   ];
 
   const DIM_DEFS = [["stress","压力负荷"],["fatigue","疲劳恢复"],["arousal","生理唤醒"],["attention","视觉注意"]];
@@ -532,6 +544,46 @@
   function dotColor(t){ if(/高风险|关注|偏高/.test(t||"")) return "#F87171"; if(/确认|待定|偏低/.test(t||"")) return "#F59E0B"; return "#14B8A8"; }
   function statusColor(s){ if(s==="following") return "#F59E0B"; if(s==="closed") return "#10B981"; return "#E2E8F0"; }
   function avatarBg(report){ if(report && report.overall > 70) return {background:"#FEE2E2", color:"#B91C1C"}; return {background:"#F1F5F9", color:"#475569"}; }
+
+  function procStatusLabel(s) {
+    const m = { pending:'待处理', video_processing:'转码中', uploading:'上传中', queued:'排队中', processing:'V3分析中', report_generating:'生成报告', completed:'已完成', failed:'失败' };
+    return m[s] || s || '—';
+  }
+  function procStatusColor(s) {
+    if (s === 'completed') return '#10B981';
+    if (s === 'failed') return '#EF4444';
+    if (s === 'pending') return '#94A3B8';
+    return '#F59E0B';
+  }
+  function resultLabel(report) {
+    if (!report || report.status === 'failed') return '暂无结果';
+    if (!report.summary && report.overall == null) return '等待结果';
+    return ovLabel(report.summary) || levelLabel(report.overall);
+  }
+  function videoStatusLabel(s) {
+    const m = { received:'已接收', ready:'已就绪', transcoding:'转码中', uploading:'上传中', deleted:'已清理', cleanup_failed:'清理异常', failed:'视频异常' };
+    return m[s] || s || '未上传';
+  }
+  function videoStatusColor(s) {
+    if (s === 'deleted' || s === 'ready') return '#10B981';
+    if (s === 'failed' || s === 'cleanup_failed') return '#EF4444';
+    return '#64748B';
+  }
+  function friendlyError(message) {
+    if (!message) return '未记录具体原因';
+    const text = String(message);
+    if (/sds_score|sas_score|no attribute/i.test(text)) return '历史版本字段错误，请重新提交该测评';
+    if (/视频缺失|video.*missing|video.*not.*found/i.test(text)) return '未收到测评视频，请重新进行测评';
+    if (/timeout|超时/i.test(text)) return '分析服务响应超时，请稍后重试';
+    if (/格式|format|mime/i.test(text)) return '视频格式不支持，请重新进行测评';
+    return '后台处理异常，请联系技术人员';
+  }
+  function formatBeijing(iso) {
+    if (!iso) return {date:'—', time:''};
+    const parts = new Intl.DateTimeFormat('zh-CN', {timeZone:'Asia/Shanghai', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false}).formatToParts(new Date(iso));
+    const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+    return {date:`${p.year}-${p.month}-${p.day}`, time:`${p.hour}:${p.minute}`};
+  }
   function fmt1(v){ return (v==null||v===undefined) ? "—" : (+v).toFixed(1); }
   function fmt3(v){ return (v==null||v===undefined) ? "—" : (+v).toFixed(3); }
   function pct(v){ return (v==null||v===undefined) ? "—" : Math.round((+v)*100)+"%"; }
@@ -560,7 +612,7 @@
 
   const app = createApp({
     setup(){
-      const loginOk = ref(sessionStorage.getItem("admin_ok")==="1");
+      const loginOk = ref(false);
       const pw = ref(""); const loginErr = ref("");
       const records = ref([]);
       const date = ref(null);
@@ -582,7 +634,9 @@
         if(date.value) rs = rs.filter(r=>r.date===date.value);
         if(statusFilter.value) rs = rs.filter(r=>r.review_status===statusFilter.value);
         const q = search.value.trim().toLowerCase();
-        if(q) rs = rs.filter(r=> (r.name||"").toLowerCase().includes(q)||(r.idcard||"").toLowerCase().includes(q)||(r.id||"").toLowerCase().includes(q));
+        if(q && !/^\d{17}[\dx]$/.test(q)) {
+          rs = rs.filter(r=> (r.name||"").toLowerCase().includes(q)||(r.idcard||"").toLowerCase().includes(q)||(r.id||"").toLowerCase().includes(q));
+        }
         rs.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
         return rs;
       });
@@ -605,8 +659,8 @@
       async function doLogin(){
         try{
           const r = await fetch("/api/v1/admin/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({password:pw.value})});
-          if(r.ok){ sessionStorage.setItem("admin_ok","1"); loginOk.value=true; } else loginErr.value="口令错误";
-        }catch(e){ loginErr.value="离线演示模式，直接进入"; sessionStorage.setItem("admin_ok","1"); setTimeout(()=>loginOk.value=true,500); }
+          if(r.ok){ sessionStorage.setItem("admin_ok","1"); loginOk.value=true; await loadData(); } else loginErr.value="口令错误";
+        }catch(e){ loginErr.value="无法连接后台，请稍后重试"; }
       }
       async function saveStatus({id, status}){
         const r = records.value.find(x=>x.id===id); if(!r) return;
@@ -631,38 +685,55 @@
       }
       async function loadData(){
         try{
-          const lst = await (await fetch("/api/v1/assessments?limit=50")).json();
+          const query = search.value.trim();
+          const params = new URLSearchParams({limit:"50"});
+          if(query){
+            if(/^\d{17}[\dXx]$/.test(query)) params.set("id_card", query);
+            else params.set("name", query);
+          }
+          const listResponse = await fetch(`/api/v1/assessments?${params.toString()}`);
+          if(!listResponse.ok) throw new Error("后台未授权");
+          const lst = await listResponse.json();
           if(lst && lst.length){
             const recs = [];
             for(const a of lst){
               try{
-                const d = await (await fetch(`/api/v1/assessments/${a.id}`)).json();
+                const detailResponse = await fetch(`/api/v1/assessments/${a.id}`);
+                if(!detailResponse.ok) continue;
+                const d = await detailResponse.json();
                 const r = d.result||{};
+                const localTime = formatBeijing(d.created_at);
                 recs.push({
                   id:(d.id||"").slice(0,8), full_id:d.id||"",
                   name:d.name||d.subject_id||"—", role:d.subject_id||"受测者", idcard:d.id_card||"",
-                  date:(d.created_at||"").slice(0,10)||"—", time:(d.created_at||"").slice(11,16)||"",
+                  date:localTime.date, time:localTime.time,
                   overall:r.overall_score,
                   review_status:d.review_status||"pending", admin_note:d.admin_note||null,
-                  summary:r.summary_json||null,                                   // V3 完整 summary（管理员专属）
-                  timeline:(r.timeline_json && r.timeline_json.events) || [],     // 分时段事件
+                  status:d.status||"pending",                                    // V3处理状态
+                  provider_mode:d.provider_mode||"mock",                        // 数据来源
+                  video_status:d.video_status||null,                             // 视频状态
+                  backup_status:d.backup_status||null,                           // 我方OSS备份状态
+                  partner_upload_status:d.partner_upload_status||null,           // 合作方OSS/接口状态
+                  error_message:d.error_message||null,                           // 失败原因
+                  retry_count:d.retry_count||0,
+                  summary:r.summary_json||null,
+                  timeline:(r.timeline_json && r.timeline_json.events) || [],
                 });
               }catch(e){}
             }
             if(recs.length){ records.value=recs; return; }
           }
-        }catch(e){}
-        records.value = FAKE;
+        }catch(e){ records.value = []; showToast("无法加载后台数据，请重新登录或检查服务"); }
       }
-      loadData();
       return {
         loginOk,pw,loginErr,records,date,statusFilter,search,
         reportOpen,allOpen,currentId,activeTab,editOpen,editForm,noteModalOpen,noteTarget,noteDraft,toastMsg,toastVisible,
         current,dates,filtered,TABS,
-        setDate,setStatusFilter,openReport,closeReport,doLogin,saveStatus,openNote,saveNote,deleteNote,openEdit,saveInfo,
+        setDate,setStatusFilter,openReport,closeReport,doLogin,loadData,saveStatus,openNote,saveNote,deleteNote,openEdit,saveInfo,
         ageText,genderFromId,maskId,scoreColor,levelLabel,badgeByLabel,dotColor,statusColor,avatarBg,fmt1,fmt3,pct,
         ovScore,ovName,ovLabel,ovColor,plLabel,plPositioning,dimsOf,screenOf,dirLabel,dirBadge:function(s,k){return badgeByLabel(dirLabel(s,k));},
         confScore,confPct,confLabel,confColor,confComps,confCompName,qOf,eventsOf,severityColor,sevLabel,sevBadge,
+        procStatusLabel,procStatusColor,resultLabel,videoStatusLabel,videoStatusColor,friendlyError,
       };
     },
   });
@@ -683,7 +754,11 @@
     emits: ["open-report","open-edit","save-status","open-note","delete-note"],
     setup(props, { emit }){
       const onStatus = e => emit("save-status", { id: props.report.id, status: e.target.value });
-      return { onStatus, maskId, ageText, genderFromId, avatarBg, statusColor, ovScore, ovColor, ovLabel, levelLabel, badgeByLabel, dotColor, dirLabel };
+      return {
+        onStatus, maskId, ageText, genderFromId, avatarBg, statusColor,
+        procStatusLabel, procStatusColor, resultLabel, videoStatusLabel, videoStatusColor, friendlyError, ovScore, ovColor, ovLabel,
+        levelLabel, badgeByLabel, dotColor, dirLabel,
+      };
     },
   });
   app.component("report-list", {

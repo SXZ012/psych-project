@@ -60,6 +60,7 @@ dist/
 *.sqlite3
 uploads/
 media/
+data/
 
 # ===== 本地备注 =====
 TODO.local.md

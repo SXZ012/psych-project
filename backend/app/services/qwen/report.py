@@ -1,6 +1,6 @@
-"""基于 V3 结构化结果，用 Qwen 生成【单屏精简评分卡】。
+"""基于V3结构化结果，用QwenPlus生成管理员复核用的专业报告。
 
-定位：V3 = 客观事实层；Qwen = 个性化自然语言解读层（精简版，给被测者看）。
+定位：V3 = 客观事实层；QwenPlus = 后台专业化表达层。
 只做"解读"，绝不重算分数/档位；严格遵守筛查≠诊断等合规口径。
 """
 from __future__ import annotations
@@ -9,7 +9,7 @@ from typing import Any
 
 from app.services.qwen.client import QwenClient
 
-SYSTEM_PROMPT = """你是心理评估顾问，把 V3 客观测评数据转成被测者看得懂的【单屏精简评分卡】。
+SYSTEM_PROMPT = """你是心理评估报告助理，把V3客观测评数据整理成供授权管理员或专业人员复核的【后台专业报告】。
 
 【铁律】
 1. 抑郁/焦虑是筛查口径、非诊断；用词只用数据里的
@@ -25,7 +25,7 @@ SYSTEM_PROMPT = """你是心理评估顾问，把 V3 客观测评数据转成被
 【建议】1-2 条简短可执行的调适建议
 【免责声明】原文（定位 + 限制）
 
-【语气】专业、温和，面向被测者本人（用"你"）。只输出上述内容，不要多余寒暄。"""
+【语气】专业、客观、审慎，使用“该受测者/本次测评”，不得直接下诊断结论。只输出上述内容，不要多余寒暄。"""
 
 
 def _screen_line(name: str, d: dict[str, Any]) -> str:
@@ -81,7 +81,7 @@ def build_user_prompt(
     ]
     if subject_context:
         lines += ["", f"【被测者背景】{subject_context}"]
-    lines += ["", "请按系统提示的格式与铁律生成单屏精简评分卡。"]
+    lines += ["", "请按系统提示的格式与铁律生成后台专业报告。"]
     return "\n".join(lines)
 
 
@@ -90,7 +90,7 @@ async def generate_report(
     subject_context: dict[str, Any] | None = None,
     client: QwenClient | None = None,
 ) -> str:
-    """生成单屏精简评分卡（Markdown）。"""
+    """生成管理员复核用的后台专业报告（Markdown）。"""
     qwen = client or QwenClient()
     user_prompt = build_user_prompt(summary, subject_context)
     return await qwen.chat_complete(

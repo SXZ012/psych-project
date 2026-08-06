@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from sqlalchemy import text
 
 # 导入模型，使其注册到 Base.metadata（供启动时 create_all）
 import app.models  # noqa: F401
@@ -30,6 +31,37 @@ async def lifespan(app: FastAPI):
     if settings.CREATE_TABLES_ON_START:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            # Development compatibility for databases created before the
+            # asynchronous video/report states were added. Production should
+            # run the equivalent migration before deployment.
+            for value in ("video_processing", "queued", "report_generating"):
+                await conn.execute(
+                    text(
+                        "ALTER TYPE assessment_status ADD VALUE IF NOT EXISTS "
+                        f"'{value}'"
+                    )
+                )
+            for column, sql_type in (
+                ("video_storage_key", "VARCHAR(256)"),
+                ("backup_storage_key", "VARCHAR(256)"),
+                ("backup_status", "VARCHAR(32)"),
+                ("partner_upload_status", "VARCHAR(32)"),
+                ("partner_file_id", "VARCHAR(128)"),
+                ("video_status", "VARCHAR(32)"),
+                ("selections_data", "JSONB"),
+                ("duration_seconds", "INTEGER"),
+                ("retry_count", "INTEGER NOT NULL DEFAULT 0"),
+                ("error_code", "VARCHAR(64)"),
+                ("submitted_at", "TIMESTAMPTZ"),
+                ("processing_started_at", "TIMESTAMPTZ"),
+                ("report_generated_at", "TIMESTAMPTZ"),
+            ):
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE assessments ADD COLUMN IF NOT EXISTS "
+                        f"{column} {sql_type}"
+                    )
+                )
     logger.info("应用启动 | env=%s provider=%s", settings.ENV, settings.PROVIDER_MODE)
     yield
     logger.info("应用关闭")

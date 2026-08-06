@@ -11,11 +11,14 @@ from app.db.base import Base
 
 
 class AssessmentStatus(str, enum.Enum):
-    pending = "pending"
-    uploading = "uploading"
-    processing = "processing"
-    completed = "completed"
-    failed = "failed"
+    pending = "pending"              # 数据已提交，待处理
+    video_processing = "video_processing"  # 视频转码中
+    uploading = "uploading"          # 上传合作方 OSS
+    queued = "queued"                # V3 任务已创建排队
+    processing = "processing"        # V3 模型分析中
+    report_generating = "report_generating"  # 生成报告中
+    completed = "completed"          # 报告已生成
+    failed = "failed"                # 处理失败
 
 
 class Assessment(Base):
@@ -37,9 +40,26 @@ class Assessment(Base):
     v3_task_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     v3_file_id: Mapped[int | None] = mapped_column(nullable=True)
     video_filename: Mapped[str | None] = mapped_column(String(256), nullable=True)
-    sds_score: Mapped[float | None] = mapped_column(nullable=True)
-    sas_score: Mapped[float | None] = mapped_column(nullable=True)
+    video_storage_key: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    backup_storage_key: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    backup_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    partner_upload_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    partner_file_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    video_status: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )  # received/transcoding/ready/failed
+    selections_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # 答题+反应时
+    duration_seconds: Mapped[int | None] = mapped_column(nullable=True)
+    retry_count: Mapped[int] = mapped_column(default=0, nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    processing_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    report_generated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     # —— 后台管理字段（仅管理员可见/操作，不进入用户报告）——
     review_status: Mapped[str] = mapped_column(
         String(16), default="pending", nullable=False, index=True
@@ -59,7 +79,7 @@ class Assessment(Base):
 
 
 class AssessmentResult(Base):
-    """V3 分析结果摘要 + Qwen 报告（一对一关联测评）。"""
+    """V3 结构化分析结果（一对一关联测评）。"""
 
     __tablename__ = "assessment_results"
 
@@ -79,7 +99,9 @@ class AssessmentResult(Base):
     summary_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # V3 summary 全量
     timeline_url: Mapped[str | None] = mapped_column(Text, nullable=True)  # real: 转存后的 OSS URL
     timeline_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # mock: 内联 timeline
-    qwen_report: Mapped[str | None] = mapped_column(Text, nullable=True)  # 后续 Qwen 模块填充
+    qwen_report: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # 预留，不参与当前1.0报告生成
     created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
 
     assessment: Mapped["Assessment"] = relationship(back_populates="result")
