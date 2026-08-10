@@ -239,9 +239,11 @@
             <div class="flex justify-between"><span class="text-gray-500">清晰度</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'sharpness_mean')) }}</span></div>
             <div class="flex justify-between"><span class="text-gray-500">人脸质量</span><span class="text-gray-700">{{ pct(qOf(current.summary,'face_quality')) }}</span></div>
             <div class="flex justify-between"><span class="text-gray-500">运动噪声</span><span class="text-gray-700">{{ fmt3(qOf(current.summary,'motion_noise_index')) }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">rPPG 置信</span><span class="text-gray-700">{{ pct(qOf(current.summary,'rppg_confidence')) }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">rPPG 置信</span><span class="text-gray-700">{{ pct(rppgConfidence(current.summary)) }}</span></div>
             <div class="flex justify-between"><span class="text-gray-500">丢帧率</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'drop_rate_percent')) }}%</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">rPPG 可用</span><span class="text-gray-700">{{ qOf(current.summary,'rppg_window_usable') ? '是' : '否' }}</span></div>
+            <div class="flex justify-between"><span class="text-gray-500">rPPG 生理信号</span><span class="text-gray-700">{{ rppgAvailabilityLabel(current.summary) }}</span></div>
+            <div v-if="rppgReasons(current.summary)" class="text-xs text-amber-600 leading-5">不可用原因：{{ rppgReasons(current.summary) }}</div>
+            <div class="flex justify-between"><span class="text-gray-500">眼动 / 视觉注意</span><span class="text-gray-700">{{ eyeTrackingLabel(current.summary) }}</span></div>
           </div>
         </div>
 
@@ -489,6 +491,8 @@
     },
     confidence: { score:0.814, level:{label:"高", color:"#16A34A"}, components:{video_quality:0.715,effective_duration:1.0,modality_completeness:1.0,signal_stability:0.8,modality_consistency:0.65,history_stability:0.5} },
     quality: { face_valid_ratio:1.0, brightness_mean:168.9, sharpness_mean:12.56, face_quality:0.715, motion_noise_index:0.224, rppg_confidence:0.782, rppg_window_usable:true, drop_rate_percent:0.0 },
+    rppg_quality_gate: { physiology_available:true, rppg_confidence:0.782, unavailable_reasons:[] },
+    modules: { eye_tracking: { status:"not_collected_in_upload_report" } },
     product_logic_summary: { primary_classification_label:"无明显风险", positioning:"scale_assisted_video_state_reference_not_diagnosis",
       clinical_directions:{ depression:{classification_label:"无明显风险"}, anxiety:{classification_label:"需量表确认"} } },
   };
@@ -546,7 +550,7 @@
   function avatarBg(report){ if(report && report.overall > 70) return {background:"#FEE2E2", color:"#B91C1C"}; return {background:"#F1F5F9", color:"#475569"}; }
 
   function procStatusLabel(s) {
-    const m = { pending:'待处理', video_processing:'转码中', uploading:'上传中', queued:'排队中', processing:'V3分析中', report_generating:'生成报告', completed:'已完成', failed:'失败' };
+    const m = { pending:'待处理', video_processing:'转码中', uploading:'上传中', queued:'排队中', processing:'V3分析中（通常约2–3分钟）', report_generating:'生成报告', completed:'已完成', failed:'失败' };
     return m[s] || s || '—';
   }
   function procStatusColor(s) {
@@ -605,6 +609,24 @@
   function confComps(s){ return (s&&s.confidence&&s.confidence.components)||{}; }
   function confCompName(k){ return CONF_COMP_NAMES[k]||k; }
   function qOf(s,k){ return s && s.quality ? s.quality[k] : undefined; }
+  function rppgGate(s){ return (s && s.rppg_quality_gate) || {}; }
+  function rppgConfidence(s){ const g=rppgGate(s); return g.rppg_confidence ?? qOf(s,'rppg_confidence'); }
+  function rppgAvailabilityLabel(s){
+    const g=rppgGate(s);
+    if(typeof g.physiology_available==='boolean') return g.physiology_available ? '可用' : '不可用';
+    const legacy=qOf(s,'rppg_window_usable');
+    return typeof legacy==='boolean' ? (legacy ? '可用' : '不可用') : '待判定';
+  }
+  function rppgReasons(s){
+    const g=rppgGate(s); const reasons=g.unavailable_reasons || g.reasons || [];
+    return Array.isArray(reasons) ? reasons.filter(Boolean).join('；') : String(reasons||'');
+  }
+  function eyeTrackingLabel(s){
+    const status=(((s||{}).modules||{}).eye_tracking||{}).status || qOf(s,'eye_tracking_status');
+    if(/not_collected|unavailable|missing/i.test(status||'')) return '未采集（不作视觉注意解释）';
+    if(status) return '已采集';
+    return '未提供';
+  }
   function eventsOf(r){ return (r && r.timeline) || []; }
   function severityColor(sev){ if(/peak|high/.test(sev||"")) return "#EF4444"; if(/medium/.test(sev||"")) return "#F59E0B"; if(/low/.test(sev||"")) return "#10B981"; return "#CBD5E1"; }
   function sevLabel(sev){ return {peak:"峰值",high:"偏高",medium:"中等",low:"偏低"}[sev]||sev||"—"; }
@@ -732,7 +754,7 @@
         setDate,setStatusFilter,openReport,closeReport,doLogin,loadData,saveStatus,openNote,saveNote,deleteNote,openEdit,saveInfo,
         ageText,genderFromId,maskId,scoreColor,levelLabel,badgeByLabel,dotColor,statusColor,avatarBg,fmt1,fmt3,pct,
         ovScore,ovName,ovLabel,ovColor,plLabel,plPositioning,dimsOf,screenOf,dirLabel,dirBadge:function(s,k){return badgeByLabel(dirLabel(s,k));},
-        confScore,confPct,confLabel,confColor,confComps,confCompName,qOf,eventsOf,severityColor,sevLabel,sevBadge,
+        confScore,confPct,confLabel,confColor,confComps,confCompName,qOf,rppgConfidence,rppgAvailabilityLabel,rppgReasons,eyeTrackingLabel,eventsOf,severityColor,sevLabel,sevBadge,
         procStatusLabel,procStatusColor,resultLabel,videoStatusLabel,videoStatusColor,friendlyError,
       };
     },

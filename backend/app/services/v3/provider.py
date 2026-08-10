@@ -70,5 +70,6 @@ def get_v3_provider() -> V3Provider:
 
     from app.services.v3.mock import MockV3Provider
 
-    fixture = Path(__file__).parent / "fixtures" / "sample_result.json"
+    # 默认回放合作方最新 V3.2 样例；旧 V3 fixture 保留用于兼容回归。
+    fixture = Path(__file__).parent / "fixtures" / "sample_result_v32.json"
     return MockV3Provider(fixture_path=fixture)

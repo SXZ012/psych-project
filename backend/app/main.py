@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 # 导入模型，使其注册到 Base.metadata（供启动时 create_all）
@@ -23,6 +24,7 @@ logger = logging.getLogger("app.main")
 _DEMO_HTML = Path(__file__).resolve().parent / "static" / "demo.html"
 _ADMIN_HTML = Path(__file__).resolve().parent / "static" / "admin.html"
 _LOGIN_HTML = Path(__file__).resolve().parent / "static" / "login.html"
+_STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 @asynccontextmanager
@@ -82,6 +84,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 本地前端依赖（人脸检测脚本、模型和 WASM），避免终端依赖境外 CDN。
+app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
 
 @app.middleware("http")

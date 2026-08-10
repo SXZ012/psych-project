@@ -8,11 +8,12 @@
 
 ## 当前状态
 
-**Demo 阶段（用户提交链路已跑通，正在进行真实 V3 联调与真机采集验证）**：
+**Demo 阶段（真实 V3 独立联调已通过，等待 USB 摄像头真人采集接入验证）**：
 
 - ✅ FastAPI + PostgreSQL + Redis + 结构化日志 + 环境变量管理
 - ✅ 图题库 ORM + 随机会话调度 + 批量注入脚本（24 张 CC0 图 × 2 题 = 48 配对包）
 - ✅ V3 Provider 抽象层（Mock/Real 零成本切换）
+- ✅ 真实 V3 联调：上传、建任务、轮询、获取 `result`、下载 `timeline` 全链路验证通过
 - ✅ V3结构化结果落库 + QwenPlus后台专业报告
 - ✅ 被测者登录页（姓名+身份证校验）+ 知情同意书（8 条 PIPL 合规条款）
 - ✅ 60 秒终端测评（Vue3 + Tailwind 单文件）
@@ -24,13 +25,13 @@
 - ✅ 我方私有 OSS 视频备份 + 合作方上传状态独立记录；无我方 OSS 时保留本地临时副本
 
 当前优先级：
-1. 阶段 6：确认合作方 Token、上传/任务/轮询接口，完成真实 V3 联调；
-2. 阶段 4：用手机或 USB 摄像头完成真人 60 秒采集和端到端验证；
+1. 阶段 4/6：接入 USB 摄像头，完成浏览器采集的真人 60 秒视频端到端验证；
+2. 阶段 6：将真实 V3 结果映射到正式后台报告，核验视频质量、状态和失败恢复；
 3. 阶段 2：先导入 10–20 张图片验证图库映射，再批量导入 100 张正式图库；
 4. 阶段 5：补齐持久化任务队列、重试/超时、权限、审计和临时文件清理；
 5. 硬件盒子预计约一个月后到位，届时进行阶段 8 的触屏、摄像头、VPU、断网缓存和看门狗适配。
 
-待完成：真实 V3 联调、生产级任务队列、正式 RBAC、FFmpeg 转码、云端部署、硬件适配和最终验收。
+待完成：真人端到端验证、生产级任务队列、正式 RBAC、按实际编码决定是否启用 FFmpeg 转码、云端部署、硬件适配和最终验收。
 
 ## 系统架构
 
@@ -48,7 +49,7 @@
 
 V3 Provider（ABC 抽象）
   ├── Mock（回放 sample_result.json + 随机扰动）
-  └── Real（httpx 异步，Token 鉴权，待凭证）
+  └── Real（httpx 异步，Token 鉴权，已完成独立联调）
 
 报告
   └── V3结构化结果 → QwenPlus专业化表达（不重算分数）→ 授权管理员查看
@@ -137,6 +138,20 @@ docker compose up -d
 
 打开 `http://localhost:8000/login`，录入姓名和身份证号，进入 60 秒测评流程。
 
+#### Windows 10 + WSL2 的 localhost 转发
+
+如果 WSL 重启后 `localhost:8000` 无法访问，在 Windows PowerShell 中运行：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\update-wsl-portproxy.ps1
+```
+
+脚本会自动读取 WSL 当前 IP 并更新端口转发，无需手工修改地址。首次运行时若希望以后登录 Windows 自动更新，可执行一次：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\update-wsl-portproxy.ps1 -InstallStartupTask
+```
+
 ## 测评流程（60 秒严格时序）
 
 ```text
@@ -158,7 +173,7 @@ docker compose up -d
 PROVIDER_MODE=mock
 ```
 
-Mock 回放 V3 fixture（sample_result.json，21 字段全覆盖），并对分数做小幅随机扰动。受测端会明确显示“演示数据”，仅用于验证流程和报告版式，不代表被测者的实际心理状态。
+Mock 回放 V3.2 fixture（sample_result_v32.json，含 rPPG 质量门控、AU 标注图与眼动未采集状态），并对分数做小幅随机扰动。受测端会明确显示“演示数据”，仅用于验证流程和报告版式，不代表被测者的实际心理状态。
 
 切换真实接口：
 
@@ -168,6 +183,31 @@ V3_API_ROOT=https://example.com
 V3_BASIC_TOKEN=xxx
 V3_ALG_SERVICE_UUID=xxx
 ```
+
+API Key 与算法服务 UUID 是两个不同配置，均需由合作方提供。密钥只写入本地
+`.env`（已被 Git 忽略），不要写进代码、README、日志或截图。
+
+在切换整个业务流程前，建议先运行独立联调工具：
+
+```bash
+cd backend
+
+# 只检查配置，不上传文件、不创建远端任务
+python scripts/v3_integration_test.py
+
+# 真实联调：上传视频、创建任务、轮询并保存 result/timeline
+python scripts/v3_integration_test.py --video ../data/videos/test.webm
+
+# 本地超时后续取已有任务（不会重复上传或创建任务）
+python scripts/v3_integration_test.py --task-id 3026
+```
+
+真实结果保存于 `data/v3-integration/`（已被 Git 忽略）。按 V3.2 文档，60 秒视频在合作方
+CPU 上通常需要约 2–3 分钟；本项目实测60秒720P视频约193秒，程序默认每5秒轮询，
+最长等待30分钟。超时会保留合作方 `task_id`，可继续查询而不重复上传。真实 `timeline`
+临时地址会在任务完成后立即下载并持久化，避免约1小时后失效。rPPG 心率/HRV
+仅在返回的 `rppg_quality_gate.physiology_available=true` 时可解释。正式业务
+确认联调通过后，再将 `PROVIDER_MODE` 改为 `real`。
 
 ## 图题库管理
 
@@ -233,8 +273,8 @@ ruff check .
 
 ## 生产化路线（阶段 5-9）
 
-- 阶段 5：Celery/Arq 任务队列 + WebSocket 时隙协议 + Alembic 迁移 + 加密/审计（阶段 6 联调稳定后推进）
-- 阶段 6：真实 V3 联调（Token） + OSS timeline 转存（当前最高优先级）
+- 阶段 5：Celery/Arq 任务队列 + WebSocket 时隙协议 + Alembic 迁移 + 加密/审计（当前优先级）
+- 阶段 6：真实 V3 独立联调已完成；下一步进行真人采集的业务链路复测与我方 OSS 正式备份验证
 - 阶段 7：阿里云 ECS + 公网 HTTPS
 - 阶段 8：硬件盒子适配（预计硬件到位后实施：VPU 硬编 / 断网缓存 / 看门狗）
 - 阶段 9：测试验收与交付

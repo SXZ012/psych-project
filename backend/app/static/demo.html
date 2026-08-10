@@ -9,6 +9,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <!-- Vue 3 (Global Build, CDN) -->
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<!-- MediaPipe 模块、模型与 WASM 均由页面从项目本地按需加载 -->
 <!-- 字体：文学性衬线 + UI 无衬线 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -100,6 +101,38 @@
   .tag {
     transition: transform .25s cubic-bezier(.22,.61,.36,1), background .35s ease, border-color .35s ease, color .35s ease, box-shadow .35s ease;
   }
+
+  .camera-monitor {
+    position: fixed; top: 20px; right: 22px; z-index: 30;
+    width: clamp(150px, 14vw, 190px);
+    pointer-events: none;
+  }
+  .camera-monitor-view {
+    position: relative; width: 100%; aspect-ratio: 4 / 3; overflow: hidden;
+    border-radius: 16px; border: 2px solid rgba(255,255,255,.34);
+    background: rgba(7,10,22,.82); box-shadow: 0 8px 28px rgba(0,0,0,.28);
+    transition: border-color .35s ease, box-shadow .35s ease;
+  }
+  .camera-monitor.ok .camera-monitor-view { border-color: rgba(95,226,168,.72); }
+  .camera-monitor.warning .camera-monitor-view { border-color: rgba(245,190,80,.86); }
+  .camera-monitor.error .camera-monitor-view {
+    border-color: rgba(248,113,113,.88); box-shadow: 0 8px 30px rgba(127,29,29,.28);
+  }
+  .camera-monitor video { width:100%; height:100%; object-fit:cover; transform:scaleX(-1); opacity:.9; }
+  .camera-safe-zone {
+    position:absolute; left:25%; top:10%; width:50%; height:72%;
+    border:1.5px solid rgba(255,255,255,.58); border-radius:46% / 50%;
+    box-shadow:0 0 0 999px rgba(7,10,22,.10);
+  }
+  .camera-monitor-status {
+    margin-top:7px; min-height:25px; padding:5px 9px; border-radius:999px;
+    text-align:center; font-size:12px; line-height:15px; color:rgba(255,255,255,.92);
+    background:rgba(7,10,22,.62); backdrop-filter:blur(8px);
+  }
+  @media (max-width: 900px) {
+    .camera-monitor { top:14px; right:14px; width:145px; }
+    .camera-monitor-status { font-size:11px; }
+  }
   .tag:active { transform: scale(.97); }
   .tag-active {
     background: linear-gradient(135deg, rgba(157,178,236,.22), rgba(224,191,154,.18));
@@ -157,6 +190,19 @@
     <div class="drift absolute -bottom-1/4 -right-1/4 w-[55%] h-[55%] rounded-full"
          style="background: radial-gradient(circle, var(--glow-warm), transparent 70%); filter: blur(60px); animation-delay: -8s;"></div>
   </div>
+
+  <!-- 始终挂载的检测画面；仅供本机算法读取，不显示、不上传额外画面 -->
+  <video ref="analysisVideoEl" autoplay muted playsinline
+         style="position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;left:-10px;top:-10px;"></video>
+
+  <!-- 测评全程的低干扰自拍状态窗 -->
+  <aside v-if="showCameraMonitor" class="camera-monitor" :class="faceState">
+    <div class="camera-monitor-view">
+      <video ref="monitorVideoEl" autoplay muted playsinline></video>
+      <div class="camera-safe-zone"></div>
+    </div>
+    <div class="camera-monitor-status">{{ faceMessage }}</div>
+  </aside>
 
   <!-- ========== Phase 1 · 待机与人脸检测 ========== -->
   <!-- 知情同意书（点开始后先弹，依据 PIPL 取得敏感个人信息单独同意） -->
@@ -227,10 +273,10 @@
       </div>
 
       <p class="font-serif text-2xl tracking-wide mb-2" style="color: var(--ink);">
-        {{ faceReady ? '已捕捉到你的存在' : '正在寻找你的面容…' }}
+        {{ faceReady ? '位置合适，可以开始测评' : '正在确认人物位置…' }}
       </p>
       <p class="text-base mb-10" style="color: var(--ink-dim);">
-        {{ faceReady ? '当准备好的时候，轻轻开始。' : '请正对屏幕，让光线落在你脸上。' }}
+        {{ faceReady ? '测评全程请保持当前坐姿。' : faceMessage }}
       </p>
 
       <button v-if="faceReady" type="button" data-testid="start-exploration" @click="begin"
@@ -255,7 +301,7 @@
     <!-- 呼吸光晕锚点（4s 瞳孔缩放，诱导注视+调息） -->
     <div class="rounded-full mb-10" style="width:130px;height:130px;background:radial-gradient(circle, rgba(157,178,236,.95), rgba(157,178,236,.25) 60%, transparent 80%);animation:pupil-breathe 4s ease-in-out infinite;"></div>
     <p class="font-serif text-3xl md:text-4xl text-white mb-7" style="text-shadow:0 2px 16px rgba(0,0,0,.5);">您好，欢迎参加心理状态评估</p>
-    <p class="text-lg text-white/70 leading-relaxed" style="animation:line-rise .8s ease .6s both;">请保持头部位于框内…</p>
+      <p class="text-lg text-white/70 leading-relaxed" style="animation:line-rise .8s ease .6s both;">请在测评全程保持头部完整位于画面框内…</p>
     <p class="text-lg text-white/70 leading-relaxed mt-2" style="animation:line-rise .8s ease 1.5s both;">跟随光点，放松注视…</p>
   </section>
 
@@ -359,7 +405,7 @@
     </div>
     <h1 class="font-serif text-3xl text-white mb-4">测评已完成</h1>
     <p class="text-base text-white/70 leading-7 mb-2 max-w-xl">
-      本次测评数据已成功提交，系统正在进行专业分析。<br/>完整结果将由授权工作人员统一查看，并结合实际情况进行说明。
+      本次测评数据已成功提交，系统正在进行专业分析（通常约需 2–3 分钟）。<br/>完整结果将由授权工作人员统一查看，并结合实际情况进行说明。
     </p>
     <p class="text-sm text-white/40 leading-6 mb-2 max-w-lg mt-4">
       本结果仅用于心理状态与岗位适配的辅助参考，不构成医学诊断，也不能作为单独的录用或淘汰依据。
@@ -483,6 +529,8 @@
       const selections = reactive(questions.value.map(() => [])); // 每题选中的 option id
       const faceReady = ref(false);
       const cameraOn = ref(false);
+      const faceState = ref('warning');       // ok | warning | error
+      const faceMessage = ref('请正对屏幕，让头部完整位于框内');
       const consentOpen = ref(false);   // 知情同意弹窗
       const agreed = ref(false);        // 是否勾选同意
       const completeCountdown = ref(30);  // 完成页 30 秒自动退出
@@ -491,6 +539,8 @@
       let lastVideoBlob = null;
       let lastSubmissionId = null;      // 幂等：重复提交不创建新测评
       const videoEl = ref(null);
+      const analysisVideoEl = ref(null);
+      const monitorVideoEl = ref(null);
       const report = ref(null);
       const finalCountdown = ref(5);
       const imgLoaded = reactive({});        // 各题图片是否已缓存，控制淡入
@@ -499,8 +549,15 @@
       let qTimer = null;
       let hintTimer = null;
       let stream = null;
+      let faceDetector = null;
+      let faceDetectionTimer = null;
+      let detectionBusy = false;
+      let faceValidSince = null;
+      let faceInvalidSince = null;
+      let lastPositionPromptAt = 0;
 
       const current = computed(() => questions.value[currentIndex.value]);
+      const showCameraMonitor = computed(() => cameraOn.value && ['intro', 'assess', 'loading'].includes(phase.value));
 
       // —— 从项目 OSS 图库加载 5 张图 ——
       async function loadPairs() {
@@ -548,17 +605,150 @@
         });
       }
 
-      // —— 人脸检测：尝试摄像头，2s 后标记就绪（计时独立于摄像头，绝不阻塞按钮）——
-      async function tryCamera() {
-        setTimeout(() => { faceReady.value = true; }, 2000);
+      async function attachCameraVideos() {
+        await nextTick();
+        [videoEl.value, analysisVideoEl.value, monitorVideoEl.value].forEach((el) => {
+          if (!el || !stream) return;
+          if (el.srcObject !== stream) el.srcObject = stream;
+          el.play().catch(() => {});
+        });
+      }
+
+      function setInvalidFace(message) {
+        const now = performance.now();
+        faceValidSince = null;
+        if (!faceInvalidSince) faceInvalidSince = now;
+        const invalidFor = now - faceInvalidSince;
+
+        faceReady.value = false;
+        faceState.value = invalidFor >= 3000 ? 'error' : 'warning';
+        faceMessage.value = message;
+
+        // 正式测评中只在持续离框时做一次中性提醒，避免频繁语音干扰状态。
+        if (['intro', 'assess', 'loading'].includes(phase.value)
+            && invalidFor >= 3000 && now - lastPositionPromptAt >= 10000) {
+          lastPositionPromptAt = now;
+          speak('请将头部移回画面框内。');
+        }
+      }
+
+      function setValidFace() {
+        const now = performance.now();
+        faceInvalidSince = null;
+        if (!faceValidSince) faceValidSince = now;
+        faceState.value = 'ok';
+        faceMessage.value = phase.value === 'detect' ? '位置合适，请保持当前坐姿' : '位置合适';
+        // 开始前短暂稳定即可；避免摄像头轻微抖动导致一直无法开始。
+        faceReady.value = now - faceValidSince >= 800;
+      }
+
+      function handleFaceResults(results) {
+        const detections = results && Array.isArray(results.detections) ? results.detections : [];
+        if (detections.length === 0) {
+          setInvalidFace('未检测到面部，请回到画面框内');
+          return;
+        }
+        if (detections.length > 1) {
+          setInvalidFace('请确保画面中只有一人');
+          return;
+        }
+
+        const detection = detections[0];
+        const box = detection.boundingBox
+          || (detection.locationData && detection.locationData.relativeBoundingBox);
+        if (!box) {
+          setInvalidFace('请将面部移至画面中央');
+          return;
+        }
+
+        const source = analysisVideoEl.value;
+        const sourceWidth = source && source.videoWidth ? source.videoWidth : 1;
+        const sourceHeight = source && source.videoHeight ? source.videoHeight : 1;
+        let width = Number(box.width || 0);
+        let height = Number(box.height || 0);
+        let xCenter;
+        let yCenter;
+        if (box.originX !== undefined || width > 1 || height > 1) {
+          xCenter = (Number(box.originX || 0) + width / 2) / sourceWidth;
+          yCenter = (Number(box.originY || 0) + height / 2) / sourceHeight;
+          width /= sourceWidth;
+          height /= sourceHeight;
+        } else {
+          xCenter = box.xCenter !== undefined ? Number(box.xCenter) : Number(box.xmin || 0) + width / 2;
+          yCenter = box.yCenter !== undefined ? Number(box.yCenter) : Number(box.ymin || 0) + height / 2;
+        }
+
+        // 只拦截明显过远、过近或接近画面边缘的情况。
+        // 手机虚拟摄像头可能输出 16:9/竖屏画幅，不能用过窄的中心阈值。
+        if (width < 0.11) {
+          setInvalidFace('距离稍远，请向屏幕靠近一点');
+        } else if (width > 0.72 || height > 0.88) {
+          setInvalidFace('距离稍近，请向后调整一点');
+        } else if (xCenter < 0.20 || xCenter > 0.80 || yCenter < 0.15 || yCenter > 0.82) {
+          setInvalidFace('请将头部移至画面框中央');
+        } else {
+          setValidFace();
+        }
+      }
+
+      async function runFaceDetection() {
+        if (!faceDetector || !stream) return;
+        const source = analysisVideoEl.value;
+        if (!detectionBusy && source && source.readyState >= 2) {
+          detectionBusy = true;
+          try {
+            const results = faceDetector.detectForVideo(source, performance.now());
+            handleFaceResults(results);
+          } catch (e) {
+            console.warn('[demo] 人脸检测暂不可用', e);
+          } finally {
+            detectionBusy = false;
+          }
+        }
+        faceDetectionTimer = setTimeout(runFaceDetection, 200); // 约 5fps，降低终端负载
+      }
+
+      async function startFaceDetection() {
         try {
-          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-          cameraOn.value = true;
-          requestAnimationFrame(() => {
-            if (videoEl.value) videoEl.value.srcObject = stream;
+          const tasksVision = await import('/static/vendor/mediapipe/vision_bundle.mjs');
+          const fileset = await tasksVision.FilesetResolver.forVisionTasks(
+            '/static/vendor/mediapipe/wasm'
+          );
+          faceDetector = await tasksVision.FaceDetector.createFromOptions(fileset, {
+            baseOptions: {
+              modelAssetPath: '/static/vendor/mediapipe/face_detector.task',
+              delegate: 'CPU',
+            },
+            runningMode: 'VIDEO',
+            minDetectionConfidence: 0.60,
           });
+          runFaceDetection();
         } catch (e) {
-          console.log('[demo] 摄像头不可用，使用占位画面', e);
+          console.warn('[demo] 初始化人脸检测失败', e);
+          faceState.value = 'error';
+          faceMessage.value = '人脸检测初始化失败，请联系现场工作人员';
+        }
+      }
+
+      // —— 摄像头与真实人脸位置检测 ——
+      async function tryCamera() {
+        faceReady.value = false;
+        faceState.value = 'warning';
+        faceMessage.value = '正在开启摄像头…';
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+            audio: false,
+          });
+          cameraOn.value = true;
+          faceMessage.value = '请正对屏幕，让头部完整位于框内';
+          await attachCameraVideos();
+          await startFaceDetection();
+        } catch (e) {
+          console.warn('[demo] 摄像头不可用', e);
+          cameraOn.value = false;
+          faceState.value = 'error';
+          faceMessage.value = '无法使用摄像头，请允许权限或联系工作人员';
         }
       }
 
@@ -633,8 +823,10 @@
         tryCamera();                                  // 同意后才采集人脸
       }
       function startIntro() {
+        if (!faceReady.value || !cameraOn.value) return;
         phase.value = 'intro';
-        speak('您好，欢迎参加心理状态评估。请保持头部位于框内，跟随光点，放松注视。');
+        attachCameraVideos();
+        speak('您好，欢迎参加心理状态评估。测评全程请保持头部位于画面框内，跟随光点，放松注视。');
         startRecording();                          // 开场即开始录制（intro+assess 全覆盖）
         if (introTimer) clearTimeout(introTimer);
         introTimer = setTimeout(() => {
@@ -751,6 +943,10 @@
         cleanupRecording();
         if (stream) stream.getTracks().forEach((t) => t.stop());
         stream = null;
+        if (faceDetectionTimer) clearTimeout(faceDetectionTimer);
+        faceDetectionTimer = null;
+        if (faceDetector) { try { faceDetector.close(); } catch (e) {} }
+        faceDetector = null;
         selections.splice(0, selections.length, ...questions.value.map(() => []));
         currentIndex.value = 0;
         localStorage.removeItem('psych_user');
@@ -771,14 +967,17 @@
         if (hintTimer) clearInterval(hintTimer);
         if (introTimer) clearTimeout(introTimer);
         if (completeTimer) clearInterval(completeTimer);
+        if (faceDetectionTimer) clearTimeout(faceDetectionTimer);
         cleanupRecording();
         try { speechSynthesis.cancel(); } catch(e) {}
         if (stream) stream.getTracks().forEach((t) => t.stop());
+        if (faceDetector) { try { faceDetector.close(); } catch (e) {} }
       });
 
       return {
         phase, current, currentIndex, qProgress, questions,
-        selections, faceReady, cameraOn, consentOpen, agreed, videoEl, imgLoaded,
+        selections, faceReady, cameraOn, faceState, faceMessage, showCameraMonitor,
+        consentOpen, agreed, videoEl, analysisVideoEl, monitorVideoEl, imgLoaded,
         completeCountdown, finalCountdown,
         begin, confirmConsent, toggle, isSelected, onImgErr, finishToLogin, submit,
         resetCompleteCountdown,
