@@ -43,6 +43,8 @@ class V3Summary(BaseModel):
     algorithm_version: str | None = None
     clinical_screening: ClinicalScreening = Field(default_factory=ClinicalScreening)
     overall: Overall = Field(default_factory=Overall)
+    # V3.2：rPPG 生理指标必须以该质量门控为准，false 时不得解释心率/HRV。
+    rppg_quality_gate: dict[str, Any] = Field(default_factory=dict)
 
 
 class V3Result(BaseModel):

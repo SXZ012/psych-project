@@ -41,6 +41,14 @@ def _core_line(ci: dict[str, Any], key: str) -> str:
     return f"  - {d.get('name', key)}：得分={d.get('score')}，档位={grade}"
 
 
+def _attention_line(summary: dict[str, Any], ci: dict[str, Any]) -> str:
+    """V3.2 上传报告未带 gaze JSON 时，禁止把视觉注意解释成实际测得结果。"""
+    eye_status = ((summary.get("modules") or {}).get("eye_tracking") or {}).get("status")
+    if eye_status in {"not_collected", "not_collected_in_upload_report"}:
+        return "  - 视觉注意：本次未采集眼动 / gaze 数据，不输出视觉注意力评分或解释。"
+    return _core_line(ci, "attention_focus")
+
+
 def build_user_prompt(
     summary: dict[str, Any],
     subject_context: dict[str, Any] | None = None,
@@ -68,7 +76,7 @@ def build_user_prompt(
         _core_line(ci, "stress_load"),
         _core_line(ci, "fatigue_recovery"),
         _core_line(ci, "physiological_arousal"),
-        _core_line(ci, "attention_focus"),
+        _attention_line(summary, ci),
         "",
         "【抑郁 / 焦虑筛查（筛查口径，非诊断）】",
         _screen_line("抑郁方向", dep),

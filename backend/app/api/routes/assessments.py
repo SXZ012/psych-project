@@ -135,12 +135,23 @@ async def resubmit_assessment(
     if assessment is None:
         raise HTTPException(status_code=404, detail="assessment not found")
 
-    # 更新数据（幂等：同一 assessment_id 不重复创建）
+    # 更新数据（幂等：同一 assessment_id 不重复创建）。仅轮询超时时续查原task_id；
+    # 其他失败以及上传了新视频时，应重新创建合作方任务。
+    resume_timed_out_task = assessment.error_code == "TimeoutError" and bool(
+        assessment.v3_task_id
+    )
     if video and video.filename:
         video_storage_key, video_filename = await _save_video(video)
         assessment.video_storage_key = video_storage_key
         assessment.video_filename = video_filename
         assessment.video_status = "received"
+        resume_timed_out_task = False
+
+    if not resume_timed_out_task:
+        assessment.v3_task_id = None
+        assessment.v3_file_id = None
+        assessment.partner_file_id = None
+        assessment.partner_upload_status = "pending"
 
     try:
         assessment.selections_data = {"selections": json.loads(selections)}

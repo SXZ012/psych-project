@@ -44,6 +44,16 @@ def test_build_prompt_contains_key_facts():
     assert "免责声明" in prompt  # 合规块在场
 
 
+def test_build_prompt_does_not_interpret_missing_eye_tracking():
+    summary = {
+        **SAMPLE_SUMMARY,
+        "modules": {"eye_tracking": {"status": "not_collected_in_upload_report"}},
+    }
+    prompt = build_user_prompt(summary)
+    assert "attention_focus" not in prompt
+    assert "未采集眼动" in prompt
+
+
 async def test_generate_report_uses_client_and_returns_text():
     fake = _FakeQwenClient()
     report = await generate_report(SAMPLE_SUMMARY, client=fake)

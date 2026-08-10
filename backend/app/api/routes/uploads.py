@@ -19,7 +19,7 @@ async def upload_image(file: Annotated[UploadFile, File()]) -> dict:
     if len(data) > MAX_IMAGE_BYTES:
         raise HTTPException(status_code=413, detail="图片过大（>10MB）")
 
-    key = OSSClient.gen_object_key("images", file.filename or "upload.png")
+    key = OSSClient.gen_object_key("image-bank/source", file.filename or "upload.png")
     # oss2 是同步 SDK，丢到线程池避免阻塞事件循环
     url = await run_in_threadpool(
         OSSClient().upload, data, key, file.content_type or "application/octet-stream"

@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     V3_ALG_SERVICE_UUID: str = ""
     V3_OSS_BUCKET_ID: int = 1
     V3_POLL_INTERVAL: int = 5
-    V3_POLL_TIMEOUT: int = 600
+    V3_POLL_TIMEOUT: int = 1800  # 真实任务可能因视频规格/排队超过10分钟
 
     # ---- 阿里云百炼 / QwenPlus（1.0后台报告专业化表达，不重算V3分数）----
     DASHSCOPE_API_KEY: str = ""
@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     QWEN_MODEL: str = "qwen-plus"
 
     # ---- 阿里云 OSS（诱发图片库 + 我方视频备份，私有Bucket）----
+    OSS_BACKUP_ENABLED: bool = False
     OSS_ACCESS_KEY_ID: str = ""
     OSS_ACCESS_KEY_SECRET: str = ""
     OSS_ENDPOINT: str = ""

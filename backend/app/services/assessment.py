@@ -5,20 +5,20 @@ Demo 阶段以 FastAPI BackgroundTasks 驱动（单进程内 asyncio）。
 """
 from __future__ import annotations
 
-import logging
 import asyncio
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.db.base import AsyncSessionLocal
 from app.models.assessment import Assessment, AssessmentResult, AssessmentStatus
-from app.services.qwen.report import generate_report
 from app.services.oss.client import OSSClient
+from app.services.qwen.report import generate_report
 from app.services.v3.provider import get_v3_provider
-from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +44,18 @@ async def run_assessment(assessment_id: UUID) -> None:
                 raise FileNotFoundError(f"测评视频不存在: {assessment.video_storage_key}")
 
             # 我方保留一份私有OSS备份；本地文件只作为临时中转。
-            if settings.OSS_ACCESS_KEY_ID and settings.OSS_ACCESS_KEY_SECRET and settings.OSS_BUCKET_NAME:
-                backup_key = OSSClient.gen_object_key("assessment-videos", video_path.name)
+            if (
+                settings.OSS_BACKUP_ENABLED
+                and settings.OSS_ACCESS_KEY_ID
+                and settings.OSS_ACCESS_KEY_SECRET
+                and settings.OSS_BUCKET_NAME
+            ):
+                video_prefix = (
+                    "assessment-videos/production"
+                    if settings.ENV.lower() == "prod"
+                    else "assessment-videos/test"
+                )
+                backup_key = OSSClient.gen_object_key(video_prefix, video_path.name)
                 await asyncio.to_thread(
                     OSSClient().upload_file, video_path, backup_key, "video/webm"
                 )
@@ -53,37 +63,63 @@ async def run_assessment(assessment_id: UUID) -> None:
                 assessment.backup_status = "completed"
                 logger.info("assessment %s 我方视频备份完成: %s", assessment_id, backup_key)
             else:
-                # Demo未配置我方OSS时保留本地文件，避免误删唯一副本。
+                # 开发期关闭视频备份时保留本地文件，避免上传真人测试视频。
                 assessment.backup_status = "local_only"
-                logger.warning("assessment %s 未配置我方OSS，视频仅保留本地临时副本", assessment_id)
+                logger.info("assessment %s OSS视频备份未启用，视频仅保留本地副本", assessment_id)
             assessment.partner_upload_status = "pending"
             await db.commit()
 
             provider = get_v3_provider()
+            assessment.provider_mode = settings.PROVIDER_MODE.lower()
             assessment.status = AssessmentStatus.uploading
             assessment.video_status = "ready"
-            await db.commit()
-            # Provider.run encapsulates upload/create/poll; expose the long
-            # running part as processing to the administrator UI.
-            assessment.status = AssessmentStatus.processing
             assessment.partner_upload_status = "uploading"
             await db.commit()
-            result = await provider.run(
-                video_path=video_path,
-            )
-            assessment.partner_upload_status = "completed"
+
+            # 超时或进程重启后如果已有 task_id，直接续查合作方任务，避免重复上传/计费。
+            if assessment.v3_task_id:
+                task_id: str | int = assessment.v3_task_id
+                assessment.partner_upload_status = "completed"
+                logger.info("assessment %s 续查已有V3任务: %s", assessment_id, task_id)
+            else:
+                # 分阶段执行并保存合作方 file_id/task_id，便于定位失败环节。
+                file_url, file_id = await provider.upload_video(video_path=video_path)
+                assessment.v3_file_id = file_id
+                assessment.partner_file_id = str(file_id)
+                assessment.partner_upload_status = "completed"
+                task = await provider.create_task(file_url=file_url, file_id=file_id)
+                task_id = task["id"]
+                assessment.v3_task_id = str(task_id)
+                assessment.status = AssessmentStatus.queued
+                await db.commit()
+
+            assessment.status = AssessmentStatus.processing
+            await db.commit()
+            final_task = await provider.wait_task(task_id)
+            result = await provider.get_result(final_task)
 
             summary = result.get("summary") or {}
+            timeline = result.get("timeline")
+            # V3.2 将上传模式的眼动采集状态放在 timeline.display_payload。
+            # 归一到 summary，供后台展示和 Qwen 报告安全地判断“未采集”。
+            if isinstance(timeline, dict):
+                eye_tracking = ((timeline.get("display_payload") or {}).get("eye_tracking"))
+                if isinstance(eye_tracking, dict):
+                    summary.setdefault("modules", {}).setdefault("eye_tracking", eye_tracking)
             cs = summary.get("clinical_screening") or {}
             dep = cs.get("depression") or {}
             anx = cs.get("anxiety") or {}
             ov = summary.get("overall") or {}
 
-            timeline = result.get("timeline")
             timeline_json = timeline if isinstance(timeline, dict) else None
-            timeline_url = timeline if isinstance(timeline, str) else None
-            # TODO(real): timeline 为 presigned URL 时，下载后转存到我们自己的 OSS，
-            # 在此填入永久可访问的 timeline_url（合作方 URL 仅 1 小时有效）。
+            timeline_url = None
+            if isinstance(timeline, str):
+                # 合作方地址约1小时失效，必须在任务完成后立即下载并持久化。
+                download_timeline = getattr(provider, "download_timeline", None)
+                if download_timeline is None:
+                    raise RuntimeError("真实V3结果包含临时timeline地址，但Provider不支持下载")
+                timeline_json = await download_timeline(timeline)
+                logger.info("assessment %s V3 timeline已下载并持久化", assessment_id)
 
             ar = AssessmentResult(
                 assessment_id=assessment.id,
@@ -113,7 +149,9 @@ async def run_assessment(assessment_id: UUID) -> None:
                 await db.commit()
                 logger.info("assessment %s QwenPlus后台报告已生成", assessment_id)
             except Exception:  # noqa: BLE001
-                logger.exception("assessment %s QwenPlus报告生成失败，保留V3结构化结果", assessment_id)
+                logger.exception(
+                    "assessment %s QwenPlus报告生成失败，保留V3结构化结果", assessment_id
+                )
 
             assessment.status = AssessmentStatus.completed
             try:
@@ -135,7 +173,8 @@ async def run_assessment(assessment_id: UUID) -> None:
             ).scalar_one_or_none()
             if assessment is not None:
                 assessment.status = AssessmentStatus.failed
-                assessment.partner_upload_status = "failed" if assessment.partner_upload_status in {"pending", "uploading"} else assessment.partner_upload_status
+                if assessment.partner_upload_status in {"pending", "uploading"}:
+                    assessment.partner_upload_status = "failed"
                 assessment.error_code = type(e).__name__
                 assessment.error_message = str(e)[:500]
                 assessment.completed_at = datetime.now(timezone.utc)
