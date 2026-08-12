@@ -7,9 +7,31 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <style>
-  body{ font-family:-apple-system,"Microsoft YaHei","Segoe UI",system-ui,sans-serif; margin:0; }
+  :root{ --terminal-max-width:480px; }
+  html,body{ width:100%; min-height:100%; overflow:hidden; }
+  body{ font-family:-apple-system,"Microsoft YaHei","Segoe UI",system-ui,sans-serif; margin:0; overflow:hidden; }
+  .terminal-login-shell{ width:min(var(--terminal-max-width), calc(100vw - 48px)); }
+  .terminal-login-card{ padding:clamp(28px,5vh,44px) clamp(28px,4vw,44px); }
+  .terminal-login-card input,
+  .terminal-login-card button{ min-height:52px; font-size:16px; }
   .fade-enter-active{ transition:opacity .5s ease, transform .5s ease; }
   .fade-enter-from{ opacity:0; transform:translateY(12px); }
+  /* 10.1 英寸终端主基准：1280x800 横屏；同时兼容 1024x600。 */
+  @media (min-width:1024px) and (min-height:600px){
+    .terminal-login-card{ box-shadow:0 22px 60px rgba(30,58,138,.13); }
+  }
+  @media (max-height:680px){
+    .terminal-login-card{ padding-top:24px; padding-bottom:24px; }
+    .terminal-login-card .login-heading{ margin-bottom:20px; }
+    .terminal-login-card .login-icon{ width:56px; height:56px; margin-bottom:12px; }
+    .terminal-login-card .login-fields{ gap:14px; }
+    .terminal-login-card .login-submit{ margin-top:18px; }
+    .terminal-login-card .login-privacy{ margin-top:12px; }
+  }
+  @media (max-width:600px){
+    .terminal-login-shell{ width:calc(100vw - 24px); }
+    .terminal-login-card{ padding-left:24px; padding-right:24px; }
+  }
 </style>
 </head>
 <body class="min-h-screen flex items-center justify-center relative overflow-hidden" style="background:linear-gradient(160deg,#F8FAFC 0%,#EFF6FF 50%,#E0F2FE 100%);">
@@ -20,12 +42,12 @@
     <div class="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full" style="background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);"></div>
   </div>
 
-  <div id="app" class="relative w-full max-w-md px-4">
+  <div id="app" class="terminal-login-shell relative">
     <Transition name="fade" appear>
-      <div class="bg-white rounded-2xl shadow-xl border border-gray-100 px-10 py-10">
+      <div class="terminal-login-card bg-white rounded-2xl shadow-xl border border-gray-100">
         <!-- 标题 -->
-        <div class="text-center mb-8">
-          <div class="mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
+        <div class="login-heading text-center mb-8">
+          <div class="login-icon mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
             <svg class="w-9 h-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10"/><path d="M9 11h2l1-2 2 4 1-2h2"/></svg>
           </div>
           <h1 class="text-xl font-bold" style="color:#1E3A8A;">心理健康测评管理系统</h1>
@@ -33,7 +55,7 @@
         </div>
 
         <!-- 表单 -->
-        <div class="space-y-5">
+        <div class="login-fields space-y-5">
           <div>
             <label class="block text-sm font-medium text-gray-600 mb-2">真实姓名</label>
             <input v-model="name" @blur="validateName" @input="errors.name=''" type="text" maxlength="20" placeholder="请输入您的姓名"
@@ -52,11 +74,11 @@
         </div>
 
         <!-- 登录按钮 -->
-        <button @click="submit" class="w-full mt-7 py-3 text-white rounded-xl text-sm font-medium hover:opacity-90 transition shadow-md" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
+        <button @click="submit" class="login-submit w-full mt-7 py-3 text-white rounded-xl text-sm font-medium hover:opacity-90 transition shadow-md" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
           开始测评
         </button>
 
-        <p class="text-center text-xs text-gray-300 mt-5">身份信息仅用于本次测评，严格保密</p>
+        <p class="login-privacy text-center text-xs text-gray-300 mt-5">身份信息仅用于本次测评，严格保密</p>
       </div>
     </Transition>
   </div>

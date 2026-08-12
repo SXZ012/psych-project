@@ -47,6 +47,17 @@
   .modal-enter-active > div{ transition:transform .35s cubic-bezier(.22,.61,.36,1), opacity .3s ease; }
   .modal-enter-from,.modal-leave-to{ opacity:0; }
   .modal-enter-from > div{ transform:scale(.96) translateY(10px); opacity:0; }
+  .terminal-admin-login{ width:min(440px, calc(100vw - 48px)); padding:clamp(28px,5vh,44px) clamp(28px,4vw,44px); }
+  .terminal-admin-login input,.terminal-admin-login button{ min-height:52px; font-size:16px; }
+  @media (min-width:1024px) and (min-height:600px){
+    .terminal-admin-login{ box-shadow:0 22px 60px rgba(30,58,138,.13); }
+  }
+  @media (max-height:680px){
+    .terminal-admin-login{ padding-top:24px; padding-bottom:24px; }
+    .terminal-admin-login .admin-login-icon{ margin-bottom:12px; }
+    .terminal-admin-login .admin-login-hint{ margin-bottom:16px; }
+  }
+  @media (max-width:600px){ .terminal-admin-login{ width:calc(100vw - 24px); padding-left:24px; padding-right:24px; } }
 </style>
 </head>
 <body>
@@ -54,13 +65,13 @@
 
   <!-- 登录门禁 -->
   <Transition name="fade">
-  <div v-if="!loginOk" class="fixed inset-0 z-50 flex items-center justify-center" style="background:linear-gradient(160deg,#F8FAFC 0%,#EFF6FF 100%);">
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 w-96 px-10 py-10 text-center">
-      <div class="mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
+  <div v-if="!loginOk" class="fixed inset-0 z-50 flex items-center justify-center p-3" style="background:linear-gradient(160deg,#F8FAFC 0%,#EFF6FF 100%);">
+    <div class="terminal-admin-login bg-white rounded-2xl shadow-sm border border-gray-100 text-center">
+      <div class="admin-login-icon mx-auto w-14 h-14 rounded-2xl flex items-center justify-center mb-5" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
         <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10"/><path d="M9 11h2l1-2 2 4 1-2h2"/></svg>
       </div>
       <div class="text-lg font-semibold text-gray-800 mb-1">心理测评后台</div>
-      <div class="text-xs text-gray-400 mb-6">请输入管理口令以继续</div>
+      <div class="admin-login-hint text-xs text-gray-400 mb-6">请输入管理口令以继续</div>
       <input v-model="pw" type="password" placeholder="管理口令" @keydown.enter="doLogin" class="w-full px-4 py-2.5 mb-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100 transition" />
       <div class="text-xs text-red-500 h-4 mb-2">{{ loginErr }}</div>
       <button @click="doLogin" class="w-full py-2.5 text-white rounded-xl text-sm font-medium hover:opacity-90 transition" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">进入后台</button>
