@@ -41,7 +41,7 @@
     --ok: #5fe2a8;
   }
   html, body {
-    height: 100%; margin: 0;
+    width:100%; height: 100%; min-height:100%; margin: 0;
     background: radial-gradient(1200px 800px at 70% -10%, var(--bg-1), var(--bg-0) 60%);
     color: var(--ink);
     font-family: "Noto Sans SC", system-ui, sans-serif;
@@ -177,6 +177,43 @@
   }
 
   .dim-fill { transition: width 1s cubic-bezier(.22,.61,.36,1); }
+
+  /* 10.1 英寸横屏终端：以 1280x800 / 16:10 为主设计画布。 */
+  #app{ width:100vw; height:100vh; height:100dvh; min-width:320px; min-height:480px; }
+  button,input,label{ touch-action:manipulation; }
+  .terminal-consent{ width:min(680px, calc(100vw - 48px)); max-height:calc(100dvh - 48px); }
+  .terminal-consent-body{ max-height:calc(100dvh - 248px) !important; overscroll-behavior:contain; }
+  .terminal-consent-footer label{ min-height:44px; }
+  .terminal-consent-footer input[type="checkbox"]{ width:24px; height:24px; flex:0 0 24px; }
+  .terminal-consent-footer button{ min-height:52px; font-size:16px; }
+  .terminal-detect-view{ width:clamp(280px,25vw,340px) !important; height:clamp(315px,43vh,380px) !important; }
+  .terminal-question{ width:min(720px, calc(100vw - 250px)); }
+  .terminal-option{ min-height:72px !important; }
+  @media (min-width:1024px) and (min-height:600px){
+    .terminal-consent{ box-shadow:0 28px 80px rgba(0,0,0,.42); }
+    .terminal-question{ transform:translateY(2vh); }
+  }
+  /* 1024x600 等低高度 10.1 英寸面板采用紧凑排版，避免按钮出屏。 */
+  @media (max-height:680px){
+    .terminal-consent{ max-height:calc(100dvh - 24px); }
+    .terminal-consent-header{ padding-top:14px !important; padding-bottom:14px !important; }
+    .terminal-consent-body{ max-height:calc(100dvh - 194px) !important; padding-top:12px !important; padding-bottom:12px !important; line-height:1.55 !important; }
+    .terminal-consent-footer{ padding-top:12px !important; padding-bottom:12px !important; }
+    .terminal-detect-view{ width:250px !important; height:278px !important; margin-bottom:20px !important; }
+    .face-frame{ width:172px; height:220px; }
+    .terminal-detect-copy{ margin-bottom:20px !important; }
+    .terminal-intro-orb{ width:96px !important; height:96px !important; margin-bottom:24px !important; }
+    .terminal-question{ width:min(660px, calc(100vw - 210px)); }
+    .terminal-question-title{ margin-bottom:16px !important; font-size:1.35rem !important; }
+    .terminal-options{ gap:12px !important; }
+    .terminal-option{ min-height:58px !important; padding-top:12px !important; padding-bottom:12px !important; }
+    .camera-monitor{ width:132px; top:12px; right:12px; }
+  }
+  @media (max-width:760px), (orientation:portrait){
+    .terminal-consent{ width:calc(100vw - 24px); }
+    .terminal-question{ width:calc(100vw - 32px); padding-top:130px; }
+    .camera-monitor{ width:120px; }
+  }
 </style>
 </head>
 
@@ -207,12 +244,12 @@
   <!-- ========== Phase 1 · 待机与人脸检测 ========== -->
   <!-- 知情同意书（点开始后先弹，依据 PIPL 取得敏感个人信息单独同意） -->
   <div v-if="phase === 'consent'" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(7,10,22,.78);backdrop-filter:blur(6px);">
-    <div class="bg-white rounded-2xl w-[500px] max-h-[88vh] flex flex-col shadow-2xl">
-      <div class="px-7 py-5 border-b border-gray-100">
+    <div class="terminal-consent bg-white rounded-2xl flex flex-col shadow-2xl">
+      <div class="terminal-consent-header px-7 py-5 border-b border-gray-100">
         <div class="text-lg font-semibold text-gray-800">知情同意书</div>
         <div class="text-xs text-gray-400 mt-0.5">开始测评前，请完整阅读并同意以下条款</div>
       </div>
-      <div class="px-7 py-5 overflow-y-auto text-[13px] text-gray-600 leading-6 space-y-4" style="max-height:52vh;">
+      <div class="terminal-consent-body px-7 py-5 overflow-y-auto text-[13px] text-gray-600 leading-6 space-y-4">
         <div>
           <div class="font-medium text-gray-800 mb-1">一、测评目的与适用范围</div>
           <p>面向高责任岗位（飞行员、轨道交通、应急救援、安检等）从业者，通过面部微表情与生理信号采集，对您当前心理生理状态进行辅助评估，输出压力负荷、情绪状态、注意与恢复等维度参考指标。本测评不构成任何医学或精神障碍诊断。</p>
@@ -246,7 +283,7 @@
           <p>本测评面向成年从业者，遵循自愿原则，您可在任何阶段中止且不受不利对待。若您未满 18 周岁，请在监护人陪同下进行。</p>
         </div>
       </div>
-      <div class="px-7 py-4 border-t border-gray-100">
+      <div class="terminal-consent-footer px-7 py-4 border-t border-gray-100">
         <label class="flex items-center gap-2.5 cursor-pointer mb-4">
           <input type="checkbox" v-model="agreed" class="w-4 h-4 accent-sky-500" />
           <span class="text-sm text-gray-600">我已完整阅读、理解并同意上述全部条款</span>
@@ -263,7 +300,7 @@
 
   <section v-if="phase === 'detect'" class="relative z-10 w-full h-full flex flex-col items-center justify-center px-8">
     <div class="flex flex-col items-center fade-up">
-      <div class="relative flex items-center justify-center mb-12" style="width:320px;height:360px;">
+      <div class="terminal-detect-view relative flex items-center justify-center mb-12" style="width:320px;height:360px;">
         <video v-if="cameraOn" ref="videoEl" autoplay muted playsinline
                class="absolute inset-0 w-full h-full object-cover rounded-3xl opacity-90"
                style="filter: brightness(.8) contrast(1.05);"></video>
@@ -275,7 +312,7 @@
       <p class="font-serif text-2xl tracking-wide mb-2" style="color: var(--ink);">
         {{ faceReady ? '位置合适，可以开始测评' : '正在确认人物位置…' }}
       </p>
-      <p class="text-base mb-10" style="color: var(--ink-dim);">
+      <p class="terminal-detect-copy text-base mb-10" style="color: var(--ink-dim);">
         {{ faceReady ? '测评全程请保持当前坐姿。' : faceMessage }}
       </p>
 
@@ -299,7 +336,7 @@
   <!-- ========== Phase 1.5 · 开场引导（0-5s，开场语音 + 欢迎语）========== -->
   <section v-else-if="phase === 'intro'" class="relative z-10 w-full h-full flex flex-col items-center justify-center text-center px-10">
     <!-- 呼吸光晕锚点（4s 瞳孔缩放，诱导注视+调息） -->
-    <div class="rounded-full mb-10" style="width:130px;height:130px;background:radial-gradient(circle, rgba(157,178,236,.95), rgba(157,178,236,.25) 60%, transparent 80%);animation:pupil-breathe 4s ease-in-out infinite;"></div>
+    <div class="terminal-intro-orb rounded-full mb-10" style="width:130px;height:130px;background:radial-gradient(circle, rgba(157,178,236,.95), rgba(157,178,236,.25) 60%, transparent 80%);animation:pupil-breathe 4s ease-in-out infinite;"></div>
     <p class="font-serif text-3xl md:text-4xl text-white mb-7" style="text-shadow:0 2px 16px rgba(0,0,0,.5);">您好，欢迎参加心理状态评估</p>
       <p class="text-lg text-white/70 leading-relaxed" style="animation:line-rise .8s ease .6s both;">请在测评全程保持头部完整位于画面框内…</p>
     <p class="text-lg text-white/70 leading-relaxed mt-2" style="animation:line-rise .8s ease 1.5s both;">跟随光点，放松注视…</p>
@@ -338,14 +375,14 @@
     <!-- 题目 + 选项（底部叠加，玻璃态镶嵌在画面里） -->
     <div class="absolute inset-0 z-10 flex flex-col items-center justify-center text-center px-8">
       <Transition name="q" mode="out-in">
-        <div :key="current.id" class="w-full max-w-2xl">
-          <p class="font-serif text-2xl mb-6 font-medium" style="letter-spacing:1px; color:rgba(255,255,255,.95); text-shadow:0 2px 16px rgba(0,0,0,.6);">
+        <div :key="current.id" class="terminal-question w-full max-w-2xl">
+          <p class="terminal-question-title font-serif text-2xl mb-6 font-medium" style="letter-spacing:1px; color:rgba(255,255,255,.95); text-shadow:0 2px 16px rgba(0,0,0,.6);">
             {{ current.question }}
           </p>
-          <div class="flex flex-col items-stretch gap-7 max-w-lg mx-auto">
+          <div class="terminal-options flex flex-col items-stretch gap-7 max-w-lg mx-auto">
             <button v-for="opt in current.options" :key="opt.id"
                     @click="toggle(opt.id)"
-                    class="tag px-7 py-5 font-serif text-[17px] leading-relaxed text-center"
+                    class="terminal-option tag px-7 py-5 font-serif text-[17px] leading-relaxed text-center"
                     :class="isSelected(opt.id) ? 'glass-active' : 'glass-idle'"
                     style="min-height:78px;">
               <span class="inline-block mr-2 font-semibold" :style="{color: isSelected(opt.id) ? '#9db2ec' : 'rgba(255,255,255,.35)'}">{{ isSelected(opt.id) ? '✓' : '○' }}</span>{{ opt.text }}
