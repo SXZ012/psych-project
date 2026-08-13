@@ -37,8 +37,9 @@
   .nav-item{ position:relative; }
   .nav-item.active{ background:#F0F9FF; }
   .nav-item.active::before{ content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:0 3px 3px 0; background:#0EA5E9; }
-  .tab-btn{ position:relative; padding:14px 4px; margin-right:24px; font-size:14px; color:#94A3B8; transition:color .2s; }
+  .tab-btn{ position:relative; flex:1; min-width:0; padding:14px 6px; border:0; outline:none; background:transparent; font-size:13px; color:#94A3B8; transition:color .2s; text-align:center; }
   .tab-btn:hover{ color:#475569; }
+  .tab-btn:focus-visible{ outline:2px solid #7DD3FC; outline-offset:-3px; border-radius:8px 8px 0 0; }
   .tab-btn.active{ color:#0EA5E9; font-weight:600; }
   .tab-btn.active::after{ content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:#0EA5E9; border-radius:2px; }
   .fade-enter-active,.fade-leave-active{ transition:opacity .3s ease; }
@@ -47,6 +48,24 @@
   .modal-enter-active > div{ transition:transform .35s cubic-bezier(.22,.61,.36,1), opacity .3s ease; }
   .modal-enter-from,.modal-leave-to{ opacity:0; }
   .modal-enter-from > div{ transform:scale(.96) translateY(10px); opacity:0; }
+  .report-modal{ width:min(1120px,calc(100vw - 32px)); }
+  .report-page-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:18px; margin-bottom:18px; }
+  .report-kicker{ font-size:11px; letter-spacing:.12em; color:#0EA5E9; font-weight:700; text-transform:uppercase; }
+  .report-title{ margin-top:4px; font-size:20px; line-height:1.35; font-weight:650; color:#1E293B; }
+  .report-hint{ margin-top:5px; max-width:720px; font-size:12px; line-height:1.7; color:#64748B; }
+  .report-panel{ border:1px solid #E2E8F0; border-radius:14px; background:#fff; }
+  .report-soft{ border:1px solid #E0F2FE; border-radius:14px; background:linear-gradient(135deg,#F0F9FF,#F8FAFC); }
+  .report-metric{ border:1px solid #EEF2F7; border-radius:12px; background:#fff; padding:14px 15px; min-height:100px; }
+  .report-metric .metric-name{ font-size:12px; color:#64748B; line-height:1.45; }
+  .report-metric .metric-value{ margin-top:10px; font-size:20px; font-weight:650; color:#1E293B; line-height:1.1; }
+  .source-chip{ display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:999px; background:#F1F5F9; color:#64748B; font-size:10px; line-height:1.4; white-space:nowrap; }
+  .source-chip::before{ content:""; width:5px; height:5px; border-radius:50%; background:#38BDF8; }
+  .report-empty{ border:1px dashed #CBD5E1; border-radius:14px; background:#F8FAFC; padding:38px 28px; text-align:center; }
+  .sparkline{ width:100%; height:70px; overflow:visible; }
+  .sparkline-grid{ stroke:#E2E8F0; stroke-width:1; }
+  .sparkline-line{ fill:none; stroke:#0EA5E9; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+  .formal-table th{ padding:9px 12px; font-size:11px; font-weight:500; color:#94A3B8; text-align:left; background:#F8FAFC; }
+  .formal-table td{ padding:10px 12px; font-size:12px; color:#475569; border-top:1px solid #F1F5F9; }
   .terminal-admin-login{ width:min(440px, calc(100vw - 48px)); padding:clamp(28px,5vh,44px) clamp(28px,4vw,44px); }
   .terminal-admin-login input,.terminal-admin-login button{ min-height:52px; font-size:16px; }
   @media (min-width:1024px) and (min-height:600px){
@@ -111,14 +130,14 @@
   <!-- 模态：完整报告（5 Tab：V3 完整分析） -->
   <Transition name="modal">
   <div v-if="reportOpen && current" class="fixed inset-0 z-40 flex items-center justify-center p-4" style="background:rgba(15,23,42,.45);backdrop-filter:blur(3px);" @click.self="closeReport">
-    <div class="bg-white rounded-2xl w-[860px] max-h-[92vh] flex flex-col shadow-2xl">
+    <div class="report-modal bg-white rounded-2xl max-h-[92vh] flex flex-col shadow-2xl">
       <!-- 头部 -->
       <div class="px-7 py-5 flex items-center justify-between border-b border-gray-100">
         <div class="flex items-center gap-4 min-w-0">
           <div class="w-11 h-11 rounded-full flex items-center justify-center font-medium shrink-0" :style="avatarBg(current)">{{ (current.name||'?').charAt(0) }}</div>
           <div class="min-w-0">
             <div class="text-base font-semibold text-gray-800 truncate">{{ current.name }} · {{ current.role }}</div>
-            <div class="text-xs text-gray-400 mt-0.5 truncate">{{ maskId(current.idcard) }} · {{ current.date }} {{ current.time }} · 编号 {{ current.id }} · <span class="text-amber-600">完整 V3 分析报告</span></div>
+            <div class="text-xs text-gray-400 mt-0.5 truncate">{{ maskId(current.idcard) }} · {{ current.date }} {{ current.time }} · 编号 {{ current.id }} · <span class="text-sky-600">{{ reportVersion(current) }} 五页报告</span></div>
           </div>
         </div>
         <button @click="closeReport" class="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition shrink-0">
@@ -130,153 +149,186 @@
         <button v-for="t in TABS" :key="t.k" @click="activeTab=t.k" class="tab-btn" :class="{active:activeTab===t.k}">{{ t.label }}</button>
       </div>
       <!-- Tab 内容（滚动区，滚到底触发状态流转） -->
-      <div class="flex-1 overflow-y-auto px-7 py-6">
+      <div class="report-body flex-1 overflow-y-auto px-7 py-6">
 
-        <!-- ① 总览 -->
+        <!-- ① 总览：2 张筛查卡 + 4 张状态卡 -->
         <div v-if="activeTab==='overview'">
-          <div class="flex items-center gap-7 mb-6">
-            <div class="relative w-28 h-28 shrink-0">
-              <svg class="w-28 h-28" style="transform:rotate(-90deg)" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F0F2F5" stroke-width="2.5"/>
-                <circle class="ring-fill" cx="18" cy="18" r="15.9155" fill="none" :stroke="ovColor(current.summary)" stroke-width="2.5" stroke-linecap="round" :stroke-dasharray="(ovScore(current.summary)||0) + ' 100'" />
-              </svg>
-              <div class="absolute inset-0 flex flex-col items-center justify-center">
-                <span class="text-3xl font-semibold text-gray-800 leading-none">{{ ovScore(current.summary) ?? '--' }}</span>
-                <span class="text-[10px] text-gray-400 mt-1">{{ ovName(current.summary) }}</span>
-              </div>
-            </div>
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="badge" :style="{background:ovColor(current.summary)+'22', color:ovColor(current.summary)}">{{ ovLabel(current.summary) }}</span>
-                <span class="badge b-gray">{{ plLabel(current.summary) }}</span>
-              </div>
-              <div class="text-xs text-gray-500 leading-6">{{ plPositioning(current.summary) }}</div>
-            </div>
-          </div>
-          <!-- 临床方向 -->
-          <div class="grid grid-cols-2 gap-3 mb-6">
-            <div class="bg-gray-50 rounded-xl px-5 py-4">
-              <div class="text-xs text-gray-400 mb-2">抑郁方向线索</div>
-              <span class="badge" :class="dirBadge(current.summary,'depression')">{{ dirLabel(current.summary,'depression') }}</span>
-            </div>
-            <div class="bg-gray-50 rounded-xl px-5 py-4">
-              <div class="text-xs text-gray-400 mb-2">焦虑方向线索</div>
-              <span class="badge" :class="dirBadge(current.summary,'anxiety')">{{ dirLabel(current.summary,'anxiety') }}</span>
-            </div>
-          </div>
-          <!-- 6维度迷你预览 -->
-          <div class="text-xs text-gray-400 tracking-wide mb-3">核心维度概览</div>
-          <div class="space-y-2.5">
-            <div v-for="dim in dimsOf(current.summary)" :key="dim.name" class="flex items-center gap-3">
-              <div class="w-20 text-sm text-gray-500 shrink-0">{{ dim.name }}</div>
-              <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="barfill h-full rounded-full" :style="{width:(dim.score||0)+'%',background:scoreColor(dim.score)}"></div></div>
-              <div class="w-10 text-sm text-right text-gray-600">{{ fmt1(dim.score) }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ② 核心维度 -->
-        <div v-else-if="activeTab==='dims'">
-          <div class="text-xs text-gray-400 tracking-wide mb-4">六大核心维度（V3 新版分类）</div>
-          <div class="space-y-5">
-            <div v-for="dim in dimsOf(current.summary)" :key="dim.name" class="border border-gray-100 rounded-xl px-5 py-4">
-              <div class="flex items-center justify-between mb-3">
-                <div class="font-medium text-gray-800">{{ dim.name }}</div>
-                <div class="flex items-center gap-2">
-                  <span class="badge" :class="badgeByLabel(dim.classification_label || dim.grade_label)">{{ dim.classification_label || dim.grade_label || '—' }}</span>
-                  <span class="text-2xl font-semibold" :style="{color:scoreColor(dim.score)}">{{ fmt1(dim.score) }}</span>
-                </div>
-              </div>
-              <div class="h-2 bg-gray-100 rounded-full overflow-hidden mb-2"><div class="barfill h-full rounded-full" :style="{width:(dim.score||0)+'%',background:scoreColor(dim.score)}"></div></div>
-              <div class="flex items-center gap-4 text-xs text-gray-400">
-                <span>档位：{{ dim.grade_display || '—' }}</span>
-                <span>置信：{{ dim.classification_confidence_label || '—' }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ③ 临床筛查 -->
-        <div v-else-if="activeTab==='screening'">
-          <div class="text-xs text-gray-400 tracking-wide mb-4">抑郁 / 焦虑 临床筛查（量表辅助，非诊断）</div>
-          <div class="space-y-4">
-            <div v-for="key in ['depression','anxiety']" :key="key" class="border border-gray-100 rounded-xl px-6 py-5">
-              <div class="flex items-center justify-between mb-3">
-                <div>
-                  <div class="font-medium text-gray-800">{{ screenOf(current.summary, key).name || (key==='depression'?'抑郁筛查':'焦虑筛查') }}</div>
-                  <div class="text-xs text-gray-400 mt-0.5">阈值 {{ fmt3(screenOf(current.summary, key).threshold) }}</div>
-                </div>
-                <span class="badge text-sm" :class="badgeByLabel(screenOf(current.summary, key).classification_label)">{{ screenOf(current.summary, key).classification_label || '—' }}</span>
-              </div>
-              <div class="flex items-center gap-6">
-                <div><div class="text-xs text-gray-400">得分</div><div class="text-xl font-semibold text-gray-800">{{ fmt1(screenOf(current.summary, key).score) }}</div></div>
-                <div><div class="text-xs text-gray-400">概率</div><div class="text-xl font-semibold text-gray-800">{{ pct(screenOf(current.summary, key).probability) }}</div></div>
-              </div>
-            </div>
-          </div>
-          <div class="mt-5 px-4 py-3 rounded-lg flex items-start gap-2" style="background:#FEF3C7;">
-            <svg class="w-4 h-4 shrink-0 mt-0.5" style="color:#92400E;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-            <span class="text-xs leading-5" style="color:#92400E;">筛查结果仅作参考，不构成临床诊断；高风险需结合专业量表与访谈复核。</span>
-          </div>
-        </div>
-
-        <!-- ④ 质量·置信 -->
-        <div v-else-if="activeTab==='quality'">
-          <div class="flex items-center gap-5 mb-6 pb-5 border-b border-gray-100">
-            <div class="relative w-20 h-20 shrink-0">
-              <svg class="w-20 h-20" style="transform:rotate(-90deg)" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#F0F2F5" stroke-width="2.5"/>
-                <circle class="ring-fill" cx="18" cy="18" r="15.9155" fill="none" :stroke="confColor(current.summary)" stroke-width="2.5" stroke-linecap="round" :stroke-dasharray="confPct(current.summary) + ' 100'" />
-              </svg>
-              <div class="absolute inset-0 flex flex-col items-center justify-center"><span class="text-xl font-semibold text-gray-800 leading-none">{{ confPct(current.summary) }}%</span><span class="text-[10px] text-gray-400 mt-1">置信度</span></div>
-            </div>
+          <div class="report-page-head">
             <div>
-              <div class="text-sm text-gray-500 mb-1">整体置信度</div>
-              <span class="badge" :class="badgeByLabel(confLabel(current.summary))">{{ confLabel(current.summary) }}</span>
+              <div class="report-kicker">Page 01 · Multimodal Overview</div>
+              <div class="report-title">心理生理状态总览</div>
+              <div class="report-hint">先呈现管理者需要的筛查结论与当前状态，再保留置信、数据质量和完整专业限制作为证据。</div>
+            </div>
+            <span class="source-chip">六卡总览契约</span>
+          </div>
+
+          <div class="report-soft p-5 mb-5">
+            <div class="flex items-start justify-between gap-5">
+              <div>
+                <div class="text-xs font-medium text-sky-700 mb-2">本次结论摘要</div>
+                <div class="text-sm leading-7 text-gray-700">{{ managementSummary(current.summary) }}</div>
+              </div>
+              <div class="shrink-0 text-right">
+                <div class="text-[11px] text-gray-400 mb-1">整体置信度</div>
+                <span class="badge" :class="badgeByLabel(confLabel(current.summary))">{{ confPct(current.summary) }}% · {{ confLabel(current.summary) }}</span>
+              </div>
             </div>
           </div>
-          <div class="text-xs text-gray-400 tracking-wide mb-3">置信分量</div>
-          <div class="grid grid-cols-2 gap-x-8 gap-y-3 mb-6">
-            <div v-for="(v,k) in confComps(current.summary)" :key="k" class="flex items-center gap-3">
-              <div class="w-28 text-xs text-gray-500 truncate">{{ confCompName(k) }}</div>
-              <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="barfill h-full rounded-full" :style="{width:(v*100)+'%',background:scoreColor(v*100)}"></div></div>
-              <div class="w-10 text-xs text-right text-gray-600">{{ pct(v) }}</div>
+
+          <div class="grid grid-cols-2 gap-4 mb-5">
+            <article v-for="card in overviewCards(current.summary)" :key="card.key" class="report-panel px-5 py-4">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-medium text-gray-800">{{ card.name }}</span>
+                    <span class="source-chip">{{ card.source }}</span>
+                  </div>
+                  <div class="text-xs text-gray-400 mt-2">{{ card.definition }}</div>
+                </div>
+                <span class="badge" :class="badgeByLabel(card.label)">{{ card.label }}</span>
+              </div>
+              <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100 text-xs text-gray-400">
+                <span>置信：{{ card.confidence }}</span>
+                <span v-if="card.score!=null">审计值 {{ fmt1(card.score) }}</span>
+                <span v-else>未形成可解释数值</span>
+              </div>
+            </article>
+          </div>
+
+          <div class="grid grid-cols-[.9fr_1.1fr] gap-4 mb-5">
+            <div class="report-panel p-5">
+              <div class="flex items-center justify-between mb-2"><div class="text-sm font-medium text-gray-800">六维证据雷达</div><span class="source-chip">0–100 审计值</span></div>
+              <svg viewBox="0 0 360 250" class="w-full h-[225px]" aria-label="六维证据雷达图">
+                <polygon v-for="scale in [.25,.5,.75,1]" :key="scale" :points="radarGridPoints(scale)" fill="none" stroke="#E2E8F0" stroke-width="1" />
+                <line v-for="p in radarData(current.summary)" :key="p.name" x1="180" y1="125" :x2="p.axisX" :y2="p.axisY" stroke="#E2E8F0" stroke-width="1" />
+                <polygon :points="radarValuePoints(current.summary)" fill="rgba(14,165,233,.16)" stroke="#0EA5E9" stroke-width="2" />
+                <circle v-for="p in radarData(current.summary)" :key="p.name+'-dot'" :cx="p.x" :cy="p.y" r="3" fill="#0EA5E9" />
+                <text v-for="p in radarData(current.summary)" :key="p.name+'-label'" :x="p.labelX" :y="p.labelY" :text-anchor="p.anchor" class="fill-slate-500 text-[11px]">{{ p.shortName }}</text>
+              </svg>
+            </div>
+            <div class="space-y-4">
+              <div class="report-panel p-5">
+                <div class="flex items-center justify-between mb-4"><div class="text-sm font-medium text-gray-800">证据质量</div><span class="source-chip">summary.quality</span></div>
+                <div class="grid grid-cols-2 gap-x-8 gap-y-3 text-xs">
+                  <div class="flex justify-between"><span class="text-gray-400">人脸有效率</span><span class="text-gray-700">{{ pct(qOf(current.summary,'face_valid_ratio')) }}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-400">人脸质量</span><span class="text-gray-700">{{ pct(qOf(current.summary,'face_quality')) }}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-400">运动干扰</span><span class="text-gray-700">{{ fmt3(qOf(current.summary,'motion_noise_index')) }}</span></div>
+                  <div class="flex justify-between"><span class="text-gray-400">丢帧率</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'drop_rate_percent')) }}%</span></div>
+                </div>
+              </div>
+              <div class="report-panel p-5">
+                <div class="text-sm font-medium text-gray-800 mb-3">建议处理</div>
+                <ol class="space-y-2.5"><li v-for="(line,i) in managementActions(current.summary)" :key="i" class="flex items-start gap-2 text-xs leading-5 text-gray-600"><span class="w-5 h-5 rounded-full bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">{{ i+1 }}</span><span>{{ line }}</span></li></ol>
+              </div>
             </div>
           </div>
-          <div class="text-xs text-gray-400 tracking-wide mb-3">视频质量</div>
-          <div class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
-            <div class="flex justify-between"><span class="text-gray-500">人脸有效率</span><span class="text-gray-700">{{ pct(qOf(current.summary,'face_valid_ratio')) }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">平均亮度</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'brightness_mean')) }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">清晰度</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'sharpness_mean')) }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">人脸质量</span><span class="text-gray-700">{{ pct(qOf(current.summary,'face_quality')) }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">运动噪声</span><span class="text-gray-700">{{ fmt3(qOf(current.summary,'motion_noise_index')) }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">rPPG 置信</span><span class="text-gray-700">{{ pct(rppgConfidence(current.summary)) }}</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">丢帧率</span><span class="text-gray-700">{{ fmt1(qOf(current.summary,'drop_rate_percent')) }}%</span></div>
-            <div class="flex justify-between"><span class="text-gray-500">rPPG 生理信号</span><span class="text-gray-700">{{ rppgAvailabilityLabel(current.summary) }}</span></div>
-            <div v-if="rppgReasons(current.summary)" class="text-xs text-amber-600 leading-5">不可用原因：{{ rppgReasons(current.summary) }}</div>
-            <div class="flex justify-between"><span class="text-gray-500">眼动 / 视觉注意</span><span class="text-gray-700">{{ eyeTrackingLabel(current.summary) }}</span></div>
+
+          <details class="report-panel px-5 py-4">
+            <summary class="cursor-pointer text-sm font-medium text-gray-700">专业说明与限制（报告必须保留）</summary>
+            <div class="mt-3 text-xs leading-6 text-gray-500">
+              <p>{{ clinicalNotice(current.summary).positioning || plPositioning(current.summary) }}</p>
+              <ul class="list-disc pl-5 mt-2 space-y-1"><li v-for="(line,i) in clinicalNotice(current.summary).limitations" :key="i">{{ line }}</li></ul>
+            </div>
+          </details>
+        </div>
+
+        <!-- ② AU 面部动作 -->
+        <div v-else-if="activeTab==='au'">
+          <div class="report-page-head">
+            <div><div class="report-kicker">Page 02 · Facial Action Units</div><div class="report-title">AU 面部动作</div><div class="report-hint">用 5 项面部动作指标、代表性语义标注图和候选时间点解释面部状态变化，不将局部动作直接解释为心理诊断。</div></div>
+            <span class="source-chip">AU Student</span>
+          </div>
+          <div class="grid grid-cols-5 gap-3 mb-5">
+            <article v-for="m in auMetrics(current.summary)" :key="m.key" class="report-metric">
+              <div class="metric-name">{{ m.name }}</div><div class="metric-value">{{ metricDisplay(m) }}</div>
+              <div class="flex items-center justify-between mt-3"><span class="badge" :class="badgeByLabel(metricLevel(m))">{{ metricLevel(m) }}</span><span class="text-[10px] text-gray-400">{{ unitLabel(m.unit) }}</span></div>
+            </article>
+          </div>
+          <div class="grid grid-cols-[1.15fr_.85fr] gap-4">
+            <article class="report-panel overflow-hidden">
+              <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between"><span class="text-sm font-medium text-gray-800">代表性语义标注图</span><span class="source-chip">summary.modules.au.visualization</span></div>
+              <div v-if="auVisualization(current.summary).image_url" class="bg-slate-900"><img :src="auVisualization(current.summary).image_url" alt="AU 语义标注图" class="w-full h-[300px] object-contain" /></div>
+              <div v-else class="report-empty m-5 text-sm text-gray-400">本次报告未提供 AU 语义标注图</div>
+              <div class="px-5 py-4 text-xs leading-5 text-gray-500"><span v-if="auVisualization(current.summary).representative_time_seconds!=null">代表时点 {{ fmt1(auVisualization(current.summary).representative_time_seconds) }}s · </span>{{ auVisualization(current.summary).display_hint || '语义区域仅用于解释面部动作变化，不代表病灶。' }}</div>
+            </article>
+            <article class="report-panel p-5">
+              <div class="flex items-center justify-between mb-4"><span class="text-sm font-medium text-gray-800">候选事件时间点</span><span class="source-chip">timeline.au_event_frames</span></div>
+              <div v-if="auCandidates(current).length" class="space-y-2.5">
+                <div v-for="(e,i) in auCandidates(current)" :key="i" class="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+                  <div class="w-9 h-9 rounded-lg bg-white flex items-center justify-center text-xs font-semibold text-sky-600 shadow-sm">{{ fmt1(e.representative_time_seconds ?? e.t_start) }}s</div>
+                  <div class="flex-1 min-w-0"><div class="text-xs font-medium text-gray-700 truncate">{{ e.label || 'AU 动作候选' }}</div><div class="text-[11px] text-gray-400 mt-1">相对强度 {{ fmt1(e.value) }} · 仅用于回看定位</div></div>
+                </div>
+              </div>
+              <div v-else class="report-empty text-xs text-gray-400">没有可展示的候选时间点</div>
+            </article>
           </div>
         </div>
 
-        <!-- ⑤ 时间线 -->
-        <div v-else-if="activeTab==='timeline'">
-          <div class="text-xs text-gray-400 tracking-wide mb-4">分时段事件（derived_state_clue，非诊断）</div>
-          <div v-if="eventsOf(current).length" class="space-y-3">
-            <div v-for="(e,i) in eventsOf(current)" :key="i" class="flex items-center gap-4 border border-gray-100 rounded-xl px-5 py-3.5">
-              <div class="w-1.5 h-10 rounded-full shrink-0" :style="{background:severityColor(e.severity)}"></div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="font-medium text-gray-800">{{ e.label }}</span>
-                  <span class="badge" :class="sevBadge(e.severity)">{{ sevLabel(e.severity) }}</span>
-                </div>
-                <div class="text-xs text-gray-400 mt-1">{{ e.t_start }}–{{ e.t_end }}s · {{ e.source }}</div>
-              </div>
-              <div class="text-right shrink-0">
-                <div class="text-lg font-semibold" :style="{color:severityColor(e.severity)}">{{ fmt1(e.value) }}</div>
-              </div>
+        <!-- ③ rPPG 生理节律 -->
+        <div v-else-if="activeTab==='rppg'">
+          <div class="report-page-head">
+            <div><div class="report-kicker">Page 03 · Physiological Rhythm</div><div class="report-title">rPPG 生理节律</div><div class="report-hint">展示质量门控后的心率区间、HRV 与信号质量。若质量门控未通过，系统只保留质量证据，不展示或补算生理数值。</div></div>
+            <span class="badge" :class="rppgAvailable(current.summary,current)?'b-green':'b-amber'">{{ rppgAvailable(current.summary,current)?'质量门控通过':'不建议解释' }}</span>
+          </div>
+          <div v-if="rppgAvailable(current.summary,current)">
+            <div class="grid grid-cols-4 gap-3 mb-5">
+              <article v-for="m in rppgMetrics(current.summary)" :key="m.key" class="report-metric">
+                <div class="metric-name">{{ m.name }}</div><div class="metric-value">{{ metricDisplay(m) }}</div>
+                <div class="flex items-center justify-between mt-3"><span class="badge" :class="badgeByLabel(metricLevel(m))">{{ metricLevel(m) }}</span><span class="text-[10px] text-gray-400">{{ unitLabel(m.unit) }}</span></div>
+              </article>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+              <article v-for="chart in rppgCharts(current)" :key="chart.key" class="report-panel p-4">
+                <div class="flex items-center justify-between mb-2"><span class="text-xs font-medium text-gray-700">{{ chart.name }}</span><span class="text-[10px] text-gray-400">{{ chart.range }}</span></div>
+                <svg v-if="chart.series.length>1" class="sparkline" viewBox="0 0 320 70" preserveAspectRatio="none"><line class="sparkline-grid" x1="0" y1="69" x2="320" y2="69"/><polyline class="sparkline-line" :points="sparklinePoints(chart.series,320,70)" /></svg>
+                <div v-else class="h-[70px] flex items-center justify-center text-[11px] text-gray-400">本次未载入曲线证据</div>
+              </article>
             </div>
           </div>
-          <div v-else class="text-center text-gray-400 py-12 text-sm">暂无时间线事件</div>
+          <div v-else>
+            <div class="report-empty"><div class="text-base font-medium text-gray-700">本次 rPPG 生理数据不满足展示条件</div><div class="text-xs leading-6 text-gray-500 mt-2">{{ rppgReasons(current.summary) || '有效窗口或信号质量不足。' }}</div></div>
+            <div class="grid grid-cols-3 gap-3 mt-4"><article v-for="m in rppgQualityMetrics(current.summary)" :key="m.key" class="report-metric"><div class="metric-name">{{ m.name }}</div><div class="metric-value">{{ metricDisplay(m) }}</div><div class="text-[10px] text-gray-400 mt-3">{{ unitLabel(m.unit) }}</div></article></div>
+          </div>
+          <div class="mt-4 px-4 py-3 rounded-xl bg-amber-50 text-xs leading-5 text-amber-800">rPPG 心率与 HRV 为视频估算值，受头动、光照和信号质量影响，只作为心理生理状态的辅助证据。</div>
+        </div>
+
+        <!-- ④ Vibra 微振动 -->
+        <div v-else-if="activeTab==='vibra'">
+          <div class="report-page-head">
+            <div><div class="report-kicker">Page 04 · Micro-vibration</div><div class="report-title">Vibra 微振动</div><div class="report-hint">先呈现 3 项聚合状态线索，再提供 formal 12 项分段统计作为研发与专业复核证据，不把单项 feature 直接翻译为确定心理结论。</div></div>
+            <span class="source-chip">Vibra formal segment</span>
+          </div>
+          <div class="grid grid-cols-3 gap-4 mb-5">
+            <article v-for="m in vibraMetrics(current.summary)" :key="m.key" class="report-metric">
+              <div class="metric-name">{{ m.name }}</div><div class="metric-value">{{ metricDisplay(m) }}</div><div class="mt-3"><span class="badge" :class="badgeByLabel(metricLevel(m))">{{ metricLevel(m) }}</span></div>
+            </article>
+          </div>
+          <div class="report-panel overflow-hidden">
+            <div class="px-5 py-4 flex items-center justify-between"><div><div class="text-sm font-medium text-gray-800">Formal 12 分段统计</div><div class="text-[11px] text-gray-400 mt-1">Feature 编号遵循合作方契约，心理命名仅供研发，不用于管理结论。</div></div><span class="badge" :class="formalEligible(current.summary)?'b-green':'b-amber'">{{ formalStatusLabel(current.summary) }}</span></div>
+            <table class="formal-table w-full border-collapse"><thead><tr><th>编号</th><th>指标</th><th>均值</th><th>最低 / 最高</th><th>样本</th><th>波动</th></tr></thead><tbody><tr v-for="(f,i) in formal12(current)" :key="f.key"><td class="font-semibold text-sky-700">F{{ String(i+1).padStart(2,'0') }}</td><td>Feature F{{ String(i+1).padStart(2,'0') }}</td><td>{{ fmt1(f.range.mean) }}</td><td>{{ fmt1(f.range.min) }} / {{ fmt1(f.range.max) }}</td><td>{{ f.range.sample_count ?? '—' }}</td><td><span class="badge" :class="f.range.is_stable===false?'b-amber':'b-gray'">{{ f.range.is_stable===false?'有波动':'相对稳定' }}</span></td></tr></tbody></table>
+            <div v-if="!formal12(current).length" class="report-empty m-5 text-xs text-gray-400">本次报告没有 formal 12 分段数据</div>
+          </div>
+        </div>
+
+        <!-- ⑤ 眼动注意 -->
+        <div v-else-if="activeTab==='eye'">
+          <div class="report-page-head">
+            <div><div class="report-kicker">Page 05 · Gaze Evidence</div><div class="report-title">眼动注意力</div><div class="report-hint">有效眼动比例、注意稳定性与视频级 gaze proxy 轨迹；它不是屏幕校准级眼动仪数据，必须结合采集状态解释。</div></div>
+            <span class="badge" :class="eyeAvailable(current)?'b-green':'b-gray'">{{ eyeAvailable(current)?'已采集':'未采集' }}</span>
+          </div>
+          <div v-if="eyeAvailable(current)">
+            <div class="grid grid-cols-4 gap-3 mb-5"><article v-for="m in eyeMetrics(current)" :key="m.key" class="report-metric"><div class="metric-name">{{ m.name }}</div><div class="metric-value">{{ metricDisplay(m) }}</div><div class="mt-3"><span class="badge" :class="badgeByLabel(metricLevel(m))">{{ metricLevel(m) }}</span></div></article></div>
+            <div class="grid grid-cols-[1.1fr_.9fr] gap-4">
+              <article class="report-panel p-5"><div class="flex items-center justify-between mb-4"><span class="text-sm font-medium text-gray-800">热区格网</span><span class="text-[10px] text-gray-400">9 × 16 proxy heatmap</span></div><div class="grid gap-[2px] rounded-xl overflow-hidden bg-slate-100 p-2" style="grid-template-columns:repeat(16,minmax(0,1fr));"><span v-for="(v,i) in eyeHeatCells(current)" :key="i" class="aspect-square rounded-[2px]" :style="{background:heatColor(v)}"></span></div></article>
+              <article class="report-panel p-5"><div class="text-sm font-medium text-gray-800 mb-4">采集说明</div><div class="text-xs leading-6 text-gray-500">{{ eyeData(current).display_policy || '当前为视频级 proxy 眼动证据，应结合有效率和采集质量解释。' }}</div><div class="mt-4 text-xs text-gray-400">有效轨迹点：{{ eyePointCount(current) }} 个</div></article>
+            </div>
+          </div>
+          <div v-else class="report-empty py-16">
+            <div class="mx-auto w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-sky-500 mb-4"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg></div>
+            <div class="text-base font-medium text-gray-700">本次上传报告未采集眼动数据</div>
+            <div class="text-xs leading-6 text-gray-500 mt-2 max-w-2xl mx-auto">{{ eyeData(current).display_policy || '因此不输出视觉注意力分数，也不使用其他模态代替眼动结论。' }}</div>
+            <div v-if="eyeData(current).recommended_action" class="mt-4 inline-flex px-4 py-2 rounded-full bg-sky-50 text-xs text-sky-700">{{ eyeData(current).recommended_action }}</div>
+          </div>
         </div>
       </div>
     </div>
@@ -533,10 +585,33 @@
   ];
   const TABS = [
     {k:"overview", label:"总览"},
-    {k:"dims",     label:"核心维度"},
-    {k:"screening",label:"临床筛查"},
-    {k:"quality",  label:"质量·置信"},
-    {k:"timeline", label:"时间线"},
+    {k:"au",       label:"AU 面部动作"},
+    {k:"rppg",     label:"rPPG 生理节律"},
+    {k:"vibra",    label:"Vibra 微振动"},
+    {k:"eye",      label:"眼动注意"},
+  ];
+  const AU_SPECS = [
+    ["micro_expression_event_rate_per_min","AU 事件率","au_event_rate_per_min"],
+    ["au_event_peak_intensity","AU 峰值强度","au_activity_score"],
+    ["au_tension_event_rate_per_min","AU 紧张事件率","tension_au_score"],
+    ["au_low_activity_score","低活动比例"],
+    ["facial_variability","面部变化幅度","au_variability_score"],
+  ];
+  const RPPG_SPECS = [
+    ["hr_interval","心率区间"], ["hr_range","心率变幅"], ["hrv_rmssd_ms","RMSSD"],
+    ["hrv_sdnn_ms","SDNN"], ["signal_quality","信号质量"],
+    ["motion_noise_index","运动干扰"], ["light_noise_index","光照干扰"],
+  ];
+  const VIBRA_SPECS = [
+    ["vibra_positive_score","正向状态线索"], ["vibra_negative_score","负向状态线索"],
+    ["vibra_body_score","身体/生理调节线索"],
+  ];
+  const FORMAL12_KEYS = ["happiness","confidence","stress","unrest","suspicion","depression","energy","balance","self_regulation","reaction","neuroticism","aggression"];
+  const EYE_SPECS = [
+    ["attention_focus_score","视觉专注度"], ["attention_stability_score","注意稳定性"],
+    ["gaze_valid_ratio","有效眼动比例"], ["aoi_center_dwell_ratio","中心关注比例"],
+    ["fixation_ratio","注视停留比例"], ["gaze_entropy","视线离散度"],
+    ["gaze_x_range","水平移动范围"], ["gaze_y_range","垂直移动范围"],
   ];
   const CONF_COMP_NAMES = {video_quality:"视频质量", effective_duration:"有效时长", modality_completeness:"模态完整性", signal_stability:"信号稳定性", modality_consistency:"模态一致性", history_stability:"历史稳定性"};
 
@@ -553,7 +628,7 @@
   function badgeByLabel(t){
     if(/高风险|偏高|关注|确认|待定/.test(t||"")) return /高风险|关注/.test(t||"") ? "b-red" : "b-amber";
     if(/偏低/.test(t||"")) return "b-amber";
-    if(/正常|参考|无明/.test(t||"")) return "b-green";
+    if(/正常|参考|无明|良好|可用|已采集/.test(t||"") || /^(高|中)$/.test(t||"")) return "b-green";
     return "b-gray";
   }
   function dotColor(t){ if(/高风险|关注|偏高/.test(t||"")) return "#F87171"; if(/确认|待定|偏低/.test(t||"")) return "#F59E0B"; return "#14B8A8"; }
@@ -638,6 +713,108 @@
     if(status) return '已采集';
     return '未提供';
   }
+  function valueAt(obj, path, fallback=null){
+    let cur=obj;
+    for(const key of String(path||'').split('.')){ if(!key) continue; if(cur==null || typeof cur!=='object' || !(key in cur)) return fallback; cur=cur[key]; }
+    return cur==null ? fallback : cur;
+  }
+  function firstDefined(...values){ return values.find(v=>v!==null && v!==undefined); }
+  function reportVersion(r){ return (r&&r.algorithmVersion) || valueAt(r,'summary.algorithm_version','V3'); }
+  function clinicalNotice(s){ const n=(s&&s.clinical_notice)||{}; return {positioning:n.positioning||'',limitations:Array.isArray(n.limitations)?n.limitations:[]}; }
+  function overviewCards(s){
+    const screens=(s&&s.clinical_screening)||{};
+    const state=valueAt(s,'product_logic_summary.state_severity',{})||{};
+    const core=(s&&s.core_indicators)||{};
+    const screenCards=[
+      {key:'depression',name:'抑郁方向筛查',source:'筛查参考',definition:'低心境、退缩和积极表达减弱相关筛查线索。'},
+      {key:'anxiety',name:'焦虑方向筛查',source:'筛查参考',definition:'紧张、警觉和不安相关筛查线索。'},
+    ].map(def=>{ const x=screens[def.key]||{}; return {...def,label:x.classification_label||x.screening_result||'待分析',confidence:x.classification_confidence_label||x.confidence_label||'—',score:firstDefined(x[`${def.key}_score`],x.score,x.probability!=null?Number(x.probability)*100:null)}; });
+    const stateDefs=[
+      ['stress_load','压力/唤醒负荷','紧张、兴奋、运动或采集干扰共同形成的即时负荷。'],
+      ['fatigue_recovery','疲劳/恢复负荷','反映恢复负荷与活力维持相关的多模态状态线索。'],
+      ['physiological_arousal','生理唤醒线索','结合心率、呼吸、面部活动和干扰形成的辅助状态线索。'],
+      ['attention_focus','视觉注意力','依据眼动数据评估注视有效率、稳定性与关注分布。'],
+    ].map(([key,name,definition])=>{ const x=state[key]||core[key]||{}; return {key,name,source:'当前状态',definition,label:x.classification_label||x.grade_label||valueAt(x,'level.label','待分析'),confidence:x.classification_confidence_label||'—',score:firstDefined(x.grade_source_score,x.raw_score,x.score)}; });
+    return [...screenCards,...stateDefs];
+  }
+  function managementSummary(s){
+    if(s&&typeof s.final_summary==='string'&&s.final_summary.trim()) return s.final_summary.trim();
+    const cards=overviewCards(s); const dep=cards[0], anx=cards[1];
+    const available=cards.slice(2).filter(x=>x.label!=='未采集');
+    const states=available.map(x=>`${x.name}为${x.label}`).join('，');
+    return `本次筛查参考：${dep.name}${dep.label}，${anx.name}${anx.label}${states?'；当前状态中，'+states:''}。结果用于后续沟通与持续观察，不作为独立诊断依据。`;
+  }
+  function managementActions(s){
+    const labels=overviewCards(s).map(x=>x.label).join('|');
+    const actions=[];
+    if(/高风险|明显偏高|需.*确认|关注/.test(labels)) actions.push('优先安排人工复核，结合量表、访谈与近期情境确认风险。');
+    else actions.push('当前未见需立即升级的筛查结论，建议结合日常状态持续观察。');
+    if(confScore(s)!=null&&confScore(s)<0.6) actions.push('本次证据置信度较低，建议改善光照、姿态与录制稳定性后复测。');
+    else actions.push('保留本次记录作为基线，在相近条件下进行后续复测对照。');
+    if(overviewCards(s).some(x=>x.key==='attention_focus'&&x.label==='未采集')) actions.push('眼动未采集，本报告不对视觉注意力作推断。');
+    return actions.slice(0,3);
+  }
+  function radarCards(s){
+    const six=overviewCards(s);
+    return six.map((x,i)=>({...x,shortName:['抑郁','焦虑','压力','恢复','唤醒','注意'][i],score:Math.max(0,Math.min(100,Number(x.score)||0))}));
+  }
+  function radarGeometry(s){
+    return radarCards(s).map((item,i)=>{
+      const angle=-Math.PI/2+i*Math.PI*2/6, axisRadius=85, valueRadius=axisRadius*item.score/100, labelRadius=108;
+      const cosine=Math.cos(angle), sine=Math.sin(angle);
+      return {...item,axisX:(180+cosine*axisRadius).toFixed(1),axisY:(125+sine*axisRadius).toFixed(1),x:(180+cosine*valueRadius).toFixed(1),y:(125+sine*valueRadius).toFixed(1),labelX:(180+cosine*labelRadius).toFixed(1),labelY:(129+sine*labelRadius).toFixed(1),anchor:Math.abs(cosine)<.15?'middle':(cosine>0?'start':'end')};
+    });
+  }
+  function radarData(s){ return radarGeometry(s); }
+  function radarValuePoints(s){ return radarGeometry(s).map(p=>`${p.x},${p.y}`).join(' '); }
+  function radarGridPoints(scale){ return Array.from({length:6},(_,i)=>{const angle=-Math.PI/2+i*Math.PI*2/6;return `${(180+Math.cos(angle)*85*scale).toFixed(1)},${(125+Math.sin(angle)*85*scale).toFixed(1)}`;}).join(' '); }
+  function indicatorGroup(s,key){ return valueAt(s,`small_indicators.${key}`,{})||{}; }
+  function pickIndicator(group,keys,name){
+    for(const key of keys){ if(group&&group[key]!=null){ const raw=group[key]; const item=raw&&typeof raw==='object'?{...raw}:{value:raw}; return {...item,key,name:name||item.name||key}; } }
+    return {key:keys[0],name:name||keys[0],value:null,level:{label:'未提供'}};
+  }
+  function metricValue(m){ return firstDefined(m&&m.value,m&&m.raw_value,m&&m.mean,m&&m.score_0_100,m&&m.score); }
+  function metricLevel(m){ return valueAt(m,'level.label',m&&m.classification_label||m&&m.grade_label||'参考'); }
+  function metricDisplay(m){
+    const v=metricValue(m); if(v===null||v===undefined||v==='') return '—';
+    if(typeof v==='string') return v;
+    if(m&&m.unit==='prob') return `${fmt1(Number(v)*100)}%`;
+    if(m&&m.unit==='ratio') return `${fmt1(Number(v)*100)}%`;
+    return fmt1(v);
+  }
+  function unitLabel(unit){ return ({bpm:'bpm',bpm_range:'bpm',ms:'ms','breaths/min':'次/分','events/min':'次/分','0-1':'0–1',score:'分','%':'%'}[unit]||unit||''); }
+  function auMetrics(s){ const g=indicatorGroup(s,'au'); return AU_SPECS.map(([key,name,fallback])=>pickIndicator(g,[key,fallback].filter(Boolean),name)); }
+  function rppgMetrics(s){ const g=indicatorGroup(s,'rppg'); return RPPG_SPECS.map(([key,name])=>pickIndicator(g,[key],name)); }
+  function rppgQualityMetrics(s){ const g=indicatorGroup(s,'rppg'); return [['signal_quality','信号质量'],['motion_noise_index','运动干扰'],['light_noise_index','光照干扰']].map(([key,name])=>pickIndicator(g,[key],name)); }
+  function vibraMetrics(s){ const g=indicatorGroup(s,'vibra'); return VIBRA_SPECS.map(([key,name])=>pickIndicator(g,[key],name)); }
+  function auVisualization(s){ return valueAt(s,'modules.au.visualization',{})||{}; }
+  function auCandidates(r){ const xs=valueAt(r,'timelineData.display_payload.au_event_frames.candidate_frames',[]); return Array.isArray(xs)?xs.slice(0,6):[]; }
+  function timelineRppg(r){ return valueAt(r,'timelineData.display_payload.rppg_waveforms',{})||{}; }
+  function rppgAvailable(s,r){ const a=firstDefined(valueAt(r,'timelineData.display_payload.rppg_waveforms.quality_gate.physiology_available'),valueAt(s,'rppg_quality_gate.physiology_available'),qOf(s,'rppg_window_usable')); return a===true || (a==null&&Object.keys(indicatorGroup(s,'rppg')).length>0); }
+  function rppgCharts(r){
+    const w=valueAt(r,'timelineData.display_payload.rppg_waveforms.waveforms',{})||{};
+    const specs=[['hr_avg','平均心率'],['hrv_rmssd_ms','RMSSD 趋势'],['signal_quality','信号质量']];
+    return specs.map(([key,name])=>{ const item=w[key]||{}; const series=item.value_series||item.score_series||[]; const range=item.range||{}; return {key,name,series:Array.isArray(series)?series:[],range:(range.min!=null&&range.max!=null)?`${fmt1(range.min)}–${fmt1(range.max)}`:''}; });
+  }
+  function sparklinePoints(series,width=320,height=70){
+    if(!Array.isArray(series)||series.length<2) return '';
+    const vals=series.map(x=>Number(x&&typeof x==='object'?x.value:x)).filter(Number.isFinite); if(vals.length<2) return '';
+    const min=Math.min(...vals),max=Math.max(...vals),span=max-min||1;
+    return vals.map((v,i)=>`${(i/(vals.length-1)*width).toFixed(1)},${(height-4-((v-min)/span)*(height-8)).toFixed(1)}`).join(' ');
+  }
+  function formal12(r){ const raw=valueAt(r,'timelineData.display_payload.vibra_formal12_ranges.indicators',{})||{}; return FORMAL12_KEYS.map(key=>{const x=raw[key];return x?{...x,key,range:x.range||{}}:null;}).filter(Boolean); }
+  function formalEligible(s){ return valueAt(s,'formal_segment_status.clinical_eligible')===true; }
+  function formalStatusLabel(s){ const x=valueAt(s,'formal_segment_status',{}); if(x&&x.clinical_eligible===true) return `可解释 · ${x.segment_count||0} 段`; if(x&&x.segment_count!=null) return `仅趋势 · ${x.segment_count} 段`; return '状态待确认'; }
+  function eyeData(r){ return valueAt(r,'timelineData.display_payload.eye_tracking',{})||{}; }
+  function eyeAvailable(r){
+    const e=eyeData(r), s=r&&r.summary||{}, small=indicatorGroup(s,'eye_tracking');
+    const status=e.status||valueAt(s,'modules.eye_tracking.status',qOf(s,'eye_tracking_status'))||'';
+    return !/not_collected|unavailable|missing/i.test(status) && (!!e.metrics || (Array.isArray(e.gaze_points)&&e.gaze_points.length>0) || Object.keys(small).length>0);
+  }
+  function eyeMetrics(r){ const s=r&&r.summary||{}; const small=indicatorGroup(s,'eye_tracking'); const raw=valueAt(r,'timelineData.display_payload.eye_tracking.metrics',{})||{}; return EYE_SPECS.map(([key,name])=>pickIndicator(Object.keys(small).length?small:raw,[key],name)); }
+  function eyeHeatCells(r){ const raw=eyeData(r).heatmap; if(Array.isArray(raw)){ const flat=raw.flat?raw.flat(Infinity):raw; return flat.slice(0,144); } return []; }
+  function eyePointCount(r){ const pts=eyeData(r).gaze_points; return Array.isArray(pts)?pts.length:0; }
+  function heatColor(v){ const n=Math.max(0,Math.min(1,Number(v)||0)); const hue=205-(n*165); return `hsla(${hue},85%,${92-n*42}%,${.45+n*.55})`; }
   function eventsOf(r){ return (r && r.timeline) || []; }
   function severityColor(sev){ if(/peak|high/.test(sev||"")) return "#EF4444"; if(/medium/.test(sev||"")) return "#F59E0B"; if(/low/.test(sev||"")) return "#10B981"; return "#CBD5E1"; }
   function sevLabel(sev){ return {peak:"峰值",high:"偏高",medium:"中等",low:"偏低"}[sev]||sev||"—"; }
@@ -750,7 +927,10 @@
                   error_message:d.error_message||null,                           // 失败原因
                   retry_count:d.retry_count||0,
                   summary:r.summary_json||null,
+                  timelineData:r.timeline_json||null,
                   timeline:(r.timeline_json && r.timeline_json.events) || [],
+                  qwenReport:r.qwen_report||null,
+                  algorithmVersion:r.algorithm_version||null,
                 });
               }catch(e){}
             }
@@ -766,6 +946,11 @@
         ageText,genderFromId,maskId,scoreColor,levelLabel,badgeByLabel,dotColor,statusColor,avatarBg,fmt1,fmt3,pct,
         ovScore,ovName,ovLabel,ovColor,plLabel,plPositioning,dimsOf,screenOf,dirLabel,dirBadge:function(s,k){return badgeByLabel(dirLabel(s,k));},
         confScore,confPct,confLabel,confColor,confComps,confCompName,qOf,rppgConfidence,rppgAvailabilityLabel,rppgReasons,eyeTrackingLabel,eventsOf,severityColor,sevLabel,sevBadge,
+        reportVersion,clinicalNotice,overviewCards,managementSummary,managementActions,radarData,radarValuePoints,radarGridPoints,
+        metricDisplay,metricLevel,unitLabel,auMetrics,auVisualization,auCandidates,
+        rppgMetrics,rppgQualityMetrics,rppgAvailable,rppgCharts,sparklinePoints,
+        vibraMetrics,formal12,formalEligible,formalStatusLabel,
+        eyeData,eyeAvailable,eyeMetrics,eyeHeatCells,eyePointCount,heatColor,
         procStatusLabel,procStatusColor,resultLabel,videoStatusLabel,videoStatusColor,friendlyError,
       };
     },

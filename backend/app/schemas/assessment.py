@@ -33,6 +33,7 @@ class AssessmentResultOut(BaseModel):
     anxiety_label: str | None = None
     anxiety_score: float | None = None
     summary_json: dict | None = None  # V3 全量 summary，供前端做可视化
+    timeline_json: dict | None = None  # V3 五页报告的曲线、候选帧与分段证据层
     qwen_report: str | None = None
 
 
