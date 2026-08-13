@@ -76,6 +76,5 @@ outputs/
 
 # ===== 本机开发工具 / AI 助手状态 =====
 .claude/
-/tools/platform-tools/
-/wsl_update_x64.msi
-/=1000
+/tools/
+*.msi
