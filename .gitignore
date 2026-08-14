@@ -78,3 +78,7 @@ outputs/
 .claude/
 /tools/
 *.msi
+certs/
+
+# 安装包不入库
+*.apk
