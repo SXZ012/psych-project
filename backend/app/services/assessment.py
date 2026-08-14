@@ -19,6 +19,8 @@ from app.models.assessment import Assessment, AssessmentResult, AssessmentStatus
 from app.services.oss.client import OSSClient
 from app.services.qwen.report import generate_report
 from app.services.v3.provider import get_v3_provider
+from app.services.v3.validation import validate_v3_result
+from app.services.video.qa import validate_and_repair
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,31 @@ async def run_assessment(assessment_id: UUID) -> None:
             if not video_path.is_file():
                 raise FileNotFoundError(f"测评视频不存在: {assessment.video_storage_key}")
 
+            # 上传前质量门禁 + 自动修复：只有“可识别时长 30–60s”的视频才进 V3。
+            final_video_path_obj, qa_report = await validate_and_repair(video_path)
+            assessment.video_qa_json = qa_report
+            if not qa_report.get("ok"):
+                assessment.video_status = "qa_failed"
+                assessment.error_code = "VideoQAFailed"
+                assessment.error_message = qa_report.get("reason") or "视频质检未通过"
+                assessment.status = AssessmentStatus.failed
+                assessment.completed_at = datetime.now(timezone.utc)
+                await db.commit()
+                logger.warning(
+                    "assessment %s 视频质检未通过，未上传合作方: %s",
+                    assessment_id,
+                    qa_report.get("reason"),
+                )
+                return
+            final_video_path = Path(final_video_path_obj)
+            assessment.video_status = "ready"
+            await db.commit()
+            logger.info(
+                "assessment %s 视频质检通过，最终文件: %s",
+                assessment_id,
+                qa_report.get("final_path"),
+            )
+
             # 我方保留一份私有OSS备份；本地文件只作为临时中转。
             if (
                 settings.OSS_BACKUP_ENABLED
@@ -55,9 +82,12 @@ async def run_assessment(assessment_id: UUID) -> None:
                     if settings.ENV.lower() == "prod"
                     else "assessment-videos/test"
                 )
-                backup_key = OSSClient.gen_object_key(video_prefix, video_path.name)
+                backup_key = OSSClient.gen_object_key(video_prefix, final_video_path.name)
+                backup_ct = (
+                    "video/mp4" if final_video_path.suffix.lower() == ".mp4" else "video/webm"
+                )
                 await asyncio.to_thread(
-                    OSSClient().upload_file, video_path, backup_key, "video/webm"
+                    OSSClient().upload_file, final_video_path, backup_key, backup_ct
                 )
                 assessment.backup_storage_key = backup_key
                 assessment.backup_status = "completed"
@@ -83,7 +113,7 @@ async def run_assessment(assessment_id: UUID) -> None:
                 logger.info("assessment %s 续查已有V3任务: %s", assessment_id, task_id)
             else:
                 # 分阶段执行并保存合作方 file_id/task_id，便于定位失败环节。
-                file_url, file_id = await provider.upload_video(video_path=video_path)
+                file_url, file_id = await provider.upload_video(video_path=final_video_path)
                 assessment.v3_file_id = file_id
                 assessment.partner_file_id = str(file_id)
                 assessment.partner_upload_status = "completed"
@@ -99,6 +129,8 @@ async def run_assessment(assessment_id: UUID) -> None:
             result = await provider.get_result(final_task)
 
             summary = result.get("summary") or {}
+            result_valid, invalid_reason = validate_v3_result(summary)
+            assessment.result_valid = result_valid
             timeline = result.get("timeline")
             # V3.2 将上传模式的眼动采集状态放在 timeline.display_payload。
             # 归一到 summary，供后台展示和 Qwen 报告安全地判断“未采集”。
@@ -137,34 +169,52 @@ async def run_assessment(assessment_id: UUID) -> None:
                 timeline_url=timeline_url,
             )
             db.add(ar)
-            assessment.status = AssessmentStatus.report_generating
-            assessment.report_generated_at = datetime.now(timezone.utc)
-            assessment.completed_at = datetime.now(timezone.utc)
-            await db.commit()
 
-            # 1.0保留QwenPlus：仅将V3事实层整理为供管理员复核的专业报告，
-            # 不重算/新增任何分数，也不在用户端展示。Qwen不可用时仍保留V3结果。
-            try:
-                ar.qwen_report = await generate_report(summary)
+            if result_valid:
+                # 结果有效：生成正式 Qwen 报告并标记完成。
+                assessment.status = AssessmentStatus.report_generating
+                assessment.report_generated_at = datetime.now(timezone.utc)
+                assessment.completed_at = datetime.now(timezone.utc)
                 await db.commit()
-                logger.info("assessment %s QwenPlus后台报告已生成", assessment_id)
-            except Exception:  # noqa: BLE001
-                logger.exception(
-                    "assessment %s QwenPlus报告生成失败，保留V3结构化结果", assessment_id
-                )
 
-            assessment.status = AssessmentStatus.completed
+                # 1.0保留QwenPlus：仅将V3事实层整理为供管理员复核的专业报告，
+                # 不重算/新增任何分数，也不在用户端展示。Qwen不可用时仍保留V3结果。
+                try:
+                    ar.qwen_report = await generate_report(summary)
+                    await db.commit()
+                    logger.info("assessment %s QwenPlus后台报告已生成", assessment_id)
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "assessment %s QwenPlus报告生成失败，保留V3结构化结果", assessment_id
+                    )
+                assessment.status = AssessmentStatus.completed
+            else:
+                # 合作方未正确识别视频时长/分析结果无效：不作为正式可解释报告；
+                # 仍保留 V3 原始 summary/timeline 供排查。
+                assessment.status = AssessmentStatus.invalid_result
+                assessment.error_code = "InvalidV3Result"
+                assessment.error_message = (
+                    f"合作方未正确识别视频时长/分析结果无效：{invalid_reason}"
+                )
+                assessment.completed_at = datetime.now(timezone.utc)
+                logger.warning("assessment %s V3结果无效: %s", assessment_id, invalid_reason)
+
+            # 本地视频清理：备份成功才删最终文件；修复过的保留原始问题文件审计
             try:
                 if assessment.backup_status == "completed":
-                    video_path.unlink(missing_ok=True)
-                    assessment.video_status = "deleted"
+                    if final_video_path != video_path:
+                        final_video_path.unlink(missing_ok=True)
+                        assessment.video_status = "retained_original_for_audit"
+                    else:
+                        video_path.unlink(missing_ok=True)
+                        assessment.video_status = "deleted"
                 else:
                     assessment.video_status = "retained_local_only"
             except OSError:
                 assessment.video_status = "cleanup_failed"
                 logger.exception("assessment %s 临时视频清理失败", assessment_id)
             await db.commit()
-            logger.info("assessment %s 完成", assessment_id)
+            logger.info("assessment %s 完成(status=%s)", assessment_id, assessment.status)
         except Exception as e:  # noqa: BLE001
             logger.exception("assessment %s 失败", assessment_id)
             await db.rollback()

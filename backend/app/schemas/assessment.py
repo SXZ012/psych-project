@@ -54,6 +54,7 @@ class AssessmentOut(BaseModel):
     retry_count: int = 0
     error_code: str | None = None
     error_message: str | None = None
+    result_valid: bool | None = None  # V3 结果是否可作为正式可解释报告
     submitted_at: datetime | None = None
     processing_started_at: datetime | None = None
     report_generated_at: datetime | None = None
@@ -67,3 +68,4 @@ class AssessmentOut(BaseModel):
 
 class AssessmentDetail(AssessmentOut):
     result: AssessmentResultOut | None = None
+    video_qa_json: dict | None = None  # 上传前 ffprobe 质检 + ffmpeg 修复报告（审计用）

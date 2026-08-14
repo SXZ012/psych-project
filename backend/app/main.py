@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
             # Development compatibility for databases created before the
             # asynchronous video/report states were added. Production should
             # run the equivalent migration before deployment.
-            for value in ("video_processing", "queued", "report_generating"):
+            for value in ("video_processing", "queued", "report_generating", "invalid_result"):
                 await conn.execute(
                     text(
                         "ALTER TYPE assessment_status ADD VALUE IF NOT EXISTS "
@@ -57,6 +57,8 @@ async def lifespan(app: FastAPI):
                 ("submitted_at", "TIMESTAMPTZ"),
                 ("processing_started_at", "TIMESTAMPTZ"),
                 ("report_generated_at", "TIMESTAMPTZ"),
+                ("video_qa_json", "JSONB"),
+                ("result_valid", "BOOLEAN"),
             ):
                 await conn.execute(
                     text(

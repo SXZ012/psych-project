@@ -1,8 +1,10 @@
+from app.core.config import settings
 from app.services.v3.provider import get_v3_provider
 
 
-async def test_mock_provider_returns_real_sample():
+async def test_mock_provider_returns_real_sample(monkeypatch):
     """路线 B：Mock Provider 回放真实样例，结构与线上接口一致。"""
+    monkeypatch.setattr(settings, "PROVIDER_MODE", "mock")  # 与 .env 的 real/mock 无关，固定测 mock
     provider = get_v3_provider()
     result = await provider.run()
 

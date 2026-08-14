@@ -182,7 +182,7 @@
   #app{ width:100vw; height:100vh; height:100dvh; min-width:320px; min-height:480px; }
   button,input,label{ touch-action:manipulation; }
   .terminal-consent{ width:min(680px, calc(100vw - 48px)); max-height:calc(100dvh - 48px); }
-  .terminal-consent-body{ max-height:calc(100dvh - 248px) !important; overscroll-behavior:contain; }
+  .terminal-consent-body{ max-height:calc(100dvh - 248px) !important; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
   .terminal-consent-footer label{ min-height:44px; }
   .terminal-consent-footer input[type="checkbox"]{ width:24px; height:24px; flex:0 0 24px; }
   .terminal-consent-footer button{ min-height:52px; font-size:16px; }
@@ -795,6 +795,7 @@
       // —— MediaRecorder：测评开始时启动，全程录制 ~60 秒 ——
       function startRecording() {
         if (!stream) return;
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') return; // 防重复启动
         videoChunks = [];
         lastVideoBlob = null;
         try {
@@ -808,7 +809,15 @@
             if (ev.data && ev.data.size > 0) videoChunks.push(ev.data);
           };
           mediaRecorder.start(1000); // 每秒一个分片，防止末尾丢失
-          console.log('[demo] 录制启动', mime);
+          const track = stream.getVideoTracks()[0];
+          window.__recMeta = {
+            mime,
+            videoBitsPerSecond: 1_500_000,
+            settings: track ? track.getSettings() : null,
+            started_perf: performance.now(),
+            started_at: new Date().toISOString(),
+          };
+          console.log('[demo] 录制启动', mime, window.__recMeta.settings);
         } catch (e) {
           console.warn('[demo] MediaRecorder 不可用，跳过视频录制', e);
           mediaRecorder = null;
@@ -818,13 +827,21 @@
       // 停止录制：必须等待最后一个 dataavailable + stop 事件完成
       function stopRecording() {
         return new Promise((resolve) => {
-          if (!mediaRecorder || mediaRecorder.state === 'inactive') {
-            resolve(null);
-            return;
-          }
+          if (!mediaRecorder || mediaRecorder.state === 'inactive') { resolve(null); return; }
+          // 停止前先 requestData，等最后一个 dataavailable 与 stop 事件都完成再合并 Blob
           mediaRecorder.onstop = () => {
-            lastVideoBlob = new Blob(videoChunks, { type: 'video/webm' });
-            console.log('[demo] 录制完成', (lastVideoBlob.size / 1024 / 1024).toFixed(1) + 'MB');
+            const blob = new Blob(videoChunks, { type: 'video/webm' });
+            const started = window.__recMeta && window.__recMeta.started_perf;
+            const recorded_ms = started ? Math.round(performance.now() - started) : 0;
+            if (window.__recMeta) {
+              window.__recMeta.recorded_ms = recorded_ms;
+              window.__recMeta.chunks = videoChunks.length;
+            }
+            // 过短/无分片/过小 → 视为录制失败，不当作有效视频上传
+            const ok = recorded_ms >= 30000 && videoChunks.length > 0 && blob.size >= 50000;
+            console.log('[demo] 录制完成', ok ? '有效' : '无效',
+              (blob.size / 1024 / 1024).toFixed(1) + 'MB', recorded_ms + 'ms', videoChunks.length + '片');
+            lastVideoBlob = ok ? blob : null;
             resolve(lastVideoBlob);
           };
           mediaRecorder.requestData(); // 强制刷出最后一片
@@ -928,8 +945,18 @@
         const videoBlob = await stopRecording();
         if (hintTimer) clearInterval(hintTimer);
         if (!videoBlob || videoBlob.size === 0) {
-          console.warn('[demo] 无视频（无摄像头/权限拒绝），跳过视频上传');
+          // 录制无效(时长不足/无分片/摄像头异常)：不当作成功提交，回到检测准备重测
+          console.warn('[demo] 录制无效，不提交');
+          faceMessage.value = '录制时长不足或失败，请重新进行测评';
+          phase.value = 'detect';
+          return;
         }
+        console.log('[demo] 录制有效，准备上传', {
+          ms: window.__recMeta && window.__recMeta.recorded_ms,
+          chunks: window.__recMeta && window.__recMeta.chunks,
+          size: videoBlob.size,
+          mime: window.__recMeta && window.__recMeta.mime,
+        });
 
         // 进入提交中
         phase.value = 'submitting';

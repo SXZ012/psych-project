@@ -171,6 +171,20 @@ powershell -ExecutionPolicy Bypass -File .\scripts\update-wsl-portproxy.ps1 -Ins
         → 清除本机身份，下一位重新录入
 ```
 
+> 摄像头在知情同意后**提前开启用于人脸定位**，但 `MediaRecorder` **仅在正式测评（开场引导）开始时启动、收尾后停止**，全程约 59–60 秒；本项目**不采集麦克风**（`getUserMedia({audio:false})`），不申请麦克风权限。停止前会 `requestData()` 并等待最后一个分片与 `stop` 事件完成再封装上传；实际录制时长过短（<30s）、无分片或文件过小时，前端不会当作成功提交。
+
+## 视频上传校验与自动修复（ffprobe + ffmpeg）
+
+真机浏览器 `MediaRecorder` 分片生成的 WebM 常缺少容器级时长（`duration`），会导致合作方 V3 读出 `duration_seconds=0.0`、`frame_count` 负溢出，进而 rPPG / Vibra 正式分段 / 抑郁焦虑筛查全部不可用。后端在上传合作方之前做质量门禁与自动修复（`backend/app/services/video/qa.py`）：
+
+1. **ffprobe 门禁**：读取是否可解码视频流、容器时长、编码、宽高、帧率、文件大小；不要求音频流。合格区间 **30–70 秒**（合作方约 60s 最佳；下界硬拒 `<30s`；超过 70s 裁剪到 70s，确保最终文件不超过合作方上限）。
+2. **自动修复**（不覆盖原文件）：时长缺失时先**无损重封装**（`ffmpeg -fflags +genpts -c copy`，最快）；仍无时长再**转标准 H.264 MP4**（`libx264 -an -movflags +faststart`，`-t 60` 兜底）。
+3. **双 OSS**：合格或修复合格后的**同一最终视频**用于上传合作方 V3，并按现有配置同步备份到我方私有 OSS；两者状态（`partner_upload_status` / `backup_status`）各自独立记录，任一失败都有独立错误。我方 OSS 未启用时保留本地副本，不影响合作方主流程；原始问题文件保留供审计。
+4. **不合格不上传**：无法修复到 30–70s 的视频不会上传合作方、不创建 V3 任务、不生成报告。
+5. **V3 结果有效性校验**：合作方返回后检查 `input.duration_seconds`、`quality.video_duration_seconds`、`session_duration_seconds` 与 `frame_count`；若时长为 0 或 `frame_count` 为负，测评状态置为 `invalid_result`、`result_valid=false`，**不生成正式报告**，仅保留 V3 原始结果供排查（不依据 `sampled_frames/sample_fps` 推断时长）。
+
+**失败排查**：`/admin` 列表显示状态（`结果无效` / `失败`）与原因；对应数据库字段为 `error_code`、`error_message`、`video_status`（如 `qa_failed`）与 `video_qa_json`（含原始/修复后 ffprobe 参数、处理耗时、最终文件）。
+
 ## Mock 与真实 V3
 
 默认 Mock 模式：

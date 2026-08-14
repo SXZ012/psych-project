@@ -150,6 +150,9 @@
       </div>
       <!-- Tab 内容（滚动区，滚到底触发状态流转） -->
       <div class="report-body flex-1 overflow-y-auto px-7 py-6">
+        <div v-if="current.status === 'invalid_result'" class="mb-5 px-4 py-3 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 text-sm leading-relaxed">
+          ⚠ 合作方未正确识别视频时长/分析结果无效，不作正式可解释报告。下方仅保留 V3 原始数据供排查，请采集符合 30–60s 的视频后复测。
+        </div>
 
         <!-- ① 总览：2 张筛查卡 + 4 张状态卡 -->
         <div v-if="activeTab==='overview'">
@@ -483,7 +486,7 @@
           <span v-if="report.provider_mode === 'mock'" class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" style="background:#FEF3C7;color:#92400E;">模拟数据</span>
           <span class="text-[10px] px-1.5 py-0.5 rounded-full font-medium" :title="'我方备份：'+(report.backup_status||'未完成')+'；合作方：'+(report.partner_upload_status||'未开始')" :style="{background: videoStatusColor(report.video_status) + '22', color: videoStatusColor(report.video_status)}">视频：{{ videoStatusLabel(report.video_status) }}</span>
         </div>
-        <div v-if="report.status === 'failed'" class="failure-reason text-[11px] text-red-600" :title="friendlyError(report.error_message)">失败原因：{{ friendlyError(report.error_message) }}</div>
+        <div v-if="report.status === 'failed' || report.status === 'invalid_result'" class="failure-reason text-[11px] text-red-600" :title="friendlyError(report.error_message)">原因：{{ friendlyError(report.error_message) }}</div>
       </div>
       <div class="record-actions flex flex-col items-end gap-1.5">
         <div class="flex gap-1.5">
@@ -636,27 +639,30 @@
   function avatarBg(report){ if(report && report.overall > 70) return {background:"#FEE2E2", color:"#B91C1C"}; return {background:"#F1F5F9", color:"#475569"}; }
 
   function procStatusLabel(s) {
-    const m = { pending:'待处理', video_processing:'转码中', uploading:'上传中', queued:'排队中', processing:'V3分析中（通常约2–3分钟）', report_generating:'生成报告', completed:'已完成', failed:'失败' };
+    const m = { pending:'待处理', video_processing:'转码中', uploading:'上传中', queued:'排队中', processing:'V3分析中（通常约2–3分钟）', report_generating:'生成报告', completed:'已完成', invalid_result:'结果无效', failed:'失败' };
     return m[s] || s || '—';
   }
   function procStatusColor(s) {
     if (s === 'completed') return '#10B981';
+    if (s === 'invalid_result') return '#F59E0B';
     if (s === 'failed') return '#EF4444';
     if (s === 'pending') return '#94A3B8';
     return '#F59E0B';
   }
   function resultLabel(report) {
-    if (!report || report.status === 'failed') return '暂无结果';
+    if (!report) return '暂无结果';
+    if (report.status === 'invalid_result') return '结果无效';
+    if (report.status === 'failed') return '暂无结果';
     if (!report.summary && report.overall == null) return '等待结果';
     return ovLabel(report.summary) || levelLabel(report.overall);
   }
   function videoStatusLabel(s) {
-    const m = { received:'已接收', ready:'已就绪', transcoding:'转码中', uploading:'上传中', deleted:'已清理', cleanup_failed:'清理异常', failed:'视频异常' };
+    const m = { received:'已接收', ready:'已就绪', transcoding:'转码中', uploading:'上传中', deleted:'已清理', cleanup_failed:'清理异常', qa_failed:'质检未通过', retained_local_only:'本地留档', retained_original_for_audit:'原件留档', failed:'视频异常' };
     return m[s] || s || '未上传';
   }
   function videoStatusColor(s) {
     if (s === 'deleted' || s === 'ready') return '#10B981';
-    if (s === 'failed' || s === 'cleanup_failed') return '#EF4444';
+    if (s === 'failed' || s === 'cleanup_failed' || s === 'qa_failed') return '#EF4444';
     return '#64748B';
   }
   function friendlyError(message) {
@@ -666,6 +672,8 @@
     if (/视频缺失|video.*missing|video.*not.*found/i.test(text)) return '未收到测评视频，请重新进行测评';
     if (/timeout|超时/i.test(text)) return '分析服务响应超时，请稍后重试';
     if (/格式|format|mime/i.test(text)) return '视频格式不支持，请重新进行测评';
+    if (/VideoQAFailed|时长不足|无法恢复|质检/i.test(text)) return '视频质检未通过(时长/格式不符)，请重新测评';
+    if (/InvalidV3Result|未正确识别视频时长|分析结果无效/i.test(text)) return '合作方未正确识别视频时长，该结果不作正式报告';
     return '后台处理异常，请联系技术人员';
   }
   function formatBeijing(iso) {

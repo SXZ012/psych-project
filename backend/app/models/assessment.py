@@ -3,7 +3,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +18,7 @@ class AssessmentStatus(str, enum.Enum):
     processing = "processing"        # V3 模型分析中
     report_generating = "report_generating"  # 生成报告中
     completed = "completed"          # 报告已生成
+    invalid_result = "invalid_result"  # 合作方未正确识别视频时长/分析结果无效，不作正式报告
     failed = "failed"                # 处理失败
 
 
@@ -47,7 +48,11 @@ class Assessment(Base):
     partner_file_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     video_status: Mapped[str | None] = mapped_column(
         String(32), nullable=True
-    )  # received/transcoding/ready/failed
+    )  # received/qa_failed/ready/deleted/retained_local_only/...
+    # 上传前 ffprobe 质检 + ffmpeg 修复报告（原始/修复后参数、处理耗时、最终文件）
+    video_qa_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # V3 返回结果是否可作为正式可解释报告（时长 0/异常时为 False）
+    result_valid: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     selections_data: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # 答题+反应时
     duration_seconds: Mapped[int | None] = mapped_column(nullable=True)
     retry_count: Mapped[int] = mapped_column(default=0, nullable=False)

@@ -31,3 +31,20 @@ def test_assessment_result_exposes_v32_timeline_evidence() -> None:
     ).model_dump()
 
     assert payload["timeline_json"] == timeline
+
+
+def test_dual_oss_status_and_result_valid_are_independent() -> None:
+    """合作方 OSS 与我方 OSS 状态各自独立、互不覆盖；result_valid 正常暴露。"""
+    payload = AssessmentOut(
+        id=uuid.uuid4(),
+        name="测试",
+        status="invalid_result",
+        provider_mode="real",
+        created_at=datetime.now(timezone.utc),
+        backup_status="completed",
+        partner_upload_status="failed",
+        result_valid=False,
+    ).model_dump()
+    assert payload["backup_status"] == "completed"
+    assert payload["partner_upload_status"] == "failed"
+    assert payload["result_valid"] is False
