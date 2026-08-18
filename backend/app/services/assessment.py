@@ -86,12 +86,21 @@ async def run_assessment(assessment_id: UUID) -> None:
                 backup_ct = (
                     "video/mp4" if final_video_path.suffix.lower() == ".mp4" else "video/webm"
                 )
-                await asyncio.to_thread(
-                    OSSClient().upload_file, final_video_path, backup_key, backup_ct
-                )
-                assessment.backup_storage_key = backup_key
-                assessment.backup_status = "completed"
-                logger.info("assessment %s 我方视频备份完成: %s", assessment_id, backup_key)
+                # 备份与合作方V3主流程相互独立：失败只标记状态，不阻断后续上传/分析。
+                try:
+                    await asyncio.to_thread(
+                        OSSClient().upload_file, final_video_path, backup_key, backup_ct
+                    )
+                    assessment.backup_storage_key = backup_key
+                    assessment.backup_status = "completed"
+                    logger.info("assessment %s 我方视频备份完成: %s", assessment_id, backup_key)
+                except Exception:  # noqa: BLE001
+                    assessment.backup_status = "failed"
+                    logger.exception(
+                        "assessment %s 我方OSS备份失败(不影响V3主流程，本地保留): %s",
+                        assessment_id,
+                        backup_key,
+                    )
             else:
                 # 开发期关闭视频备份时保留本地文件，避免上传真人测试视频。
                 assessment.backup_status = "local_only"

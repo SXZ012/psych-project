@@ -1,3 +1,5 @@
+import json
+
 from app.services.qwen.report import build_user_prompt, generate_report
 
 SAMPLE_SUMMARY = {
@@ -57,7 +59,10 @@ def test_build_prompt_does_not_interpret_missing_eye_tracking():
 async def test_generate_report_uses_client_and_returns_text():
     fake = _FakeQwenClient()
     report = await generate_report(SAMPLE_SUMMARY, client=fake)
-    assert "测试用占位报告" in report
+    parsed = json.loads(report)
+    assert parsed["schema_version"] == "qwen_page_summaries_v1"
+    assert set(parsed["pages"]) == {"overview", "au", "rppg", "vibra", "eye"}
+    assert parsed["source"] == "rule_fallback"  # 非法自由文本必须被安全兜底替换
     assert fake.last_messages is not None
     # system 在前、user 在后，且 system 含合规铁律
     assert fake.last_messages[0]["role"] == "system"
