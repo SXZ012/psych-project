@@ -6,14 +6,14 @@
 <title>心象 · 内心探索</title>
 
 <!-- Tailwind CSS (CDN) -->
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="/static/assets/vendor/tailwind.js"></script>
 <!-- Vue 3 (Global Build, CDN) -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="/static/assets/vendor/vue.global.prod.js"></script>
 <!-- MediaPipe 模块、模型与 WASM 均由页面从项目本地按需加载 -->
 <!-- 字体：文学性衬线 + UI 无衬线 -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+
+<link href="/static/assets/vendor/fonts.css" rel="stylesheet" />
 
 <script>
   tailwind.config = {
@@ -29,6 +29,7 @@
 </script>
 
 <style>
+  [v-cloak]{display:none!important}
   :root {
     --bg-0: #070a16;
     --bg-1: #0e1430;
@@ -181,8 +182,8 @@
   /* 10.1 英寸横屏终端：以 1280x800 / 16:10 为主设计画布。 */
   #app{ width:100vw; height:100vh; height:100dvh; min-width:320px; min-height:480px; }
   button,input,label{ touch-action:manipulation; }
-  .terminal-consent{ width:min(680px, calc(100vw - 48px)); max-height:calc(100dvh - 48px); }
-  .terminal-consent-body{ max-height:calc(100dvh - 248px) !important; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
+  .terminal-consent{ width:min(680px, calc(100vw - 48px)); max-height:calc(100vh - 48px); max-height:calc(100dvh - 48px); }
+  .terminal-consent-body{ max-height:calc(100vh - 248px) !important; max-height:calc(100dvh - 248px) !important; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y; }
   .terminal-consent-footer label{ min-height:44px; }
   .terminal-consent-footer input[type="checkbox"]{ width:24px; height:24px; flex:0 0 24px; }
   .terminal-consent-footer button{ min-height:52px; font-size:16px; }
@@ -195,9 +196,9 @@
   }
   /* 1024x600 等低高度 10.1 英寸面板采用紧凑排版，避免按钮出屏。 */
   @media (max-height:680px){
-    .terminal-consent{ max-height:calc(100dvh - 24px); }
+    .terminal-consent{ max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px); }
     .terminal-consent-header{ padding-top:14px !important; padding-bottom:14px !important; }
-    .terminal-consent-body{ max-height:calc(100dvh - 194px) !important; padding-top:12px !important; padding-bottom:12px !important; line-height:1.55 !important; }
+    .terminal-consent-body{ max-height:calc(100vh - 194px) !important; max-height:calc(100dvh - 194px) !important; padding-top:12px !important; padding-bottom:12px !important; line-height:1.55 !important; }
     .terminal-consent-footer{ padding-top:12px !important; padding-bottom:12px !important; }
     .terminal-detect-view{ width:250px !important; height:278px !important; margin-bottom:20px !important; }
     .face-frame{ width:172px; height:220px; }
@@ -218,7 +219,7 @@
 </head>
 
 <body>
-<div id="app" class="relative w-screen h-screen overflow-hidden select-none">
+<div id="app" v-cloak class="relative w-screen h-screen overflow-hidden select-none">
 
   <!-- 全局背景光晕 -->
   <div class="absolute inset-0 pointer-events-none">
@@ -234,7 +235,7 @@
 
   <!-- 测评全程的低干扰自拍状态窗 -->
   <aside v-if="showCameraMonitor" class="camera-monitor" :class="faceState">
-    <div class="camera-monitor-view">
+    <div class="camera-monitor-view" data-native-preview-anchor="monitor">
       <video ref="monitorVideoEl" autoplay muted playsinline></video>
       <div class="camera-safe-zone"></div>
     </div>
@@ -300,7 +301,7 @@
 
   <section v-if="phase === 'detect'" class="relative z-10 w-full h-full flex flex-col items-center justify-center px-8">
     <div class="flex flex-col items-center fade-up">
-      <div class="terminal-detect-view relative flex items-center justify-center mb-12" style="width:320px;height:360px;">
+      <div class="terminal-detect-view relative flex items-center justify-center mb-12" data-native-preview-anchor="detect" style="width:320px;height:360px;">
         <video v-if="cameraOn" ref="videoEl" autoplay muted playsinline
                class="absolute inset-0 w-full h-full object-cover rounded-3xl opacity-90"
                style="filter: brightness(.8) contrast(1.05);"></video>
@@ -461,7 +462,7 @@
 </div>
 
 <script>
-  const { createApp, ref, reactive, computed, nextTick, onMounted, onBeforeUnmount } = Vue;
+  const { createApp, ref, reactive, computed, watch, nextTick, onMounted, onBeforeUnmount } = Vue;
 
   // —— 4 套文学性文案（通用版，配任何 OSS 图都成立，避免图文违和）——
   const QUESTION_TEMPLATES = [
@@ -593,8 +594,63 @@
       let faceInvalidSince = null;
       let lastPositionPromptAt = 0;
 
+      // —— APK 混合模式探测：有 window.AndroidCamera 用原生 Camera2/MediaCodec；普通浏览器走原 MediaRecorder ——
+      const nativeCam = (() => {
+        try { return !!(window.AndroidCamera && JSON.parse(window.AndroidCamera.isAvailable()).available); }
+        catch (e) { return false; }
+      })();
+      // 原生异步调用包装：回调一次性挂 window，原生 evaluateJavascript 回来后 resolve
+      window.__acNoop = window.__acNoop || function () {};
+      const nativeCall = (fn, ...args) => new Promise((resolve) => {
+        const token = '__ac_cb_' + Math.random().toString(36).slice(2);
+        window[token] = (res) => { try { delete window[token]; } catch (e) {} resolve(res); };
+        try { window.AndroidCamera[fn](...args, token); }
+        catch (e) { resolve({ ok: false, error: String((e && e.message) || e) }); }
+      });
+      // 音频接口预留（仅 APK 环境；当前原生返回 not_configured，不阻塞流程）。浏览器继续用 speechSynthesis。
+      const playIntroAudio = () => { if (nativeCam) { try { window.AndroidCamera.playIntroAudio(); } catch (e) {} } };
+      const playOutroAudio = () => { if (nativeCam) { try { window.AndroidCamera.playOutroAudio(); } catch (e) {} } };
+      const stopPromptAudio = () => { if (nativeCam) { try { window.AndroidCamera.stopPromptAudio(); } catch (e) {} } };
+
       const current = computed(() => questions.value[currentIndex.value]);
       const showCameraMonitor = computed(() => cameraOn.value && ['intro', 'assess', 'loading'].includes(phase.value));
+
+      // 原生 TextureView 位于 WebView 上层：读取当前网页框的真实位置，避免固定坐标悬浮。
+      async function alignNativePreview(kind) {
+        if (!nativeCam) return;
+        await nextTick();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const anchor = document.querySelector(`[data-native-preview-anchor="${kind}"]`);
+        if (!anchor) {
+          try { window.AndroidCamera.setPreviewLayout(false, 0, 0, 0, 0); } catch (e) {}
+          return;
+        }
+        const rect = anchor.getBoundingClientRect();
+        const vw = Math.max(1, window.innerWidth);
+        const vh = Math.max(1, window.innerHeight);
+        window.AndroidCamera.setPreviewLayout(
+          true,
+          rect.left / vw * 100,
+          rect.top / vh * 100,
+          rect.width / vw * 100,
+          rect.height / vh * 100,
+        );
+      }
+
+      function syncNativePreviewForPhase() {
+        if (!nativeCam) return;
+        if (!cameraOn.value) {
+          try { window.AndroidCamera.setPreviewLayout(false, 0, 0, 0, 0); } catch (e) {}
+        } else if (phase.value === 'detect') {
+          alignNativePreview('detect');
+        } else if (['intro', 'assess', 'loading'].includes(phase.value)) {
+          alignNativePreview('monitor');
+        } else {
+          try { window.AndroidCamera.setPreviewLayout(false, 0, 0, 0, 0); } catch (e) {}
+        }
+      }
+
+      watch([phase, cameraOn], syncNativePreviewForPhase);
 
       // —— 从项目 OSS 图库加载 5 张图 ——
       async function loadPairs() {
@@ -772,6 +828,24 @@
         faceReady.value = false;
         faceState.value = 'warning';
         faceMessage.value = '正在开启摄像头…';
+        if (nativeCam) {
+          // APK：先把原生 Camera2 预览嵌入网页中央人物框。
+          await alignNativePreview('detect');
+          const r = await nativeCall('startPreview');
+          if (r && r.ok) {
+            cameraOn.value = true;
+            faceState.value = 'ok';
+            faceMessage.value = '请正对屏幕，让头部完整位于画面框内';
+            // APK 模式网页内无相机流：跳过 MediaPipe 检测门，由原生预览框辅助对位（后续可上 RKNN 原生检测）
+            faceReady.value = true;
+            console.log('[demo] 原生预览就绪', r);
+          } else {
+            cameraOn.value = false;
+            faceState.value = 'error';
+            faceMessage.value = '原生摄像头开启失败：' + ((r && r.error) || '未知原因');
+          }
+          return;
+        }
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
@@ -794,6 +868,19 @@
 
       // —— MediaRecorder：测评开始时启动，全程录制 ~60 秒 ——
       function startRecording() {
+        if (nativeCam) {
+          // APK：原生 H.264 硬编。确认启动成功后才触发预留的开头音时序
+          nativeCall('startRecording').then((r) => {
+            window.__recMeta = Object.assign({ mode: 'native' }, r || {});
+            if (r && r.ok) {
+              console.log('[demo] 原生录制启动', r);
+              playIntroAudio();                    // 预留：录像确认启动成功 → 未来播开头音（当前 not_configured）
+            } else {
+              console.error('[demo] 原生录制启动失败', r);
+            }
+          });
+          return;
+        }
         if (!stream) return;
         if (mediaRecorder && mediaRecorder.state !== 'inactive') return; // 防重复启动
         videoChunks = [];
@@ -826,6 +913,7 @@
 
       // 停止录制：必须等待最后一个 dataavailable + stop 事件完成
       function stopRecording() {
+        if (nativeCam) return nativeCall('stopRecording'); // 原生：等 MP4 封装完成才 resolve
         return new Promise((resolve) => {
           if (!mediaRecorder || mediaRecorder.state === 'inactive') { resolve(null); return; }
           // 停止前先 requestData，等最后一个 dataavailable 与 stop 事件都完成再合并 Blob
@@ -880,8 +968,8 @@
         if (!faceReady.value || !cameraOn.value) return;
         phase.value = 'intro';
         attachCameraVideos();
-        speak('您好，欢迎参加心理状态评估。测评全程请保持头部位于画面框内，跟随光点，放松注视。');
-        startRecording();                          // 开场即开始录制（intro+assess 全覆盖）
+        if (!nativeCam) speak('您好，欢迎参加心理状态评估。测评全程请保持头部位于画面框内，跟随光点，放松注视。');
+        startRecording();                          // 开场即开始录制（intro+assess 全覆盖；APK 内部走 playIntroAudio 预留时序）
         if (introTimer) clearTimeout(introTimer);
         introTimer = setTimeout(() => {
           phase.value = 'assess';
@@ -931,10 +1019,21 @@
 
       const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+      function showComplete() {                    // 提交成功 → 完成页（浏览器/APK 共用，不展示报告）
+        phase.value = 'complete';
+        completeCountdown.value = 30;
+        resetCompleteCountdown();
+        if (completeTimer) clearInterval(completeTimer);
+        completeTimer = setInterval(() => {
+          completeCountdown.value -= 1;
+          if (completeCountdown.value <= 0) finishToLogin();
+        }, 1000);
+      }
+
       // —— 提交：录制停止 → 上传视频+答题 → 成功则显示完成页（不展示报告）——
       async function submit() {
         phase.value = 'loading';
-        speak('评估完成，感谢您的配合。');
+        if (nativeCam) playOutroAudio(); else speak('评估完成，感谢您的配合。'); // 收尾音预留时序：停止录像前
         finalCountdown.value = 5;
         hintTimer = setInterval(() => {
           finalCountdown.value = Math.max(1, finalCountdown.value - 1);
@@ -942,8 +1041,39 @@
 
         // 补足开场5秒 + 5题各10秒 = 55秒，收尾再录制5秒，总时长约60秒
         await delay(5000);
-        const videoBlob = await stopRecording();
+        const rec = await stopRecording();         // 浏览器: Blob|null；APK: {ok,filePath,...}|null（封装完成才返回）
         if (hintTimer) clearInterval(hintTimer);
+
+        if (nativeCam) {
+          // —— APK：原生 H.264 MP4 由原生层 multipart 上传（复用现有 /submit），失败绝不显示"测评完成" ——
+          if (!rec || !rec.ok) {
+            console.warn('[demo] 原生录制无效，不提交', rec);
+            faceMessage.value = '录制失败：' + ((rec && rec.error) || '未知原因，请重测');
+            phase.value = 'detect';
+            return;
+          }
+          phase.value = 'submitting';
+          const user = JSON.parse(localStorage.getItem('psych_user') || '{}');
+          const payload = {
+            name: user.name || '',
+            id_card: user.id_card || '',
+            selections: selections.map((ids, i) => ({ question_id: questions.value[i].id, picked: ids })),
+            duration_seconds: 60,
+          };
+          const r = await nativeCall('submitAssessment', JSON.stringify(payload));
+          if (r && r.ok) {
+            if (r.assessment_id) lastSubmissionId = r.assessment_id;
+            showComplete();
+          } else {
+            console.error('[demo] 原生上传失败（本地MP4已保留，可重试）', r);
+            faceMessage.value = '上传失败：' + ((r && r.error) || '请重试');
+            phase.value = 'detect';
+          }
+          return;
+        }
+
+        // —— 浏览器路径（原逻辑不变） ——
+        const videoBlob = rec;
         if (!videoBlob || videoBlob.size === 0) {
           // 录制无效(时长不足/无分片/摄像头异常)：不当作成功提交，回到检测准备重测
           console.warn('[demo] 录制无效，不提交');
@@ -983,14 +1113,7 @@
           if (data.id) lastSubmissionId = data.id;
 
           // 提交成功 → 完成页
-          phase.value = 'complete';
-          completeCountdown.value = 30;
-          resetCompleteCountdown();
-          if (completeTimer) clearInterval(completeTimer);
-          completeTimer = setInterval(() => {
-            completeCountdown.value -= 1;
-            if (completeCountdown.value <= 0) finishToLogin();
-          }, 1000);
+          showComplete();
         } catch (e) {
           console.warn('[demo] 提交失败', e);
           phase.value = 'submit_failed';
@@ -1005,6 +1128,11 @@
         if (completeTimer) clearInterval(completeTimer);
         // 彻底清理：摄像头/录制/答题/身份/定时器
         cleanupRecording();
+        if (nativeCam) {
+          // APK：停掉原生预览并隐藏原生预览层
+          try { window.AndroidCamera.setPreviewLayout(false, 0, 0, 0, 0); } catch (e) {}
+          try { window.AndroidCamera.stopPreview('__acNoop'); } catch (e) {}
+        }
         if (stream) stream.getTracks().forEach((t) => t.stop());
         stream = null;
         if (faceDetectionTimer) clearTimeout(faceDetectionTimer);
@@ -1025,14 +1153,17 @@
         }
         await loadPairs();
         preload();
+        window.addEventListener('resize', syncNativePreviewForPhase);
       });
       onBeforeUnmount(() => {
+        window.removeEventListener('resize', syncNativePreviewForPhase);
         if (qTimer) clearInterval(qTimer);
         if (hintTimer) clearInterval(hintTimer);
         if (introTimer) clearTimeout(introTimer);
         if (completeTimer) clearInterval(completeTimer);
         if (faceDetectionTimer) clearTimeout(faceDetectionTimer);
         cleanupRecording();
+        stopPromptAudio(); // 预留音频接口：退出时统一停掉（当前 not_configured）
         try { speechSynthesis.cancel(); } catch(e) {}
         if (stream) stream.getTracks().forEach((t) => t.stop());
         if (faceDetector) { try { faceDetector.close(); } catch (e) {} }

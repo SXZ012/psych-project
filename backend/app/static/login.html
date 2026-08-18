@@ -4,119 +4,106 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>登录 · 心理健康测评系统</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <style>
-  :root{ --terminal-max-width:480px; }
-  html,body{ width:100%; min-height:100%; overflow:hidden; }
-  body{ font-family:-apple-system,"Microsoft YaHei","Segoe UI",system-ui,sans-serif; margin:0; overflow:hidden; }
-  .terminal-login-shell{ width:min(var(--terminal-max-width), calc(100vw - 48px)); }
-  .terminal-login-card{ padding:clamp(28px,5vh,44px) clamp(28px,4vw,44px); }
-  .terminal-login-card input,
-  .terminal-login-card button{ min-height:52px; font-size:16px; }
-  .fade-enter-active{ transition:opacity .5s ease, transform .5s ease; }
-  .fade-enter-from{ opacity:0; transform:translateY(12px); }
-  /* 10.1 英寸终端主基准：1280x800 横屏；同时兼容 1024x600。 */
-  @media (min-width:1024px) and (min-height:600px){
-    .terminal-login-card{ box-shadow:0 22px 60px rgba(30,58,138,.13); }
-  }
-  @media (max-height:680px){
-    .terminal-login-card{ padding-top:24px; padding-bottom:24px; }
-    .terminal-login-card .login-heading{ margin-bottom:20px; }
-    .terminal-login-card .login-icon{ width:56px; height:56px; margin-bottom:12px; }
-    .terminal-login-card .login-fields{ gap:14px; }
-    .terminal-login-card .login-submit{ margin-top:18px; }
-    .terminal-login-card .login-privacy{ margin-top:12px; }
-  }
-  @media (max-width:600px){
-    .terminal-login-shell{ width:calc(100vw - 24px); }
-    .terminal-login-card{ padding-left:24px; padding-right:24px; }
-  }
+  /* v-cloak：Vue 挂载前隐藏模板，杜绝键盘等元素闪现 */
+  [v-cloak]{display:none!important}.error[v-cloak]{display:block!important;visibility:hidden}
+  *{box-sizing:border-box}html,body,#app{width:100%;height:100%;margin:0}body{font-family:-apple-system,"Microsoft YaHei","Segoe UI",system-ui,sans-serif;overflow:hidden;background:#E8F0ED}button,input{font:inherit}
+  .login-layout{position:relative;width:100%;height:100%;min-height:600px;background:#E8F0ED;overflow:hidden}
+  .login-layout::before{content:"";position:fixed;z-index:0;inset:0;background:#E8F0ED url('/static/assets/login-wellbeing-lake.webp') center center/cover no-repeat;transform:translateZ(0);will-change:transform;pointer-events:none}
+  .login-layout::after{content:"";position:fixed;z-index:0;inset:0;background:linear-gradient(90deg,rgba(238,244,240,.04) 0%,rgba(238,244,240,.10) 42%,rgba(238,244,240,.52) 100%);transform:translateZ(0);pointer-events:none}
+  .brand-panel{position:absolute;z-index:1;top:52px;left:58px;color:#24483B}.brand-content{padding:12px 16px;border-radius:15px;background:rgba(250,252,249,.72);border:1px solid rgba(255,255,255,.55)}
+  .system-name{margin:0;color:#315849;font-size:16px;font-weight:600;letter-spacing:.14em}
+  .form-panel{position:relative;z-index:1;display:flex;align-items:center;justify-content:flex-end;width:100%;height:100%;padding:40px 11.5% 40px 45%}
+  .form-content{width:min(460px,100%);padding:34px 36px;border:1px solid rgba(255,255,255,.75);border-radius:28px;background:rgba(248,251,248,.88);box-shadow:0 22px 55px rgba(55,83,71,.14)}
+  .form-heading{margin-bottom:24px}.form-kicker{margin:0 0 4px;color:#5D897A;font-size:14px;font-weight:600}.form-title{margin:0;color:#2E4A40;font-size:24px;line-height:1.35;font-weight:700}.form-subtitle{margin:4px 0 0;color:#80938A;font-size:14px}.fields{display:grid;grid-template-columns:1fr;gap:4px}.field-label{display:block;margin-bottom:7px;color:#4B625C;font-size:14px;font-weight:600}.form-input{width:100%;height:56px;border:1px solid rgba(115,143,133,.35);border-radius:14px;background:rgba(255,255,255,.85);padding:0 17px;color:#263C35;font-size:17px;transition:border-color .12s ease,box-shadow .12s ease}.form-input:focus{outline:0;border-color:#79A99A;box-shadow:0 0 0 4px rgba(128,171,155,.16)}.form-input.invalid{border-color:#E96B6B}
+  .primary-button{width:100%;height:54px;margin-top:15px;border:0;border-radius:14px;color:#fff;font-size:16px;font-weight:600;background:linear-gradient(135deg,#668D7E,#3E7367);box-shadow:0 10px 24px rgba(62,115,103,.22)}.error{min-height:18px;margin-top:5px;color:#D85B5B;font-size:12px}
+  /* 身份证字段：只读展示 + 自带数字键盘，系统输入法不弹 */
+  .id-field-wrap{position:relative}
+  .id-progress{position:absolute;right:2px;top:2px;font-size:12px;color:#6C8B7D;font-variant-numeric:tabular-nums}
+  .id-progress.ok{color:#2F8F6B;font-weight:700}
+  #id-card-input{cursor:pointer;letter-spacing:.06em;font-variant-numeric:tabular-nums}
+  .id-caret{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:2px;height:26px;background:#3E7367;border-radius:1px;animation:caret-blink 1.1s steps(1) infinite}
+  @keyframes caret-blink{50%{opacity:0}}
+  /* 自带数字键盘（布局一部分，物理上不可能遮挡输入框）；不含 backdrop-filter 保证低端GPU流畅 */
+  .id-keypad{position:absolute;z-index:2;top:50%;right:calc(11.5% + 478px);width:min(340px,40vw);padding:16px 16px 14px;border:1px solid #DCE6E1;border-radius:22px;background:#F5F8F6;box-shadow:0 8px 22px rgba(55,83,71,.12);transform:translate3d(0,-50%,0);contain:layout paint style;backface-visibility:hidden;opacity:0;visibility:hidden;pointer-events:none}
+  .id-keypad.open{opacity:1;visibility:visible;pointer-events:auto}
+  .kp-title{margin:0 0 10px;padding-left:4px;font-size:12px;font-weight:600;color:#4B625C;letter-spacing:.08em}
+  .kp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .kp-key{height:56px;border:1px solid #CBDAD3;border-radius:12px;background:#fff;font-size:21px;font-weight:600;color:#263C35;transition:background .06s ease;touch-action:manipulation;user-select:none}
+  .kp-key:active{background:#E4EDE6}
+  .kp-key.fn{background:rgba(102,141,126,.13);font-size:14px;font-weight:600;color:#3E6154}
+  .kp-key.fn:active{background:rgba(102,141,126,.24)}
+  .kp-key.x-key:disabled{opacity:.35}
+  .kp-key.done{background:#4E7F70;color:#fff;font-size:15px}
+  .kp-key.span2{grid-column:span 2}
+  .kp-key.big{font-size:26px}
+  .privacy{margin:12px 0 0;color:#8A9B92;font-size:12px;text-align:center}
+  @media(max-height:680px){.brand-panel{top:28px;left:38px}.form-panel{padding-top:18px;padding-bottom:18px}.form-content{padding:22px 28px}.form-heading{margin-bottom:14px}.form-input{height:48px}.primary-button{height:48px;margin-top:9px}.privacy{margin-top:7px}.error{min-height:14px}.id-keypad{width:320px;padding:12px}.kp-key{height:48px;font-size:19px}.kp-grid{gap:8px}}
+  @media(max-width:800px),(orientation:portrait){.login-layout::before{background-position:38% center}.login-layout::after{background:rgba(239,245,241,.52)}.brand-panel{top:24px;left:24px}.form-panel{justify-content:center;padding:98px 24px 24px}.form-content{max-width:480px}.form-heading{text-align:center}.id-keypad{position:fixed;top:auto;right:24px;bottom:24px;width:calc(100% - 48px);max-width:480px;transform:none}}
 </style>
 </head>
-<body class="min-h-screen flex items-center justify-center relative overflow-hidden" style="background:linear-gradient(160deg,#F8FAFC 0%,#EFF6FF 50%,#E0F2FE 100%);">
-
-  <!-- 微弱医疗科技感光晕 -->
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-24 -left-24 w-[28rem] h-[28rem] rounded-full" style="background:radial-gradient(circle,rgba(14,165,233,.12),transparent 70%);"></div>
-    <div class="absolute -bottom-24 -right-24 w-[28rem] h-[28rem] rounded-full" style="background:radial-gradient(circle,rgba(99,102,241,.12),transparent 70%);"></div>
-  </div>
-
-  <div id="app" class="terminal-login-shell relative">
-    <Transition name="fade" appear>
-      <div class="terminal-login-card bg-white rounded-2xl shadow-xl border border-gray-100">
-        <!-- 标题 -->
-        <div class="login-heading text-center mb-8">
-          <div class="login-icon mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
-            <svg class="w-9 h-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.5-7-10a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 5.5-7 10-7 10"/><path d="M9 11h2l1-2 2 4 1-2h2"/></svg>
-          </div>
-          <h1 class="text-xl font-bold" style="color:#1E3A8A;">心理健康测评管理系统</h1>
-          <p class="text-sm text-gray-400 mt-1.5">请录入身份信息，开始测评</p>
-        </div>
-
-        <!-- 表单 -->
-        <div class="login-fields space-y-5">
-          <div>
-            <label class="block text-sm font-medium text-gray-600 mb-2">真实姓名</label>
-            <input v-model="name" @blur="validateName" @input="errors.name=''" type="text" maxlength="20" placeholder="请输入您的姓名"
-                   class="w-full px-4 py-3 border rounded-xl text-sm transition focus:outline-none focus:ring-2"
-                   :class="errors.name ? 'border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-sky-400 focus:ring-sky-100'" />
-            <div v-if="errors.name" class="text-xs text-red-500 mt-1.5">{{ errors.name }}</div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-600 mb-2">身份证号码</label>
-            <input :value="idCard" @input="onIdCardInput" @blur="validateIdCard" type="text" maxlength="18" placeholder="请输入 18 位身份证号码"
-                   class="w-full px-4 py-3 border rounded-xl text-sm tracking-wider transition focus:outline-none focus:ring-2"
-                   :class="errors.idCard ? 'border-red-400 focus:ring-red-100' : 'border-gray-200 focus:border-sky-400 focus:ring-sky-100'" />
-            <div v-if="errors.idCard" class="text-xs text-red-500 mt-1.5">{{ errors.idCard }}</div>
-          </div>
-        </div>
-
-        <!-- 登录按钮 -->
-        <button @click="submit" class="login-submit w-full mt-7 py-3 text-white rounded-xl text-sm font-medium hover:opacity-90 transition shadow-md" style="background:linear-gradient(135deg,#0EA5E9,#6366F1);">
-          开始测评
-        </button>
-
-        <p class="login-privacy text-center text-xs text-gray-300 mt-5">身份信息仅用于本次测评，严格保密</p>
+<body>
+<main id="app">
+  <div class="login-layout">
+    <section class="brand-panel" aria-label="心理健康测评欢迎界面">
+      <div class="brand-content">
+        <p class="system-name">心理健康测评系统</p>
       </div>
-    </Transition>
+    </section>
+
+    <section class="form-panel">
+      <!-- 自带数字键盘：身份证专用，系统输入法不参与 -->
+        <div class="id-keypad" :class="{open:idPadOpen}" aria-label="身份证数字键盘" v-cloak>
+          <p class="kp-title">身份证号键盘 · 已输入 {{idCard.length}}/18 位</p>
+          <div class="kp-grid">
+            <button type="button" class="kp-key" @click="idKey('1')">1</button>
+            <button type="button" class="kp-key" @click="idKey('2')">2</button>
+            <button type="button" class="kp-key" @click="idKey('3')">3</button>
+            <button type="button" class="kp-key fn big" @click="idBackspace" aria-label="退格">⌫</button>
+            <button type="button" class="kp-key" @click="idKey('4')">4</button>
+            <button type="button" class="kp-key" @click="idKey('5')">5</button>
+            <button type="button" class="kp-key" @click="idKey('6')">6</button>
+            <button type="button" class="kp-key fn" @click="idClear">清空</button>
+            <button type="button" class="kp-key" @click="idKey('7')">7</button>
+            <button type="button" class="kp-key" @click="idKey('8')">8</button>
+            <button type="button" class="kp-key" @click="idKey('9')">9</button>
+            <button type="button" class="kp-key x-key" :disabled="idCard.length !== 17" @click="idKey('X')" title="仅第18位可为 X">X</button>
+            <button type="button" class="kp-key span2" @click="idKey('0')">0</button>
+            <button type="button" class="kp-key span2 done" @click="idDone">完成</button>
+          </div>
+        </div>
+
+      <div class="form-content">
+        <header class="form-heading"><p class="form-kicker">欢迎使用</p><h2 class="form-title">请填写测评信息</h2><p class="form-subtitle">身份信息仅用于本次测评</p></header>
+        <div class="fields">
+          <div><label class="field-label" for="name-input">真实姓名</label><input id="name-input" v-model="name" @focus="handleNameFocus" @blur="handleNameBlur" @input="errors.name=''" @keydown.enter.prevent="activateIdCard" type="text" maxlength="20" autocomplete="off" enterkeyhint="next" placeholder="请输入姓名" class="form-input" :class="{invalid:errors.name}"/><p class="error" v-cloak>{{errors.name}}</p></div>
+          <div class="id-field-wrap"><span class="id-progress" :class="{ok:idCardValid}" v-cloak>{{idCard.length}}/18<span v-if="idCardValid"> ✓</span></span><label class="field-label" for="id-card-input">身份证号码</label><input id="id-card-input" :value="idCardDisplay" @focus="openIdPad" @click="openIdPad" @keydown.enter.prevent="idDone" type="text" inputmode="none" readonly autocomplete="off" placeholder="请输入18位身份证号码" class="form-input" :class="{invalid:errors.idCard}"/><span v-if="idPadOpen && idCard.length < 18" class="id-caret" aria-hidden="true" v-cloak></span><p class="error" v-cloak>{{errors.idCard}}</p></div>
+        </div>
+        <button class="primary-button" type="button" @click="submit">开始测评</button><p class="privacy">您的身份信息将被严格保密</p>
+      </div>
+    </section>
   </div>
-
+</main>
+<script src="/static/assets/vendor/vue.global.prod.js"></script>
 <script>
-  const { createApp, ref, reactive } = Vue;
-
-  createApp({
-    setup(){
-      // login 页始终可访问：支持重新登录 / 换被测者（提交时覆盖旧身份）
-      const name = ref("");
-      const idCard = ref("");
-      const errors = reactive({ name: "", idCard: "" });
-
-      // 身份证输入：限 18 位、小写 x → 大写 X、只保留数字和 X
-      function onIdCardInput(e){
-        idCard.value = e.target.value.toUpperCase().replace(/[^\dX]/g, "").slice(0, 18);
-        errors.idCard = "";
-      }
-      function validateName(){
-        const n = name.value.trim();
-        errors.name = (n.length < 2 || n.length > 20) ? "姓名需 2-20 字符" : "";
-      }
-      function validateIdCard(){
-        errors.idCard = /^\d{17}[\dX]$/.test(idCard.value) ? "" : "身份证号码必须为 18 位";
-      }
-      function submit(){
-        validateName();
-        validateIdCard();
-        if (errors.name || errors.idCard) return;                 // 校验不通过，留在本页
-        // 存身份信息，跳转测评端
-        localStorage.setItem("psych_user", JSON.stringify({ name: name.value.trim(), id_card: idCard.value }));
-        location.href = "/demo";
-      }
-
-      return { name, idCard, errors, onIdCardInput, validateName, validateIdCard, submit };
-    },
-  }).mount("#app");
+const{createApp,ref,reactive,computed}=Vue;
+createApp({setup(){
+  const name=ref(""),idCard=ref("");const errors=reactive({name:"",idCard:""});const idPadOpen=ref(false);
+  const idCardValid=computed(()=>/^\d{17}[\dX]$/.test(idCard.value));
+  const idCardDisplay=computed(()=>{const r=idCard.value;return (r.slice(0,6)+" "+r.slice(6,14)+" "+r.slice(14)).trim()});
+  function validateName(){const v=name.value.trim();errors.name=v.length<2||v.length>20?"请输入2—20个字符的真实姓名":"";return!errors.name}
+  function validateIdCard(){errors.idCard=/^\d{17}[\dX]$/.test(idCard.value)?"":"请输入完整的18位身份证号码";return!errors.idCard}
+  function openIdPad(){idPadOpen.value=true;errors.idCard=""}
+  function idKey(k){if(idCard.value.length>=18)return;if(k==="X"&&idCard.value.length!==17)return;idCard.value=(idCard.value+k).slice(0,18);errors.idCard=""}
+  function idBackspace(){idCard.value=idCard.value.slice(0,-1);errors.idCard=""}
+  function idClear(){idCard.value="";errors.idCard=""}
+  function idDone(){idPadOpen.value=false}
+  function handleNameFocus(){idDone()}
+  function handleNameBlur(){}
+  function activateIdCard(){document.getElementById("id-card-input")?.focus();openIdPad()}
+  function submit(){validateName();validateIdCard();if(errors.name||errors.idCard)return;localStorage.setItem("psych_user",JSON.stringify({name:name.value.trim(),id_card:idCard.value}));location.href="/demo"}
+  return{name,idCard,errors,idPadOpen,idCardValid,idCardDisplay,openIdPad,idKey,idBackspace,idClear,idDone,handleNameFocus,handleNameBlur,activateIdCard,submit};
+}}).mount("#app");
 </script>
 </body>
 </html>

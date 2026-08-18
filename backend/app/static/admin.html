@@ -4,9 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>报告管理 · 心理测评后台</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="/static/assets/vendor/tailwind.js"></script>
+<script src="/static/assets/vendor/vue.global.prod.js"></script>
 <style>
+  [v-cloak]{display:none!important}
   :root{ --bg:#F8FAFC; --ink-1:#1E293B; --ink-2:#475569; --ink-3:#64748B; }
   body{ font-family:-apple-system,"Microsoft YaHei","Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--ink-2); margin:0; }
   ::-webkit-scrollbar{ width:8px; height:8px; }
@@ -55,6 +56,10 @@
   .report-hint{ margin-top:5px; max-width:720px; font-size:12px; line-height:1.7; color:#64748B; }
   .report-panel{ border:1px solid #E2E8F0; border-radius:14px; background:#fff; }
   .report-soft{ border:1px solid #E0F2FE; border-radius:14px; background:linear-gradient(135deg,#F0F9FF,#F8FAFC); }
+  .page-summary{ border:1px solid #DCEEE8; border-radius:14px; background:linear-gradient(135deg,#F3FAF7,#F8FBFA); padding:16px 18px; margin-bottom:20px; }
+  .page-summary-title{ font-size:12px; font-weight:650; color:#397565; margin-bottom:7px; }
+  .page-summary-text{ font-size:13px; line-height:1.8; color:#475569; }
+  .page-summary-note{ margin-top:7px; font-size:11px; line-height:1.65; color:#84938D; }
   .report-metric{ border:1px solid #EEF2F7; border-radius:12px; background:#fff; padding:14px 15px; min-height:100px; }
   .report-metric .metric-name{ font-size:12px; color:#64748B; line-height:1.45; }
   .report-metric .metric-value{ margin-top:10px; font-size:20px; font-weight:650; color:#1E293B; line-height:1.1; }
@@ -80,7 +85,7 @@
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" v-cloak>
 
   <!-- 登录门禁 -->
   <Transition name="fade">
@@ -165,11 +170,12 @@
             <span class="source-chip">六卡总览契约</span>
           </div>
 
-          <div class="report-soft p-5 mb-5">
+          <div class="page-summary">
             <div class="flex items-start justify-between gap-5">
               <div>
-                <div class="text-xs font-medium text-sky-700 mb-2">本次结论摘要</div>
-                <div class="text-sm leading-7 text-gray-700">{{ managementSummary(current.summary) }}</div>
+                <div class="page-summary-title">本页结果摘要</div>
+                <div class="page-summary-text">{{ pageSummary(current,'overview').text }}</div>
+                <div class="page-summary-note">{{ pageSummary(current,'overview').constraint }}</div>
               </div>
               <div class="shrink-0 text-right">
                 <div class="text-[11px] text-gray-400 mb-1">整体置信度</div>
@@ -241,6 +247,7 @@
             <div><div class="report-kicker">Page 02 · Facial Action Units</div><div class="report-title">AU 面部动作</div><div class="report-hint">用 5 项面部动作指标、代表性语义标注图和候选时间点解释面部状态变化，不将局部动作直接解释为心理诊断。</div></div>
             <span class="source-chip">AU Student</span>
           </div>
+          <div class="page-summary"><div class="page-summary-title">本页结果摘要</div><div class="page-summary-text">{{ pageSummary(current,'au').text }}</div><div class="page-summary-note">{{ pageSummary(current,'au').constraint }}</div></div>
           <div class="grid grid-cols-5 gap-3 mb-5">
             <article v-for="m in auMetrics(current.summary)" :key="m.key" class="report-metric">
               <div class="metric-name">{{ m.name }}</div><div class="metric-value">{{ metricDisplay(m) }}</div>
@@ -273,6 +280,7 @@
             <div><div class="report-kicker">Page 03 · Physiological Rhythm</div><div class="report-title">rPPG 生理节律</div><div class="report-hint">展示质量门控后的心率区间、HRV 与信号质量。若质量门控未通过，系统只保留质量证据，不展示或补算生理数值。</div></div>
             <span class="badge" :class="rppgAvailable(current.summary,current)?'b-green':'b-amber'">{{ rppgAvailable(current.summary,current)?'质量门控通过':'不建议解释' }}</span>
           </div>
+          <div class="page-summary"><div class="page-summary-title">本页结果摘要</div><div class="page-summary-text">{{ pageSummary(current,'rppg').text }}</div><div class="page-summary-note">{{ pageSummary(current,'rppg').constraint }}</div></div>
           <div v-if="rppgAvailable(current.summary,current)">
             <div class="grid grid-cols-4 gap-3 mb-5">
               <article v-for="m in rppgMetrics(current.summary)" :key="m.key" class="report-metric">
@@ -301,6 +309,7 @@
             <div><div class="report-kicker">Page 04 · Micro-vibration</div><div class="report-title">Vibra 微振动</div><div class="report-hint">先呈现 3 项聚合状态线索，再提供 formal 12 项分段统计作为研发与专业复核证据，不把单项 feature 直接翻译为确定心理结论。</div></div>
             <span class="source-chip">Vibra formal segment</span>
           </div>
+          <div class="page-summary"><div class="page-summary-title">本页结果摘要</div><div class="page-summary-text">{{ pageSummary(current,'vibra').text }}</div><div class="page-summary-note">{{ pageSummary(current,'vibra').constraint }}</div></div>
           <div class="grid grid-cols-3 gap-4 mb-5">
             <article v-for="m in vibraMetrics(current.summary)" :key="m.key" class="report-metric">
               <div class="metric-name">{{ m.name }}</div><div class="metric-value">{{ metricDisplay(m) }}</div><div class="mt-3"><span class="badge" :class="badgeByLabel(metricLevel(m))">{{ metricLevel(m) }}</span></div>
@@ -319,6 +328,7 @@
             <div><div class="report-kicker">Page 05 · Gaze Evidence</div><div class="report-title">眼动注意力</div><div class="report-hint">有效眼动比例、注意稳定性与视频级 gaze proxy 轨迹；它不是屏幕校准级眼动仪数据，必须结合采集状态解释。</div></div>
             <span class="badge" :class="eyeAvailable(current)?'b-green':'b-gray'">{{ eyeAvailable(current)?'已采集':'未采集' }}</span>
           </div>
+          <div class="page-summary"><div class="page-summary-title">本页结果摘要</div><div class="page-summary-text">{{ pageSummary(current,'eye').text }}</div><div class="page-summary-note">{{ pageSummary(current,'eye').constraint }}</div></div>
           <div v-if="eyeAvailable(current)">
             <div class="grid grid-cols-4 gap-3 mb-5"><article v-for="m in eyeMetrics(current)" :key="m.key" class="report-metric"><div class="metric-name">{{ m.name }}</div><div class="metric-value">{{ metricDisplay(m) }}</div><div class="mt-3"><span class="badge" :class="badgeByLabel(metricLevel(m))">{{ metricLevel(m) }}</span></div></article></div>
             <div class="grid grid-cols-[1.1fr_.9fr] gap-4">
@@ -752,6 +762,41 @@
     const states=available.map(x=>`${x.name}为${x.label}`).join('，');
     return `本次筛查参考：${dep.name}${dep.label}，${anx.name}${anx.label}${states?'；当前状态中，'+states:''}。结果用于后续沟通与持续观察，不作为独立诊断依据。`;
   }
+  function qwenPages(r){
+    if(!r||!r.qwenReport) return null;
+    try{
+      const parsed=typeof r.qwenReport==='string'?JSON.parse(r.qwenReport):r.qwenReport;
+      return parsed&&parsed.schema_version==='qwen_page_summaries_v1'&&parsed.pages?parsed.pages:null;
+    }catch(e){ return null; }
+  }
+  function readableMetrics(metrics,limit=3){
+    return (metrics||[]).filter(m=>metricValue(m)!=null&&metricLevel(m)!=='未提供').slice(0,limit).map(m=>`${m.name}为${metricLevel(m)}`);
+  }
+  function pageSummary(r,page){
+    const generated=qwenPages(r); const ai=generated&&generated[page];
+    if(ai&&typeof ai.summary==='string'&&typeof ai.constraint==='string') return {text:ai.summary,constraint:ai.constraint};
+    const s=r&&r.summary||{};
+    if(page==='overview') return {text:managementSummary(s),constraint:'以上仅概括本页合作方结构化结果；筛查结果不是医学诊断，需结合量表、访谈及实际情况综合判断。'};
+    if(page==='au'){
+      const parts=readableMetrics(auMetrics(s));
+      return {text:parts.length?`本次面部动作分析显示，${parts.join('，')}。这些指标用于说明测试过程中面部活动的强弱与变化情况。`:'本次报告未形成足够的面部动作指标，暂不作进一步解读。',constraint:'面部动作只能作为状态变化线索，不能单独对应某种情绪，也不能据此判断心理疾病。'};
+    }
+    if(page==='rppg'){
+      if(!rppgAvailable(s,r)) return {text:'本次视频的生理节律信号未达到可靠展示条件，因此不对心率或心率变异性作结果解释。',constraint:`不可用原因：${rppgReasons(s)||'有效窗口或信号质量不足'}。不补算、不推测缺失数据。`};
+      const parts=readableMetrics(rppgMetrics(s));
+      return {text:parts.length?`质量门控通过。本次生理节律数据中，${parts.join('，')}，可作为观察测试期间生理唤醒变化的辅助依据。`:'质量门控通过，但本页没有可概括的生理节律指标。',constraint:'rPPG为视频估算结果，容易受到光照、头动和皮肤区域信号质量影响，不等同于医疗设备测量。'};
+    }
+    if(page==='vibra'){
+      const parts=readableMetrics(vibraMetrics(s));
+      return {text:parts.length?`本次微振动分析中，${parts.join('，')}。这些结果用于观察测试时身体微小运动所反映的状态变化。`:'本次报告未形成足够的微振动聚合指标，暂不作进一步解读。',constraint:'微振动指标是辅助状态线索；单项特征及其波动不能直接解释为具体症状或诊断结论。'};
+    }
+    if(page==='eye'){
+      if(!eyeAvailable(r)) return {text:'本次测评未采集到可用于正式解释的眼动数据，因此不对视觉注意力作判断。',constraint:'未采集即不推测；本页保留状态说明，避免将摄像头画面误当作专业眼动仪结果。'};
+      const parts=readableMetrics(eyeMetrics(r));
+      return {text:parts.length?`本次视觉注意数据中，${parts.join('，')}，可用于了解测试期间注视分布与稳定性。`:'本次虽有眼动记录，但没有形成足够的可概括指标。',constraint:'当前为视频级眼动线索，不是经过屏幕校准的专业眼动仪数据，应结合有效轨迹比例解释。'};
+    }
+    return {text:'本页暂无可概括结果。',constraint:'不对缺失数据作推测。'};
+  }
   function managementActions(s){
     const labels=overviewCards(s).map(x=>x.label).join('|');
     const actions=[];
@@ -954,7 +999,7 @@
         ageText,genderFromId,maskId,scoreColor,levelLabel,badgeByLabel,dotColor,statusColor,avatarBg,fmt1,fmt3,pct,
         ovScore,ovName,ovLabel,ovColor,plLabel,plPositioning,dimsOf,screenOf,dirLabel,dirBadge:function(s,k){return badgeByLabel(dirLabel(s,k));},
         confScore,confPct,confLabel,confColor,confComps,confCompName,qOf,rppgConfidence,rppgAvailabilityLabel,rppgReasons,eyeTrackingLabel,eventsOf,severityColor,sevLabel,sevBadge,
-        reportVersion,clinicalNotice,overviewCards,managementSummary,managementActions,radarData,radarValuePoints,radarGridPoints,
+        reportVersion,clinicalNotice,overviewCards,managementSummary,pageSummary,managementActions,radarData,radarValuePoints,radarGridPoints,
         metricDisplay,metricLevel,unitLabel,auMetrics,auVisualization,auCandidates,
         rppgMetrics,rppgQualityMetrics,rppgAvailable,rppgCharts,sparklinePoints,
         vibraMetrics,formal12,formalEligible,formalStatusLabel,
