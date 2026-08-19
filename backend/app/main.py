@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -21,10 +21,19 @@ from app.db.base import Base, engine
 setup_logging()
 logger = logging.getLogger("app.main")
 
-_DEMO_HTML = Path(__file__).resolve().parent / "static" / "demo.html"
-_ADMIN_HTML = Path(__file__).resolve().parent / "static" / "admin.html"
-_LOGIN_HTML = Path(__file__).resolve().parent / "static" / "login.html"
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+def _serve_spa(dist_name: str, path: str, label: str):
+    """返回 SPA 静态资源；未知子路径回落到 index.html 交给前端路由处理。"""
+    dist_dir = _STATIC_DIR / dist_name
+    requested = (dist_dir / path).resolve()
+    if path and requested.is_relative_to(dist_dir.resolve()) and requested.is_file():
+        return FileResponse(requested)
+    index = dist_dir / "index.html"
+    if not index.exists():
+        return HTMLResponse(f"{label}尚未构建，请先运行对应前端目录的 npm run build。", status_code=503)
+    return FileResponse(index)
 
 
 @asynccontextmanager
@@ -143,24 +152,34 @@ async def root() -> HTMLResponse:
     return HTMLResponse(
         f"<h3>{settings.APP_NAME}</h3>"
         f"<p>env={settings.ENV} | provider={settings.PROVIDER_MODE}</p>"
-        f"<p><a href='/demo'>▶ 测评端</a> | "
-        f"<a href='/admin'>🛠 后台</a> | "
+        f"<p><a href='/login/'>▶ 测评端</a> | "
+        f"<a href='/admin/'>🛠 后台</a> | "
         f"<a href='/docs'>API</a></p>"
     )
 
 
-@app.get("/demo", response_class=HTMLResponse, include_in_schema=False)
-async def demo_page() -> HTMLResponse:
-    return HTMLResponse(_DEMO_HTML.read_text(encoding="utf-8"))
+@app.get("/demo", include_in_schema=False)
+async def demo_page() -> RedirectResponse:
+    """旧测评页地址；新版已将身份录入与测评整合到 /login/。"""
+    return RedirectResponse(url="/login/", status_code=307)
+
+@app.get("/admin", include_in_schema=False)
+async def admin_page():
+    """正式管理后台入口。"""
+    return _serve_spa("admin-v2", "", "管理后台")
 
 
-@app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
-async def admin_page() -> HTMLResponse:
-    """后台：工作人员查看每个被测者的详细测评报告。"""
-    return HTMLResponse(_ADMIN_HTML.read_text(encoding="utf-8"))
+@app.get("/admin/{path:path}", include_in_schema=False)
+async def admin_spa_page(path: str = ""):
+    return _serve_spa("admin-v2", path, "管理后台")
 
 
-@app.get("/login", response_class=HTMLResponse, include_in_schema=False)
-async def login_page() -> HTMLResponse:
-    """测评入口：被测者录入身份信息后进入测评。"""
-    return HTMLResponse(_LOGIN_HTML.read_text(encoding="utf-8"))
+@app.get("/login", include_in_schema=False)
+async def login_page():
+    """正式测评入口。"""
+    return _serve_spa("terminal-v2", "", "测评端")
+
+
+@app.get("/login/{path:path}", include_in_schema=False)
+async def login_spa_page(path: str = ""):
+    return _serve_spa("terminal-v2", path, "测评端")

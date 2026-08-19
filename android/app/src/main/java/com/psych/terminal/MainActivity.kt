@@ -11,6 +11,7 @@ import android.graphics.SurfaceTexture
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.os.Looper
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.Surface
@@ -30,6 +31,7 @@ import com.psych.terminal.bridge.AndroidCameraBridge
 import com.psych.terminal.core.BaseUrlValidator
 import com.psych.terminal.hw.CameraEngine
 import com.psych.terminal.hw.H264Recorder
+import com.psych.terminal.hw.NativeFaceAnalyzer
 
 /**
  * 混合终端主界面：FrameLayout 组合 WebView（现有网页）+ TextureView（原生摄像头预览）。
@@ -45,6 +47,7 @@ class MainActivity : Activity() {
 
     private lateinit var engine: CameraEngine
     private lateinit var recorder: H264Recorder
+    private lateinit var faceAnalyzer: NativeFaceAnalyzer
     private lateinit var bridge: AndroidCameraBridge
     private var splashOverlay: android.widget.FrameLayout? = null
 
@@ -66,6 +69,8 @@ class MainActivity : Activity() {
             or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION)
         engine = CameraEngine(this)
         recorder = H264Recorder()
+        faceAnalyzer = NativeFaceAnalyzer()
+        engine.setAnalysisSurface(faceAnalyzer.surface)
         buildUi()
         if (savedInstanceState == null) {
             ensurePermissionThenLoad()
@@ -89,17 +94,9 @@ class MainActivity : Activity() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
                     false // 站内跳转一律内部加载
 
-                override fun onPageCommitVisible(view: WebView, url: String?) {
-                    super.onPageCommitVisible(view, url)
-                    // 首帧已经可见就立即露出网页，不再等待图片等资源全部结束。
-                    runOnUiThread { hideSplash() }
-                }
-
-                override fun onPageFinished(view: WebView, url: String?) {
-                    super.onPageFinished(view, url)
-                    // 页面加载完成 → 淡出原生加载层，露出 WebView 内容
-                    runOnUiThread { hideSplash() }
-                }
+                // 不在 onPageCommitVisible/onPageFinished 移除启动层：这两个回调可能
+                // 早于 Vue 的首帧绘制，偶发露出 WebView 的黑色合成帧。由页面挂载后
+                // 调用 AndroidCamera.notifyPageReady() 统一完成首屏切换。
             }
             webChromeClient = WebChromeClient()
         }
@@ -119,8 +116,9 @@ class MainActivity : Activity() {
             scaleX = -1f
             surfaceTextureListener = object : TextureView.SurfaceTextureListener {
                 override fun onSurfaceTextureAvailable(st: SurfaceTexture, w: Int, h: Int) {
-                    // 预览缓冲尽量对齐 1080P 输出，避免拉伸畸变
-                    runCatching { st.setDefaultBufferSize(1920, 1080) }
+                    // 与旧单页 getUserMedia(640x480) 一致：显示预览固定为 4:3。
+                    // 1080P/30fps 仍由独立的 MediaCodec Surface 录制，不受这里影响。
+                    runCatching { st.setDefaultBufferSize(640, 480) }
                     previewSurface = Surface(st)
                     engine.setPreviewSurface(previewSurface)
                 }
@@ -209,6 +207,7 @@ class MainActivity : Activity() {
             context = this,
             engine = engine,
             recorder = recorder,
+            faceAnalyzer = faceAnalyzer,
             postJs = { js -> runOnUiThread { webView.evaluateJavascript(js, null) } },
             currentUrl = {
                 // WebView 方法只允许主线程调用；桥线程里需同步切回主线程取值
@@ -229,8 +228,23 @@ class MainActivity : Activity() {
             previewLayoutSetter = { visible, l, t, w, h ->
                 runOnUiThread { applyPreviewLayout(visible, l, t, w, h) }
             },
+            previewGuideSetter = { status -> runOnUiThread { previewGuide.setStatus(status) } },
             hasCameraPermission = {
                 checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            },
+            pageReadyNotifier = {
+                runOnUiThread {
+                    // Vue 已连续绘制两帧后，再等待 WebView 合成器确认该视觉状态已提交。
+                    // 不能仅靠 post 或淡出动画：RK3568 上底层黑帧偶尔仍会在 alpha 过渡时透出。
+                    webView.postVisualStateCallback(
+                        SystemClock.uptimeMillis(),
+                        object : WebView.VisualStateCallback() {
+                            override fun onComplete(requestId: Long) {
+                                runOnUiThread { removeSplashImmediately() }
+                            }
+                        },
+                    )
+                }
             },
         )
         webView.addJavascriptInterface(bridge, "AndroidCamera")
@@ -256,23 +270,27 @@ class MainActivity : Activity() {
         lp.topMargin = (rh * topPct / 100.0).toInt()
         previewContainer.layoutParams = lp
 
-        // 1920x1080 预览按 center-crop 填满网页目标框，避免把人脸拉伸变形。
-        val cameraAspect = 16.0 / 9.0
+        // 显示预览固定为 4:3，匹配旧单页的 640x480 摄像头预览。
+        val cameraAspect = 4.0 / 3.0
         val targetAspect = targetWidth.toDouble() / targetHeight.toDouble()
+        // TextureView 本身始终保持 4:3，再由外层容器裁掉超出的部分。
+        // 这样在 4:3 监控小窗或偏竖的人脸框中都只会裁边，不会拉伸人物。
         val previewWidth: Int
         val previewHeight: Int
-        if (targetAspect > cameraAspect) {
-            previewWidth = targetWidth
-            previewHeight = (targetWidth / cameraAspect).toInt()
-        } else {
+        if (targetAspect < cameraAspect) {
             previewHeight = targetHeight
-            previewWidth = (targetHeight * cameraAspect).toInt()
+            previewWidth = (targetHeight * cameraAspect).toInt().coerceAtLeast(targetWidth)
+        } else {
+            previewWidth = targetWidth
+            previewHeight = (targetWidth / cameraAspect).toInt().coerceAtLeast(targetHeight)
         }
         previewView.layoutParams = FrameLayout.LayoutParams(
             previewWidth,
             previewHeight,
             Gravity.CENTER,
         )
+        previewView.setTransform(null)
+        previewView.scaleX = -1f
         previewContainer.invalidateOutline()
         // INVISIBLE 保留 SurfaceTexture；GONE 会销毁导致会话丢预览输出
         previewContainer.visibility = if (visible) View.VISIBLE else View.INVISIBLE
@@ -298,22 +316,20 @@ class MainActivity : Activity() {
             startActivity(Intent(this, DebugSettingsActivity::class.java))
             return
         }
-        webView.loadUrl(v.normalized + "/login")
+        // 正式测评入口：模块化 Vue 前端直接挂载在 /login/。
+        webView.loadUrl(v.normalized + "/login/")
     }
 
-    /** 页面加载完成后淡出原生加载层 */
-    private fun hideSplash() {
+    /**
+     * WebView 已确认有可见合成帧后，原子移除原生加载层。
+     * 刻意不用 alpha 动画：动画期间底层若晚一帧合成，会形成一次黑屏闪烁。
+     */
+    private fun removeSplashImmediately() {
         val splash = splashOverlay ?: return
         if (splash.visibility != View.VISIBLE) return
-        splash.animate()
-            .alpha(0f)
-            .setDuration(120)
-            .withEndAction {
-                splash.visibility = View.GONE
-                root.removeView(splash)
-                splashOverlay = null
-            }
-            .start()
+        splash.visibility = View.GONE
+        root.removeView(splash)
+        splashOverlay = null
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -350,6 +366,7 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         bridge.release()
+        faceAnalyzer.close()
         webView.destroy()
         super.onDestroy()
     }
@@ -370,10 +387,21 @@ private class PreviewGuideView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
 ) : View(context, attrs) {
     private val density = resources.displayMetrics.density
+    private var status: String = "warning"
     private val border = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f * density
-        color = Color.argb(190, 95, 226, 168)
+        color = Color.argb(170, 255, 255, 255)
+    }
+
+    fun setStatus(value: String) {
+        status = value
+        border.color = when (value) {
+            "ok" -> Color.argb(230, 95, 226, 168)
+            "error" -> Color.argb(230, 248, 113, 113)
+            else -> Color.argb(170, 255, 255, 255)
+        }
+        invalidate()
     }
     private val outerBorder = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE

@@ -1,0 +1,2 @@
+<script setup lang="ts">import { REPORT_TABS } from '@/utils/report';import type { ReportTab } from '@/types/report';defineProps<{modelValue:ReportTab}>();defineEmits<{(e:'update:modelValue',value:ReportTab):void}>()</script>
+<template><nav class="report-tabs" aria-label="五页报告导航"><button v-for="tab in REPORT_TABS" :key="tab.key" :class="{active:modelValue===tab.key}" @click="$emit('update:modelValue',tab.key)">{{ tab.label }}</button></nav></template>

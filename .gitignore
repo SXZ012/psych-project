@@ -25,6 +25,7 @@ htmlcov/
 coverage.xml
 *.cover
 .hypothesis/
+*.tsbuildinfo
 
 # ===== 环境变量 / 密钥（绝不入库）=====
 .env
@@ -82,3 +83,5 @@ certs/
 
 # 安装包不入库
 *.apk
+tmp-terminal-v2*.png
+.npm-cache/

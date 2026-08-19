@@ -16,6 +16,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -26,6 +27,8 @@ from app.db.base import get_db
 from app.models.assessment import Assessment, AssessmentStatus
 from app.schemas.assessment import AssessmentDetail, AssessmentOut
 from app.services.assessment import run_assessment
+from app.services.v3.assets import cache_au_image, find_cached_au_image
+from app.services.v3.provider import get_v3_provider
 
 logger = logging.getLogger("app.routes.assessments")
 router = APIRouter()
@@ -230,3 +233,37 @@ async def get_assessment(
     if assessment is None:
         raise HTTPException(status_code=404, detail="assessment not found")
     return assessment
+
+
+@router.get("/{assessment_id}/au-image", response_class=FileResponse)
+async def get_assessment_au_image(
+    assessment_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[str, Depends(require_admin_session)],
+) -> FileResponse:
+    """返回持久化 AU 标注图；旧报告首次访问时按 file_id 刷新并缓存。"""
+    cached = find_cached_au_image(assessment_id)
+    if cached is None:
+        stmt = (
+            select(Assessment)
+            .options(selectinload(Assessment.result))
+            .where(Assessment.id == assessment_id)
+        )
+        assessment = (await db.execute(stmt)).scalar_one_or_none()
+        if assessment is None or assessment.result is None:
+            raise HTTPException(status_code=404, detail="AU image not found")
+        try:
+            cached = await cache_au_image(
+                assessment.result.summary_json or {}, assessment_id, get_v3_provider()
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("恢复 assessment %s AU图片失败: %s", assessment_id, exc)
+            raise HTTPException(status_code=404, detail="AU image expired or unavailable") from exc
+    if cached is None:
+        raise HTTPException(status_code=404, detail="AU image not provided")
+    path, content_type = cached
+    return FileResponse(
+        path,
+        media_type=content_type,
+        headers={"Cache-Control": "private, max-age=86400"},
+    )

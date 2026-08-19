@@ -1,12 +1,46 @@
-# 前端（工控一体机交互端）
+# 前端工程
 
-后续阶段搭建。技术选型待定（Vue 3 / React + WebSocket）。
+本目录只包含心理测评系统的两个业务前端：
 
-核心职责（依据方案）：
-- 图片诱发 + 即时交互选择题（1 图配 1 题，2 个选项）
-- 摄像头视频流采集（交合作方 V3 微表情分析）
-- 60 秒精确时序控制 + 预录音频播放
-- 通过 WebSocket 接收"时隙数据包"，记录点击反应时
-- 渲染 V3 五页式报告（参照 ziliao/v3_report_sample.html）
+- `admin-web/`：管理后台与五页测评报告（Vue 3 + TypeScript + Vite）
+- `terminal-web/`：Firefly 测评端（Vue 3 + TypeScript + Vite）
 
-骨架将在「协议定义与接口开发」阶段初始化。
+当前正式入口：管理端为 `/admin/`，测评端为 `/login/`。`/demo` 自动跳转到 `/login/`；旧单页 HTML 与历史模块化 URL 已移除。
+
+## 管理端本地开发
+
+```bash
+cd frontend/admin-web
+npm install
+npm run dev
+```
+
+开发服务器默认代理 `/api` 到 `http://127.0.0.1:8000`。
+
+## 管理端构建
+
+```bash
+npm run type-check
+npm run build
+```
+
+构建产物输出到 `backend/app/static/admin-v2/`。
+
+## 测评端本地开发与构建
+
+```bash
+cd frontend/terminal-web
+npm install
+npm run dev
+npm run build
+```
+
+测评端构建产物输出到 `backend/app/static/terminal-v2/`。网页业务与界面调整只需重新构建并发布后端静态文件；Camera2、硬编码等原生能力仍由 Android 工程处理。
+
+## 模块边界
+
+- `terminal-web/src/components/`：身份录入、同意书、人脸确认、相机监控、引导、题目、结果页。
+- `terminal-web/src/composables/`：测评时序、Android Bridge、浏览器相机、人脸检测。
+- `admin-web/src/pages/`：登录、测评列表、报告页。
+- `admin-web/src/components/report/`：概览、AU、rPPG、Vibra、眼动五页报告及受约束摘要。
+- `admin-web/src/api/`、`stores/`、`router/`：接口访问、页面状态、路由。

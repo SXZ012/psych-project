@@ -1,0 +1,2 @@
+<script setup lang="ts">import AppStatus from '@/components/common/AppStatus.vue';import type { MetricView } from '@/types/report';defineProps<{metric:MetricView}>()</script>
+<template><article class="metric-card"><div class="metric-card__head"><span>{{ metric.name }}</span><AppStatus :label="metric.level" /></div><strong>{{ metric.value }}</strong><small>{{ metric.unit || '合作方专业数据' }}</small></article></template>

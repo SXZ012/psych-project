@@ -10,6 +10,7 @@ import com.psych.terminal.core.CameraCandidate
 import com.psych.terminal.core.CameraSelector
 import com.psych.terminal.hw.CameraEngine
 import com.psych.terminal.hw.H264Recorder
+import com.psych.terminal.hw.NativeFaceAnalyzer
 import com.psych.terminal.net.AssessmentUploader
 import org.json.JSONArray
 import org.json.JSONObject
@@ -32,11 +33,14 @@ class AndroidCameraBridge(
     private val context: Context,
     private val engine: CameraEngine,
     private val recorder: H264Recorder,
+    private val faceAnalyzer: NativeFaceAnalyzer,
     private val postJs: (String) -> Unit,
     private val currentUrl: () -> String?,
     private val previewSurfaceProvider: () -> Surface?,
     private val previewLayoutSetter: (visible: Boolean, leftPct: Double, topPct: Double, widthPct: Double, heightPct: Double) -> Unit,
+    private val previewGuideSetter: (status: String) -> Unit,
     private val hasCameraPermission: () -> Boolean,
+    private val pageReadyNotifier: () -> Unit,
 ) {
 
     enum class State { IDLE, PREVIEWING, RECORDING, STOPPING, READY, UPLOADING, UPLOADED }
@@ -62,6 +66,22 @@ class AndroidCameraBridge(
     private var pendingPreviewCb: String? = null
 
     init {
+        faceAnalyzer.listener = object : NativeFaceAnalyzer.Listener {
+            override fun onResult(result: NativeFaceAnalyzer.Result) {
+                val json = JSONObject()
+                    .put("count", result.count)
+                    .put("xCenter", result.xCenter)
+                    .put("yCenter", result.yCenter)
+                    .put("width", result.width)
+                    .put("height", result.height)
+                postJs("try{window.__onNativeFaceState&&window.__onNativeFaceState($json)}catch(e){console.error('[face]回调异常',e)}")
+            }
+
+            override fun onError(message: String) {
+                val json = JSONObject().put("error", message)
+                postJs("try{window.__onNativeFaceState&&window.__onNativeFaceState($json)}catch(e){console.error('[face]回调异常',e)}")
+            }
+        }
         engine.listener = object : CameraEngine.Listener {
             override fun onPreviewReady(cameraId: String, width: Int, height: Int, fpsMin: Int, fpsMax: Int) {
                 state.set(State.PREVIEWING)
@@ -102,6 +122,14 @@ class AndroidCameraBridge(
         .put("mode", "hybrid")
         .put("appVersion", BuildConfig.VERSION_NAME)
         .toString()
+
+    /**
+     * Vue 登录页已完成挂载并连续绘制两帧后调用。
+     * 启动层只能在这里移除，不能以 WebView 的 onPageFinished 为准：后者可能发生在
+     * 空白文档或 Vue 尚未首帧绘制时，RK3568 上会短暂露出 WebView 的黑色合成帧。
+     */
+    @JavascriptInterface
+    fun notifyPageReady() = pageReadyNotifier()
 
     // ================== 摄像头能力 ==================
 
@@ -194,7 +222,6 @@ class AndroidCameraBridge(
             return
         }
         pendingPreviewCb = null
-        engine.stopRecording() // 幂等：清掉可能残留的编码 Surface
         engine.release()
         state.set(State.IDLE)
         fire(callback, JSONObject().put("ok", true))
@@ -382,6 +409,11 @@ class AndroidCameraBridge(
             widthPct.coerceIn(0.0, 100.0),
             heightPct.coerceIn(0.0, 100.0),
         )
+    }
+
+    @JavascriptInterface
+    fun setFaceGuideState(status: String) {
+        previewGuideSetter(if (status in setOf("ok", "warning", "error")) status else "warning")
     }
 
     // ================== 音频接口：仅预留，本轮不实现 ==================

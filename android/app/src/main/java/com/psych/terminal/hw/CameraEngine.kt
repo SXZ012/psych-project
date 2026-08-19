@@ -42,6 +42,7 @@ class CameraEngine(context: Context) {
     private var device: CameraDevice? = null
     private var session: CameraCaptureSession? = null
     private var previewSurface: Surface? = null
+    private var analysisSurface: Surface? = null
     private var encoderSurface: Surface? = null
     private var chosenFps: Pair<Int, Int> = 15 to 30
 
@@ -135,6 +136,10 @@ class CameraEngine(context: Context) {
         previewSurface = surface
     }
 
+    fun setAnalysisSurface(surface: Surface?) {
+        analysisSurface = surface
+    }
+
     private fun rebuildSession(recording: Boolean, onReady: (() -> Unit)? = null) {
         val camera = device ?: run {
             listener?.onError("相机未打开，无法配置会话")
@@ -143,6 +148,7 @@ class CameraEngine(context: Context) {
         val h = handler ?: return
         val targets = mutableListOf<Surface>()
         previewSurface?.let { targets.add(it) }
+        analysisSurface?.let { targets.add(it) }
         encoderSurface?.let { targets.add(it) }
         if (targets.isEmpty()) {
             listener?.onError("无可用输出 Surface（预览与编码均缺失）")

@@ -18,6 +18,7 @@ from app.db.base import AsyncSessionLocal
 from app.models.assessment import Assessment, AssessmentResult, AssessmentStatus
 from app.services.oss.client import OSSClient
 from app.services.qwen.report import generate_report
+from app.services.v3.assets import cache_au_image
 from app.services.v3.provider import get_v3_provider
 from app.services.v3.validation import validate_v3_result
 from app.services.video.qa import validate_and_repair
@@ -161,6 +162,13 @@ async def run_assessment(assessment_id: UUID) -> None:
                     raise RuntimeError("真实V3结果包含临时timeline地址，但Provider不支持下载")
                 timeline_json = await download_timeline(timeline)
                 logger.info("assessment %s V3 timeline已下载并持久化", assessment_id)
+
+            # 合作方 AU 图片是短期签名地址，任务完成后立即持久化。
+            # 图片失败不应阻断结构化报告生成，后台接口仍可按 file_id 懒恢复。
+            try:
+                await cache_au_image(summary, assessment.id, provider)
+            except Exception:  # noqa: BLE001
+                logger.exception("assessment %s AU图片持久化失败，稍后按需恢复", assessment_id)
 
             ar = AssessmentResult(
                 assessment_id=assessment.id,

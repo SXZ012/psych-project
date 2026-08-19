@@ -249,3 +249,32 @@ class RealV3Client(V3Provider):
             if not isinstance(timeline, dict):
                 raise V3IntegrationError("V3 timeline 不是 JSON 对象")
             return timeline
+
+    async def get_file_url(self, file_id: int) -> str:
+        """根据合作方 file_id 刷新一个短期有效的下载地址。"""
+        auth = {"Authorization": self._headers["Authorization"]}
+        async with self._client() as client:
+            response = await client.get(
+                f"{self.api_root}/api/file-manager/oss-file/{file_id}",
+                headers=auth,
+            )
+            self._raise_api_error(response, "刷新合作方文件地址")
+            payload = response.json()
+            file_url = payload.get("presigned_get_url") or payload.get("url")
+            if not file_url:
+                raise V3IntegrationError("合作方文件响应缺少可用下载地址")
+            return str(file_url)
+
+    async def download_image(self, image_url: str) -> tuple[bytes, str]:
+        """下载合作方生成的 AU 图片；调用方负责持久化。"""
+        if not image_url:
+            raise V3IntegrationError("AU 图片地址为空")
+        async with self._client(upload=True) as client:
+            response = await client.get(image_url)
+            self._raise_api_error(response, "下载 AU 面部动作图片")
+            content_type = response.headers.get("content-type", "").split(";", 1)[0].lower()
+            if content_type not in {"image/jpeg", "image/png", "image/webp"}:
+                raise V3IntegrationError(f"AU 图片类型不受支持：{content_type or 'unknown'}")
+            if not response.content or len(response.content) > 10 * 1024 * 1024:
+                raise V3IntegrationError("AU 图片为空或超过 10MB")
+            return response.content, content_type

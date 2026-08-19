@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
-    // 刻意不引入 AndroidX/第三方库：全部使用 Android 官方平台 API，零额外依赖
+    // 模型随 APK 分发，不依赖 Google Play 服务或现场联网下载。
+    implementation("com.google.mlkit:face-detection:16.1.7")
     testImplementation("junit:junit:4.13.2")
 }

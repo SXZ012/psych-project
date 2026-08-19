@@ -16,7 +16,7 @@
 - ✅ 真实 V3 联调：上传、建任务、轮询、获取 `result`、下载 `timeline` 全链路验证通过
 - ✅ V3 结构化结果落库 + QwenPlus 后台专业报告
 - ✅ 被测者登录页（姓名+身份证+自带数字键盘）+ 知情同意书（8 条 PIPL 合规条款）
-- ✅ 60 秒终端测评（Vue3 + Tailwind，全资源本地化零外链）
+- ✅ 模块化测评端（Vue 3 + TypeScript + Vite，全资源本地化零外链）
   - 知情同意 → 人脸检测 → 开场引导(5s) → 图片轮播(5×10s=50s) → 收尾(5s) → 视频上传
   - 全屏图片 + 严格 60 秒时序；浏览器走 MediaRecorder，APK 走 Camera2/MediaCodec 硬编
 - ✅ 混合 Android APK（Firefly IPC-M10R800-A3568J / RK3568 / Android 11 / arm64-v8a）
@@ -26,7 +26,7 @@
   - JS Bridge 同源校验、防重状态机、multipart 原生上传
   - 19 个单元测试通过（摄像头选择/编码器选择/URL 校验）
 - ✅ rPPG 心率可用（1080P H.264 硬编后 physiology_available=true，实测 79bpm）
-- ✅ 管理后台（V3.2 五页证据报告 + 编辑/备注/状态流转 + 结果无效标识）
+- ✅ 模块化管理后台（Vue 3 + TypeScript + Vite；V3.2 五页证据报告 + 编辑/备注/状态流转 + 结果无效标识）
 - ✅ 视频上传前 ffprobe 质检（30–70s）+ ffmpeg 自动修复（WebM 无时长 → 无损 remux → H.264 MP4 兜底）
 - ✅ V3 结果有效性校验（时长 0 / frame_count 负溢出 → 标记 invalid_result，不作正式报告）
 - ✅ 我方私有 OSS 备份与合作方 V3 上传双路径独立；备份失败不阻断主流程
@@ -45,10 +45,9 @@
 ## 系统架构
 
 ```text
-被测者 → /login（身份录入）
-      → /demo（知情同意 → 人脸检测 → 60秒测评 → 视频提交 → 完成页）
+被测者 → /login/（身份录入 → 知情同意 → 人脸检测 → 60秒测评 → 视频提交 → 完成页）
 
-管理后台 → /admin（管理员登录 → 报告列表 → V3.2五页详情 → 编辑/备注/状态流转）
+管理后台 → /admin/（管理员登录 → 报告列表 → V3.2五页详情 → 编辑/备注/状态流转）
 
 后端 FastAPI
   ├── 测评编排（视频接收 → V3分析 → QwenPlus后台报告 → 落库）
@@ -68,7 +67,7 @@ V3 Provider（ABC 抽象）
 
 - 后端：Python 3.12、FastAPI、SQLAlchemy 2.0 Async、Pydantic Settings
 - 数据库与缓存：PostgreSQL 16、Redis 7
-- 前端：Vue 3 Global Build（CDN）、Tailwind CSS（CDN）、原生浏览器 API
+- 前端：Vue 3、TypeScript、Vite、Vue Router、Pinia、原生浏览器 API
 - AI：合作方V3心理生理状态算法、阿里云百炼QwenPlus（后台报告表达层）
 - 对象存储：阿里云 OSS
 - 基础设施：Docker Compose、Adminer
@@ -78,9 +77,9 @@ V3 Provider（ABC 抽象）
 
 | 地址 | 说明 |
 | --- | --- |
-| `http://localhost:8000/login` | 被测者身份录入入口（姓名+身份证） |
-| `http://localhost:8000/demo` | 终端测评页面（需先 /login 录入身份） |
-| `http://localhost:8000/admin` | 测评管理后台（口令门禁） |
+| `http://localhost:8000/login/` | 被测者正式测评入口（姓名+身份证、知情同意、人脸确认、60秒测评） |
+| `http://localhost:8000/admin/` | 正式测评管理后台（口令门禁、五页报告） |
+| `http://localhost:8000/demo` | 兼容旧测评页地址，自动跳转到 `/login/` |
 | `http://localhost:8000/docs` | Swagger API 文档 |
 | `http://localhost:8000/health` | 服务及数据库健康检查 |
 | `http://localhost:8080` | Adminer 数据库管理页面 |
@@ -102,13 +101,17 @@ psych-project/
 │  │  │  ├─ v3/               # V3Provider(ABC) + Mock + Real
 │  │  │  ├─ qwen/             # QwenPlus 客户端与报告 Prompt
 │  │  │  └─ oss/              # 阿里云 OSS 客户端
-│  │  ├─ static/              # login.html / demo.html / admin.html（Vue3 单文件）
+│  │  ├─ static/              # 前端构建产物、图片与本地 MediaPipe 资源
 │  │  └─ main.py              # FastAPI 应用入口
 │  └─ tests/
 ├─ scripts/
 │  ├─ env_check.sh            # 环境诊断
 │  └─ seed_image_bank.py      # 图题库导入（--fetch/--csv/--dir/--requestion）
 ├─ docker-compose.yml          # PG + Redis + Adminer
+├─ frontend/
+│  ├─ terminal-web/            # 测评端 Vue 3 + TypeScript 源码
+│  └─ admin-web/               # 管理后台与五页报告 Vue 3 + TypeScript 源码
+├─ android/                    # Firefly 混合 APK（WebView + Camera2 + MediaCodec）
 ├─ .env.example
 └─ README.md
 ```
@@ -145,7 +148,7 @@ docker compose up -d
 
 ### 5. 浏览器访问
 
-打开 `http://localhost:8000/login`，录入姓名和身份证号，进入 60 秒测评流程。
+打开 `http://localhost:8000/login/`，录入姓名和身份证号，进入 60 秒测评流程。旧的 `/demo` 地址仍可使用，会自动跳转到该入口。
 
 #### Windows 10 + WSL2 的 localhost 转发
 
@@ -186,7 +189,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\update-wsl-portproxy.ps1 -Ins
 4. **不合格不上传**：无法修复到 30–70s 的视频不会上传合作方、不创建 V3 任务、不生成报告。
 5. **V3 结果有效性校验**：合作方返回后检查 `input.duration_seconds`、`quality.video_duration_seconds`、`session_duration_seconds` 与 `frame_count`；若时长为 0 或 `frame_count` 为负，测评状态置为 `invalid_result`、`result_valid=false`，**不生成正式报告**，仅保留 V3 原始结果供排查（不依据 `sampled_frames/sample_fps` 推断时长）。
 
-**失败排查**：`/admin` 列表显示状态（`结果无效` / `失败`）与原因；对应数据库字段为 `error_code`、`error_message`、`video_status`（如 `qa_failed`）与 `video_qa_json`（含原始/修复后 ffprobe 参数、处理耗时、最终文件）。
+**失败排查**：`/admin/` 列表显示状态（`结果无效` / `失败`）与原因；对应数据库字段为 `error_code`、`error_message`、`video_status`（如 `qa_failed`）与 `video_qa_json`（含原始/修复后 ffprobe 参数、处理耗时、最终文件）。
 
 ## Mock 与真实 V3
 
