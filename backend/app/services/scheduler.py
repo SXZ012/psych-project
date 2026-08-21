@@ -23,11 +23,21 @@ def _pair_dict(pair: Pair, image: Image) -> dict:
         "question": pair.question,
         "option_a": pair.option_a,
         "option_b": pair.option_b,
+        "dimension": pair.dimension,
+        "scenario": pair.scenario,
+        "audio_url": pair.audio_url,
+        "content_version": pair.content_version,
+        "source_note": pair.source_note,
+        "scoring_mode": pair.scoring_mode,
     }
 
 
 async def _active_pairs(db: AsyncSession) -> list[tuple[Pair, Image]]:
-    stmt = select(Pair, Image).join(Image).where(Pair.active.is_(True))
+    stmt = (
+        select(Pair, Image)
+        .join(Image)
+        .where(Pair.active.is_(True), Image.active.is_(True))
+    )
     return [(r[0], r[1]) for r in (await db.execute(stmt)).all()]
 
 
@@ -51,8 +61,25 @@ async def get_session_pairs(db: AsyncSession, count: int = 4) -> list[dict]:
     by_image: dict[object, list[tuple[Pair, Image]]] = {}
     for pair, image in rows:
         by_image.setdefault(image.id, []).append((pair, image))
-    images = list(by_image.values())
-    random.shuffle(images)
-    session = [_pair_dict(*random.choice(plist)) for plist in images[:count]]
+    # 优先跨维度抽取，使单次会话不会被同一类航空情境占满；题库不足时再随机补齐。
+    dimension_groups: dict[str, list[list[tuple[Pair, Image]]]] = {}
+    for plist in by_image.values():
+        dimension = next((p.dimension for p, _ in plist if p.dimension), "unclassified")
+        dimension_groups.setdefault(dimension, []).append(plist)
+    dimensions = list(dimension_groups)
+    random.shuffle(dimensions)
+    selected: list[list[tuple[Pair, Image]]] = []
+    while dimensions and len(selected) < count:
+        remaining: list[str] = []
+        for dimension in dimensions:
+            group = dimension_groups[dimension]
+            if group:
+                selected.append(group.pop(random.randrange(len(group))))
+            if group:
+                remaining.append(dimension)
+            if len(selected) >= count:
+                break
+        dimensions = remaining
+    session = [_pair_dict(*random.choice(plist)) for plist in selected]
     logger.info("schedule session | count=%d", len(session))
     return session

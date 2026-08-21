@@ -3,7 +3,8 @@ import { makeQuestions } from '@/data/questions'
 import { useAndroidCamera } from '@/composables/useAndroidCamera'
 import { useBrowserCamera } from '@/composables/useBrowserCamera'
 import { useBrowserFaceDetection } from '@/composables/useBrowserFaceDetection'
-import type { TerminalPhase, UserIdentity } from '@/types/terminal'
+import { usePromptAudio } from '@/composables/usePromptAudio'
+import type { TerminalPhase, TerminalQuestion, UserIdentity } from '@/types/terminal'
 
 const PER_QUESTION_MS = 10_000
 const INTRO_MS = 5_000
@@ -16,6 +17,7 @@ export function useAssessmentFlow() {
   const index = ref(0), progress = ref(0), selections = ref<string[][]>(questions.value.map(() => []))
   const faceReady = ref(false), faceState = ref<'ok'|'warning'|'error'>('warning'), faceMessage = ref('请正对屏幕，让头部完整位于框内'), finalCountdown = ref(5), completeCountdown = ref(30), failure = ref('')
   const native = useAndroidCamera(), browser = useBrowserCamera(), browserFace = useBrowserFaceDetection(handleFace)
+  const promptAudio = usePromptAudio()
   let stageTimer: number | null = null, countdownTimer: number | null = null, completeTimer: number | null = null, lastSubmissionId: string | null = null
   let pendingPayload: {name:string;id_card:string;selections:{question_id:string;picked:string[]}[];duration_seconds:number} | null = null
   let pendingBrowserVideo: Blob | null = null
@@ -51,8 +53,28 @@ export function useAssessmentFlow() {
       const response = await fetch('/api/v1/pairs/session?count=5')
       const body = await response.json()
       const pairs = Array.isArray(body.pairs) ? body.pairs.filter((item: { image_url?: string }) => item?.image_url) : []
-      questions.value = makeQuestions().map((question, i) => ({ ...question, image: pairs[i]?.image_url || question.image }))
+      questions.value = makeQuestions().map((fallback, i) => {
+        const pair = pairs[i]
+        if (!pair) return fallback
+        const pairId = String(pair.pair_id || fallback.id)
+        return {
+          ...fallback,
+          id: pairId,
+          image: pair.image_url || fallback.image,
+          question: pair.question || fallback.question,
+          options: [
+            { id: `${pairId}a`, text: pair.option_a || fallback.options[0].text },
+            { id: `${pairId}b`, text: pair.option_b || fallback.options[1].text },
+          ],
+          dimension: pair.dimension || fallback.dimension,
+          scenario: pair.scenario || fallback.scenario,
+          audioUrl: pair.audio_url || undefined,
+          contentVersion: pair.content_version || fallback.contentVersion,
+          scoringMode: pair.scoring_mode === 'validated' ? 'validated' : 'observation_only',
+        } satisfies TerminalQuestion
+      })
       questions.value.forEach(question => { const image = new Image(); image.src = question.image })
+      promptAudio.preload(questions.value)
     } catch { /* 断网或图库异常时使用内置兜底图 */ }
   }
   function enter(identityValue: UserIdentity) { identity.value = identityValue; phase.value = 'consent' }
@@ -75,6 +97,8 @@ export function useAssessmentFlow() {
   async function syncPreview(kind: 'detect' | 'monitor') { if (native.available.value) await native.place(document.querySelector(`[data-native-preview-anchor="${kind}"]`)) }
   async function begin() {
     if (!faceReady.value) return
+    // Must run synchronously within the user's click event for Chrome autoplay policy.
+    promptAudio.unlock()
     phase.value = 'intro'; await nextTick(); await syncPreview('monitor')
     if (native.available.value) {
       const result = await native.startRecording()
@@ -84,7 +108,7 @@ export function useAssessmentFlow() {
     window.setTimeout(() => { phase.value = 'assess'; startQuestion() }, INTRO_MS)
   }
   function startQuestion() {
-    clear(stageTimer); progress.value = 0; const start = performance.now()
+    clear(stageTimer); progress.value = 0; void promptAudio.playQuestion(current.value); const start = performance.now()
     stageTimer = window.setInterval(() => {
       progress.value = Math.min(100, (performance.now() - start) / PER_QUESTION_MS * 100)
       if (progress.value >= 100) nextQuestion()
@@ -93,6 +117,7 @@ export function useAssessmentFlow() {
   function select(option: string) { const currentSelection = selections.value[index.value]; selections.value[index.value] = currentSelection[0] === option ? [] : [option] }
   function nextQuestion() { clear(stageTimer); if (index.value < questions.value.length - 1) { index.value += 1; startQuestion() } else void submit() }
   async function submit() {
+    promptAudio.stop()
     phase.value = 'loading'; finalCountdown.value = 5; native.available.value ? native.playOutroAudio() : undefined
     clear(countdownTimer); countdownTimer = window.setInterval(() => { finalCountdown.value = Math.max(1, finalCountdown.value - 1) }, 1000)
     await delay(OUTRO_MS); clear(countdownTimer)
@@ -129,7 +154,7 @@ export function useAssessmentFlow() {
   }
   function showComplete() { phase.value = 'complete'; completeCountdown.value = 30; clear(completeTimer); completeTimer = window.setInterval(() => { completeCountdown.value -= 1; if (completeCountdown.value <= 0) finish() }, 1000) }
   function resetCompleteCountdown() { if (phase.value === 'complete') completeCountdown.value = 30 }
-  function finish() { clear(stageTimer); clear(countdownTimer); clear(completeTimer); native.stopPromptAudio(); native.stopPreview(); browserFace.stop(); browser.stop(); phase.value = 'login'; identity.value = null; index.value = 0; progress.value = 0; selections.value = questions.value.map(() => []); faceReady.value = false; lastSubmissionId = null; pendingPayload = null; pendingBrowserVideo = null; failure.value = '' }
+  function finish() { clear(stageTimer); clear(countdownTimer); clear(completeTimer); promptAudio.stop(); native.stopPromptAudio(); native.stopPreview(); browserFace.stop(); browser.stop(); phase.value = 'login'; identity.value = null; index.value = 0; progress.value = 0; selections.value = questions.value.map(() => []); faceReady.value = false; lastSubmissionId = null; pendingPayload = null; pendingBrowserVideo = null; failure.value = '' }
   void preloadPairs()
   onBeforeUnmount(finish)
   return { phase, current, index, progress, selections, faceReady, faceState, finalCountdown, completeCountdown, failure, native, cameraMessage, enter, confirmConsent, begin, select, retry, finish, resetCompleteCountdown, syncPreview }

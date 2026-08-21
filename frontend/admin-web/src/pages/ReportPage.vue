@@ -4,17 +4,16 @@ import { useRouter } from 'vue-router'
 import { updateInfo } from '@/api/assessments'
 import AppEmpty from '@/components/common/AppEmpty.vue'
 import AppStatus from '@/components/common/AppStatus.vue'
-import AuReport from '@/components/report/AuReport.vue'
-import EyeReport from '@/components/report/EyeReport.vue'
+import CoreReport from '@/components/report/CoreReport.vue'
+import EvidenceReport from '@/components/report/EvidenceReport.vue'
 import OverviewReport from '@/components/report/OverviewReport.vue'
 import PageSummary from '@/components/report/PageSummary.vue'
 import ReportTabs from '@/components/report/ReportTabs.vue'
-import RppgReport from '@/components/report/RppgReport.vue'
-import VibraReport from '@/components/report/VibraReport.vue'
+import ScreeningReport from '@/components/report/ScreeningReport.vue'
 import { useAssessmentStore } from '@/stores/assessments'
 import type { ReportTab } from '@/types/report'
 import { formatDateTime, maskId } from '@/utils/formatters'
-import { eyeAvailable, pageSummary, REPORT_TABS, rppgAvailable } from '@/utils/report'
+import { pageSummary, REPORT_TABS } from '@/utils/report'
 import { processLabel } from '@/utils/status'
 
 const props = defineProps<{ id: string }>()
@@ -24,11 +23,14 @@ const form = ref({ name: '', subject_id: '', id_card: '' })
 const report = computed(() => store.current)
 const tab = computed(() => REPORT_TABS.find(item => item.key === activeTab.value)!)
 const summary = computed(() => report.value ? pageSummary(report.value, activeTab.value) : null)
-const rppgReady = computed(() => report.value ? rppgAvailable(report.value) : false)
-const eyeReady = computed(() => report.value ? eyeAvailable(report.value) : false)
-const activeComponent = computed(() => ({ overview: OverviewReport, au: AuReport, rppg: RppgReport, vibra: VibraReport, eye: EyeReport })[activeTab.value])
+const activeComponent = computed(() => ({ overview: OverviewReport, screening: ScreeningReport, core: CoreReport, evidence: EvidenceReport })[activeTab.value])
 
-onMounted(async () => { await store.open(props.id); syncForm() })
+onMounted(async () => {
+  await store.open(props.id)
+  // 报告成功打开即进入管理跟进流程；不覆盖“跟进中”或“已结案”。
+  if (store.current?.review_status === 'pending') await store.setReviewStatus(props.id, 'following')
+  syncForm()
+})
 function syncForm() { if (!report.value) return; note.value = report.value.admin_note || ''; form.value = { name: report.value.name || '', subject_id: report.value.subject_id || '', id_card: report.value.id_card || '' } }
 async function saveNote() { if (!report.value) return; savingNote.value = true; try { await store.saveNote(report.value.id, note.value.trim() || null) } finally { savingNote.value = false } }
 function openEdit() { editError.value = ''; syncForm(); editOpen.value = true }
@@ -46,8 +48,8 @@ function printReport() { window.print() }
       <section v-if="report.status === 'invalid_result'" class="alert alert--warning">合作方分析结果无效，本报告只保留原始数据用于排查，不作为正式可解释结论。</section>
       <ReportTabs v-model="activeTab"/>
       <section class="report-content">
-        <header class="report-section-head"><div><div class="eyebrow">{{ tab.kicker }}</div><h2>{{ tab.title }}</h2><p>{{ tab.hint }}</p></div><AppStatus v-if="activeTab === 'rppg'" :label="rppgReady ? '质量门控通过' : '不建议解释'"/><AppStatus v-else-if="activeTab === 'eye'" :label="eyeReady ? '已采集' : '未采集'"/></header>
-        <PageSummary v-if="summary" :summary="summary"/>
+        <header class="report-section-head"><div><div class="eyebrow">{{ tab.kicker }}</div><h2>{{ tab.title }}</h2><p>{{ tab.hint }}</p></div><AppStatus v-if="activeTab === 'screening'" label="筛查不等于诊断"/><AppStatus v-else-if="activeTab === 'evidence'" label="辅助证据层"/></header>
+        <PageSummary v-if="summary && activeTab !== 'overview'" :summary="summary"/>
         <component :is="activeComponent" :report="report"/>
       </section>
       <section class="admin-note"><div><h3>内部跟进备注</h3><p>仅管理人员可见，不进入被测人员报告及合作方分析。</p></div><textarea v-model="note" maxlength="2000" placeholder="记录回访情况、复测安排或管理说明"></textarea><button class="primary-button" :disabled="savingNote" @click="saveNote">{{ savingNote ? '保存中…' : '保存备注' }}</button></section>

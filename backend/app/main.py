@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -32,7 +32,10 @@ def _serve_spa(dist_name: str, path: str, label: str):
         return FileResponse(requested)
     index = dist_dir / "index.html"
     if not index.exists():
-        return HTMLResponse(f"{label}尚未构建，请先运行对应前端目录的 npm run build。", status_code=503)
+        return HTMLResponse(
+            f"{label}尚未构建，请先运行对应前端目录的 npm run build。",
+            status_code=503,
+        )
     return FileResponse(index)
 
 
@@ -72,6 +75,21 @@ async def lifespan(app: FastAPI):
                 await conn.execute(
                     text(
                         f"ALTER TABLE assessments ADD COLUMN IF NOT EXISTS "
+                        f"{column} {sql_type}"
+                    )
+                )
+            # 航空情境题扩展字段；均为向后兼容字段，旧题库无需重灌即可继续使用。
+            for column, sql_type in (
+                ("dimension", "VARCHAR(64)"),
+                ("scenario", "VARCHAR(64)"),
+                ("audio_url", "VARCHAR(512)"),
+                ("content_version", "VARCHAR(32)"),
+                ("source_note", "VARCHAR(256)"),
+                ("scoring_mode", "VARCHAR(32) NOT NULL DEFAULT 'observation_only'"),
+            ):
+                await conn.execute(
+                    text(
+                        f"ALTER TABLE pairs ADD COLUMN IF NOT EXISTS "
                         f"{column} {sql_type}"
                     )
                 )
@@ -158,28 +176,23 @@ async def root() -> HTMLResponse:
     )
 
 
-@app.get("/demo", include_in_schema=False)
-async def demo_page() -> RedirectResponse:
-    """旧测评页地址；新版已将身份录入与测评整合到 /login/。"""
-    return RedirectResponse(url="/login/", status_code=307)
-
 @app.get("/admin", include_in_schema=False)
 async def admin_page():
     """正式管理后台入口。"""
-    return _serve_spa("admin-v2", "", "管理后台")
+    return _serve_spa("admin", "", "管理后台")
 
 
 @app.get("/admin/{path:path}", include_in_schema=False)
 async def admin_spa_page(path: str = ""):
-    return _serve_spa("admin-v2", path, "管理后台")
+    return _serve_spa("admin", path, "管理后台")
 
 
 @app.get("/login", include_in_schema=False)
 async def login_page():
     """正式测评入口。"""
-    return _serve_spa("terminal-v2", "", "测评端")
+    return _serve_spa("terminal", "", "测评端")
 
 
 @app.get("/login/{path:path}", include_in_schema=False)
 async def login_spa_page(path: str = ""):
-    return _serve_spa("terminal-v2", path, "测评端")
+    return _serve_spa("terminal", path, "测评端")

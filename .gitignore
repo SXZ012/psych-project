@@ -56,12 +56,15 @@ dist/
 .next/
 .nuxt/
 .cache/
+.vite/
 
 # ===== 数据库 / 上传 =====
 *.sqlite3
 uploads/
 media/
 data/
+!frontend/terminal-web/src/data/
+!frontend/terminal-web/src/data/**
 
 # ===== 本地备注 =====
 TODO.local.md

@@ -6,5 +6,6 @@ import './styles/reset.css'
 import './styles/tokens.css'
 import './styles/base.css'
 import './styles/report.css'
+import './styles/report-v2.css'
 import './styles/print.css'
 createApp(App).use(createPinia()).use(router).mount('#app')

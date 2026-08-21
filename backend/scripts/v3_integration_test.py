@@ -85,7 +85,10 @@ async def run(args: argparse.Namespace) -> int:
             sas_score=args.sas_score,
         )
         task_id = task["id"]
-        print(f"[3/4] V3 任务已创建，task_id={task_id}，开始轮询（最长 {settings.V3_POLL_TIMEOUT} 秒）")
+        print(
+            f"[3/4] V3 任务已创建，task_id={task_id}，"
+            f"开始轮询（最长 {settings.V3_POLL_TIMEOUT} 秒）"
+        )
     final_task = await client.wait_task(task_id)
     result = await client.get_result(final_task)
 

@@ -7,5 +7,5 @@ export default defineConfig({
   plugins: [vue()],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: { port: 5174, proxy: { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true } } },
-  build: { outDir: '../../backend/app/static/terminal-v2', emptyOutDir: true },
+  build: { outDir: '../../backend/app/static/terminal', emptyOutDir: true },
 })

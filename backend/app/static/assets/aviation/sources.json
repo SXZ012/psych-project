@@ -1,0 +1,27 @@
+{
+  "content_version":"aviation-draft-v2",
+  "usage_note":"Twenty real aviation photographs for an observation-only content draft. Not a validated aviation psychological scale.",
+  "license_pages":{"Pexels License":"https://www.pexels.com/license/","Unsplash License":"https://unsplash.com/license"},
+  "assets":[
+    {"file":"a01-instrument-monitoring.jpg","author":"Adrian Gagea","source_page":"https://www.pexels.com/photo/pilots-in-the-cockpit-4207314/","license":"Pexels License"},
+    {"file":"a02-instrument-panel.jpg","author":"Mariya Eskina","source_page":"https://www.pexels.com/photo/commercial-airplane-cockpit-with-instrument-panels-36569342/","license":"Pexels License"},
+    {"file":"a03-flight-instruments.jpg","author":"Magda Ehlers","source_page":"https://www.pexels.com/photo/airplane-cockpit-with-controls-and-instruments-34182242/","license":"Pexels License"},
+    {"file":"a04-cockpit-displays.jpg","author":"Mariya Eskina","source_page":"https://www.pexels.com/photo/cockpit-view-of-commercial-airplane-interior-37645081/","license":"Pexels License"},
+    {"file":"b01-workload.jpg","author":"Nikita Grishin","source_page":"https://www.pexels.com/photo/man-flying-an-aircraft-11581856/","license":"Pexels License"},
+    {"file":"b02-pilot-operation.jpg","author":"Mariya Eskina","source_page":"https://www.pexels.com/photo/cockpit-in-a-plane-19576655/","license":"Pexels License"},
+    {"file":"b03-active-control.jpg","author":"Jonathan Borba","source_page":"https://www.pexels.com/photo/airplane-cockpit-with-pilot-in-control-36410538/","license":"Pexels License"},
+    {"file":"b04-flight-operation.jpg","author":"K","source_page":"https://www.pexels.com/photo/pilots-operating-airplane-in-cockpit-during-flight-4269510/","license":"Pexels License"},
+    {"file":"c01-situation-awareness.jpg","author":"Sven Siegenthaler","source_page":"https://unsplash.com/photos/the-cockpit-of-an-airplane-with-a-lot-of-instruments-Tq2fpTTE6fI","license":"Unsplash License"},
+    {"file":"c02-runway-dusk.jpg","author":"Benjamin Chambon","source_page":"https://unsplash.com/photos/pilot-in-cockpit-looking-at-runway-at-dusk-XrViyzENBIU","license":"Unsplash License"},
+    {"file":"c03-sunset-conditions.jpg","author":"Mariya Eskina","source_page":"https://www.pexels.com/photo/airplane-cockpit-with-pilot-at-sunset-34593174/","license":"Pexels License"},
+    {"file":"c04-runway-instruments.jpg","author":"Sean P. Twomey","source_page":"https://www.pexels.com/photo/aircraft-cockpit-with-instrument-panel-view-31458771/","license":"Pexels License"},
+    {"file":"d01-procedure-check.jpg","author":"Phyllis Lilienthal","source_page":"https://unsplash.com/photos/pilots-hands-operating-aircraft-controls-and-dashboard-_afkM8DouF0","license":"Unsplash License"},
+    {"file":"d02-navigation-check.jpg","author":"Lina Kivaka","source_page":"https://www.pexels.com/photo/a-person-piloting-a-plane-5328304/","license":"Pexels License"},
+    {"file":"d03-control-check.jpg","author":"Jorgen Larsen","source_page":"https://www.pexels.com/photo/control-panel-in-a-airplane-11398987/","license":"Pexels License"},
+    {"file":"d04-cockpit-procedure.jpg","author":"capricorn sound","source_page":"https://www.pexels.com/photo/an-airplane-cockpit-23956965/","license":"Pexels License"},
+    {"file":"e01-crew-communication.jpg","author":"Mael Balland","source_page":"https://www.pexels.com/photo/two-men-sitting-inside-helicopter-3099037/","license":"Pexels License"},
+    {"file":"e02-team-headsets.jpg","author":"Rachel Claire","source_page":"https://www.pexels.com/photo/people-sitting-in-a-cockpit-7276731/","license":"Pexels License"},
+    {"file":"e03-two-pilots.jpg","author":"K","source_page":"https://www.pexels.com/photo/two-pilots-flying-an-airplane-2898316/","license":"Pexels License"},
+    {"file":"e04-crew-collaboration.jpg","author":"Rafael Cosquiere","source_page":"https://www.pexels.com/photo/two-pilots-sitting-inside-plane-2064123/","license":"Pexels License"}
+  ]
+}

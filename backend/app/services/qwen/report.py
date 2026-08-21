@@ -11,19 +11,21 @@ from typing import Any
 
 from app.services.qwen.client import QwenClient
 
-PAGE_KEYS = ("overview", "au", "rppg", "vibra", "eye")
+PAGE_KEYS = ("overview", "screening", "core", "evidence")
 
-SYSTEM_PROMPT = """你是心理评估报告助理。你的唯一任务，是把给定的V3客观事实改写成五页报告顶部的通俗摘要。
+SYSTEM_PROMPT = """你是航空从业人员心理状态辅助评估报告助理。你的任务是把给定的V3客观事实改写成四页报告顶部的通俗摘要。
 
 【铁律】
-1. 只能引用输入 facts 中明确存在的名称、档位、分类和可用状态，不得补充原因、症状、人格、风险或建议。
+1. 只能引用输入 facts 中明确存在的名称、档位、分类和可用状态；建议只能选用 allowed_actions，不得补充原因、症状、人格或适航判断。
 2. 不重算、不修改数据，不新增任何数字；摘要正文不写数字，具体数值由下方专业卡片展示。
-3. 抑郁和焦虑严格使用筛查口径，只能称为“筛查方向/筛查结果”，禁止使用“确诊、患有、病人、正常、异常、健康、不健康”。
+3. 抑郁和焦虑严格使用筛查口径，只能称为“筛查方向/筛查结果”；合作方返回“无明显风险”时可通俗表述为“正常（未见明显风险）”，禁止使用“确诊、患有、病人、异常、不健康”。
 4. unavailable=true 时必须直说未采集或不建议解释，绝不推测。
-5. 每页 summary 40—100个汉字，通俗客观；constraint 20—70个汉字，说明该页证据边界。
+5. 每页 summary 60—150个汉字，先说结果再解释含义；constraint 20—80个汉字，说明该页证据边界。
+6. 可以说明“压力负荷、疲劳恢复、生理唤醒、视觉注意”等结果之间的并列关系，但不得推断因果关系。
+7. 禁止使用“适航、不适航、胜任、不胜任、停飞”等自动岗位结论。
 
 【输出】只输出合法JSON，不要Markdown代码块或其他文字：
-{"schema_version":"qwen_page_summaries_v1","pages":{"overview":{"summary":"...","constraint":"..."},"au":{"summary":"...","constraint":"..."},"rppg":{"summary":"...","constraint":"..."},"vibra":{"summary":"...","constraint":"..."},"eye":{"summary":"...","constraint":"..."}}}"""
+{"schema_version":"qwen_page_summaries_v2","pages":{"overview":{"summary":"...","constraint":"..."},"screening":{"summary":"...","constraint":"..."},"core":{"summary":"...","constraint":"..."},"evidence":{"summary":"...","constraint":"..."}}}"""
 
 
 def _screen_line(name: str, d: dict[str, Any]) -> str:
@@ -59,20 +61,25 @@ def build_user_prompt(
     ci = summary.get("core_indicators") or {}
     notice = summary.get("clinical_notice") or {}
     overall_level = (ov.get("level") or {}).get("label", "未知")
-    limitations = notice.get("limitations") or []
-    if isinstance(limitations, list):
-        lim_text = "\n".join(f"    - {x}" for x in limitations) or "    （无）"
-    else:
-        lim_text = f"    {limitations}"
-
     small = summary.get("small_indicators") or {}
+
     def compact_group(name: str) -> list[dict[str, Any]]:
         group = small.get(name) or {}
         out = []
         for key, item in list(group.items())[:16]:
             item = item if isinstance(item, dict) else {"value": item}
-            level = (item.get("level") or {}).get("label") if isinstance(item.get("level"), dict) else None
-            out.append({"key": key, "name": item.get("name") or key, "level": level or item.get("grade_label") or item.get("classification_label") or "未提供"})
+            level_data = item.get("level")
+            level = level_data.get("label") if isinstance(level_data, dict) else None
+            out.append(
+                {
+                    "key": key,
+                    "name": item.get("name") or key,
+                    "level": level
+                    or item.get("grade_label")
+                    or item.get("classification_label")
+                    or "未提供",
+                }
+            )
         return out
 
     eye_status = ((summary.get("modules") or {}).get("eye_tracking") or {}).get("status")
@@ -88,10 +95,24 @@ def build_user_prompt(
                 _core_line(ci, "physiological_arousal"), _attention_line(summary, ci),
             ],
         },
-        "au": {"facts": compact_group("au")},
-        "rppg": {"unavailable": rppg_gate.get("physiology_available") is False, "facts": compact_group("rppg")},
-        "vibra": {"facts": compact_group("vibra")},
-        "eye": {"unavailable": eye_status in {"not_collected", "not_collected_in_upload_report"}, "facts": compact_group("eye_tracking")},
+        "core": {
+            "stress_load": _core_line(ci, "stress_load"),
+            "fatigue_recovery": _core_line(ci, "fatigue_recovery"),
+            "physiological_arousal": _core_line(ci, "physiological_arousal"),
+            ("visual_attention_status" if eye_status in {"not_collected", "not_collected_in_upload_report"} else "attention_focus"): _attention_line(summary, ci),
+        },
+        "screening": {
+            "depression": _screen_line("抑郁方向筛查", dep),
+            "anxiety": _screen_line("焦虑方向筛查", anx),
+            "depression_reliability": dep.get("reliability"),
+            "anxiety_reliability": anx.get("reliability"),
+        },
+        "evidence": {
+            "au": compact_group("au"),
+            "rppg": {"unavailable": rppg_gate.get("physiology_available") is False, "facts": compact_group("rppg")},
+            "vibra": compact_group("vibra"),
+            "eye": {"unavailable": eye_status in {"not_collected", "not_collected_in_upload_report"}, "facts": compact_group("eye_tracking")},
+        },
         "clinical_positioning": notice.get("positioning", "心理生理状态辅助评估，不作为独立诊断依据。"),
     }
     lines = ["以下JSON是本次报告唯一允许引用的事实白名单：", json.dumps(facts, ensure_ascii=False), "【免责声明约束】各页 constraint 必须遵守 clinical_positioning。"]
@@ -113,12 +134,11 @@ def _fallback_report(summary: dict[str, Any]) -> dict[str, Any]:
     eye_status = ((summary.get("modules") or {}).get("eye_tracking") or {}).get("status")
     eye_missing = eye_status in {"not_collected", "not_collected_in_upload_report"}
     rppg_missing = (summary.get("rppg_quality_gate") or {}).get("physiology_available") is False
-    return {"schema_version": "qwen_page_summaries_v1", "source": "rule_fallback", "pages": {
+    return {"schema_version": "qwen_page_summaries_v2", "source": "rule_fallback", "pages": {
         "overview": {"summary": f"本次抑郁方向筛查为{dep}，焦虑方向筛查为{anx}；压力负荷为{label('stress_load')}，疲劳恢复负荷为{label('fatigue_recovery')}，生理唤醒为{label('physiological_arousal')}。", "constraint": "筛查结果不是医学诊断，需结合量表、访谈及实际情况综合判断。"},
-        "au": {"summary": "本页依据合作方返回的面部动作指标，概括测试过程中面部活动的强弱与变化。具体结果以下方专业卡片为准。", "constraint": "面部动作不等同于具体情绪，也不能单独用于心理诊断。"},
-        "rppg": {"summary": "本次生理节律数据不建议解释。" if rppg_missing else "本页依据质量门控后的心率、心率变异性和信号质量，概括测试期间的生理节律变化。", "constraint": "rPPG为视频估算结果，受光照、头动和信号质量影响。"},
-        "vibra": {"summary": "本页依据合作方返回的微振动聚合指标，概括测试期间身体微小运动所反映的状态变化。", "constraint": "单项微振动特征不能直接解释为具体症状或诊断结论。"},
-        "eye": {"summary": "本次未采集可用于正式解释的眼动数据。" if eye_missing else "本页依据有效眼动比例和注意稳定性，概括测试期间的注视分布。", "constraint": "未采集时不作推测；视频级眼动线索不等同于专业眼动仪结果。"},
+        "core": {"summary": f"核心状态中，压力负荷为{label('stress_load')}，疲劳恢复负荷为{label('fatigue_recovery')}，生理唤醒为{label('physiological_arousal')}；各项定义、分档依据和参考区间以下方合作方结果为准。", "constraint": "短时状态受测评情境和采集质量影响，不据此推断稳定人格或岗位胜任。"},
+        "screening": {"summary": f"本次抑郁方向筛查为{dep}，焦虑方向筛查为{anx}。需要关注的分类应结合标准量表、访谈和近期实际情境进一步确认。", "constraint": "筛查不是诊断，严禁写作已患抑郁或焦虑。"},
+        "evidence": {"summary": "本页保留AU面部动作与Vibra微振动依据；" + ("rPPG生理节律数据未通过解释条件；" if rppg_missing else "同时保留质量门控后的rPPG生理节律证据；") + ("眼动未采集。" if eye_missing else "并保留眼动代理证据。"), "constraint": "底层多模态指标只用于结果追溯，不能脱离核心分类与质量门控单独形成心理结论。"},
     }}
 
 
@@ -131,16 +151,23 @@ def _validate_model_report(text: str) -> dict[str, Any] | None:
     except (TypeError, json.JSONDecodeError):
         return None
     pages = data.get("pages") if isinstance(data, dict) else None
-    forbidden = re.compile(r"确诊|患有|病人|正常|异常|不健康|健康人")
-    if data.get("schema_version") != "qwen_page_summaries_v1" or not isinstance(pages, dict):
+    forbidden = re.compile(r"确诊|患有|病人|异常|不健康|健康人|不适航|适航|停飞|不胜任|胜任")
+    if data.get("schema_version") != "qwen_page_summaries_v2" or not isinstance(pages, dict):
         return None
     for key in PAGE_KEYS:
         page = pages.get(key)
-        if not isinstance(page, dict): return None
+        if not isinstance(page, dict):
+            return None
         for field in ("summary", "constraint"):
             value = page.get(field)
-            if not isinstance(value, str) or not value.strip() or len(value) > 180 or forbidden.search(value): return None
-            if re.search(r"\d", value): return None
+            invalid_value = (
+                not isinstance(value, str)
+                or not value.strip()
+                or len(value) > 180
+                or forbidden.search(value)
+            )
+            if invalid_value or re.search(r"\d", value):
+                return None
     data["source"] = "qwen_constrained"
     return data
 

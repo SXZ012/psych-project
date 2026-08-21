@@ -176,31 +176,6 @@ async def resubmit_assessment(
     return assessment
 
 
-@router.post(
-    "", response_model=AssessmentOut, status_code=status.HTTP_201_CREATED, include_in_schema=False
-)
-async def create_assessment_legacy(
-    payload: dict,
-    background_tasks: BackgroundTasks,
-    db: Annotated[AsyncSession, Depends(get_db)],
-) -> Assessment:
-    """旧版 JSON 创建接口（内部/兼容用）。前端应使用 /submit。"""
-    assessment = Assessment(
-        name=payload.get("name", "").strip() or None,
-        id_card=payload.get("id_card", "").strip() or None,
-        selections_data={"selections": payload.get("selections", [])},
-        duration_seconds=payload.get("duration_seconds"),
-        status=AssessmentStatus.pending,
-        provider_mode=settings.PROVIDER_MODE,
-        submitted_at=datetime.now(timezone.utc),
-    )
-    db.add(assessment)
-    await db.commit()
-    await db.refresh(assessment)
-    background_tasks.add_task(run_assessment, assessment.id)
-    return assessment
-
-
 @router.get("", response_model=list[AssessmentOut])
 async def list_assessments(
     db: Annotated[AsyncSession, Depends(get_db)],

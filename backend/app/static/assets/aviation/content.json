@@ -1,0 +1,11 @@
+{
+  "content_version": "aviation-draft-v2",
+  "scoring_mode": "observation_only",
+  "question_types": [
+    {"id":"A","dimension":"注意分配","scenario":"仪表监控","question":"当多个信息同时变化时，你通常更接近哪种处理方式？","option_a":"先确认最关键的信息，再依次处理其他变化。","option_b":"先快速浏览全部信息，再决定从哪里开始。","audio_url":"/static/assets/aviation/audio/a-attention.mp3?v=qwen-plus-1","images":["a01-instrument-monitoring.jpg","a02-instrument-panel.jpg","a03-flight-instruments.jpg","a04-cockpit-displays.jpg"]},
+    {"id":"B","dimension":"工作负荷","scenario":"时间压力","question":"当时间压力增加而任务仍未完成时，你更倾向于？","option_a":"重新确认优先级，按关键程度继续推进。","option_b":"尽量维持原有节奏，避免临时调整计划。","audio_url":"/static/assets/aviation/audio/b-workload.mp3?v=qwen-plus-1","images":["b01-workload.jpg","b02-pilot-operation.jpg","b03-active-control.jpg","b04-flight-operation.jpg"]},
+    {"id":"C","dimension":"情境意识","scenario":"运行条件变化","question":"当外部条件与预期逐渐出现偏差时，你更倾向于？","option_a":"及时更新判断，并为替代方案预留空间。","option_b":"继续观察变化，等信息更明确后再调整。","audio_url":"/static/assets/aviation/audio/c-awareness.mp3?v=qwen-plus-1","images":["c01-situation-awareness.jpg","c02-runway-dusk.jpg","c03-sunset-conditions.jpg","c04-runway-instruments.jpg"]},
+    {"id":"D","dimension":"程序与安全意识","scenario":"交叉检查","question":"在熟悉任务且时间紧张的情况下，你更接近哪种做法？","option_a":"仍按步骤完成必要复核，避免遗漏。","option_b":"依靠经验简化部分步骤，提高处理速度。","audio_url":"/static/assets/aviation/audio/d-procedure.mp3?v=qwen-plus-1","images":["d01-procedure-check.jpg","d02-navigation-check.jpg","d03-control-check.jpg","d04-cockpit-procedure.jpg"]},
+    {"id":"E","dimension":"机组沟通","scenario":"协同决策","question":"当同伴的判断与你不一致时，你更倾向于？","option_a":"说明依据并共同核对关键事实。","option_b":"先保留意见，等待后续情况进一步明确。","audio_url":"/static/assets/aviation/audio/e-communication.mp3?v=qwen-plus-1","images":["e01-crew-communication.jpg","e02-team-headsets.jpg","e03-two-pilots.jpg","e04-crew-collaboration.jpg"]}
+  ]
+}
