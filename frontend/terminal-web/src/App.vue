@@ -15,7 +15,7 @@ watch(() => flow.phase.value, async phase => { if (['intro', 'assess', 'loading'
 <template>
   <video id="analysis-video" autoplay muted playsinline style="position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;left:-10px;top:-10px"></video>
   <IdentityForm v-if="flow.phase.value==='login'" @submit="flow.enter" />
-  <ConsentPanel v-else-if="flow.phase.value==='consent'" @confirm="flow.confirmConsent" />
+  <ConsentPanel v-else-if="flow.phase.value==='consent'" :assets-ready="flow.assetsReady.value" :assets-error="flow.assetsError.value" @retry-assets="flow.prepareAssets" @confirm="flow.confirmConsent" />
   <FaceCheck v-else-if="flow.phase.value==='detect'" :ready="flow.faceReady.value" :message="flow.cameraMessage.value" :native="flow.native.available.value" :state="flow.faceState.value" @start="flow.begin" />
   <template v-else-if="flow.phase.value==='intro'"><CameraMonitor :native="flow.native.available.value" :message="flow.cameraMessage.value" :state="flow.faceState.value"/><IntroStage /></template>
   <template v-else-if="flow.phase.value==='assess'"><QuestionStage :question="flow.current.value" :index="flow.index.value" :progress="flow.progress.value" :selected="flow.selections.value[flow.index.value]" :native="flow.native.available.value" :camera-message="flow.cameraMessage.value" :face-state="flow.faceState.value" @select="flow.select"/></template>

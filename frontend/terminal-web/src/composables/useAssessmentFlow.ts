@@ -14,6 +14,8 @@ export function useAssessmentFlow() {
   const phase = ref<TerminalPhase>('login')
   const identity = ref<UserIdentity | null>(null)
   const questions = ref(makeQuestions())
+  const assetsReady = ref(false)
+  const assetsError = ref('')
   const index = ref(0), progress = ref(0), selections = ref<string[][]>(questions.value.map(() => []))
   const faceReady = ref(false), faceState = ref<'ok'|'warning'|'error'>('warning'), faceMessage = ref('请正对屏幕，让头部完整位于框内'), finalCountdown = ref(5), completeCountdown = ref(30), failure = ref('')
   const native = useAndroidCamera(), browser = useBrowserCamera(), browserFace = useBrowserFaceDetection(handleFace)
@@ -48,14 +50,30 @@ export function useAssessmentFlow() {
 
   function clear(timer: number | null) { if (timer) window.clearInterval(timer) }
   function delay(ms: number) { return new Promise<void>(resolve => window.setTimeout(resolve, ms)) }
-  async function preloadPairs() {
+  async function preloadImages(items: TerminalQuestion[]) {
+    await Promise.all(items.map(question => new Promise<void>((resolve, reject) => {
+      const image = new Image()
+      image.onload = () => {
+        const decoded = image.decode?.()
+        if (decoded) void decoded.then(() => resolve()).catch(() => resolve())
+        else resolve()
+      }
+      image.onerror = () => reject(new Error('图片下载失败'))
+      image.src = question.image
+    })))
+  }
+
+  async function prepareAssets() {
+    assetsReady.value = false
+    assetsError.value = ''
     try {
       const response = await fetch('/api/v1/pairs/session?count=5')
+      if (!response.ok) throw new Error('题库请求失败')
       const body = await response.json()
       const pairs = Array.isArray(body.pairs) ? body.pairs.filter((item: { image_url?: string }) => item?.image_url) : []
-      questions.value = makeQuestions().map((fallback, i) => {
+      if (pairs.length !== 5) throw new Error('当前题库不足 5 张可用图片')
+      const prepared = makeQuestions().map((fallback, i) => {
         const pair = pairs[i]
-        if (!pair) return fallback
         const pairId = String(pair.pair_id || fallback.id)
         return {
           ...fallback,
@@ -73,12 +91,21 @@ export function useAssessmentFlow() {
           scoringMode: pair.scoring_mode === 'validated' ? 'validated' : 'observation_only',
         } satisfies TerminalQuestion
       })
-      questions.value.forEach(question => { const image = new Image(); image.src = question.image })
-      promptAudio.preload(questions.value)
-    } catch { /* 断网或图库异常时使用内置兜底图 */ }
+      await preloadImages(prepared)
+      questions.value = prepared
+      promptAudio.preload(prepared)
+      assetsReady.value = true
+    } catch (error) {
+      assetsError.value = error instanceof Error ? error.message : '测评素材准备失败'
+    }
   }
-  function enter(identityValue: UserIdentity) { identity.value = identityValue; phase.value = 'consent' }
+  function enter(identityValue: UserIdentity) {
+    identity.value = identityValue
+    phase.value = 'consent'
+    void prepareAssets()
+  }
   async function confirmConsent() {
+    if (!assetsReady.value) return
     phase.value = 'detect'; faceReady.value = false; faceState.value = 'warning'; faceMessage.value = '正在开启摄像头…'; faceValidSince = null; faceInvalidSince = null; native.setGuideState('warning')
     await nextTick()
     const anchor = document.querySelector<HTMLElement>('[data-native-preview-anchor="detect"]')
@@ -155,7 +182,6 @@ export function useAssessmentFlow() {
   function showComplete() { phase.value = 'complete'; completeCountdown.value = 30; clear(completeTimer); completeTimer = window.setInterval(() => { completeCountdown.value -= 1; if (completeCountdown.value <= 0) finish() }, 1000) }
   function resetCompleteCountdown() { if (phase.value === 'complete') completeCountdown.value = 30 }
   function finish() { clear(stageTimer); clear(countdownTimer); clear(completeTimer); promptAudio.stop(); native.stopPromptAudio(); native.stopPreview(); browserFace.stop(); browser.stop(); phase.value = 'login'; identity.value = null; index.value = 0; progress.value = 0; selections.value = questions.value.map(() => []); faceReady.value = false; lastSubmissionId = null; pendingPayload = null; pendingBrowserVideo = null; failure.value = '' }
-  void preloadPairs()
   onBeforeUnmount(finish)
-  return { phase, current, index, progress, selections, faceReady, faceState, finalCountdown, completeCountdown, failure, native, cameraMessage, enter, confirmConsent, begin, select, retry, finish, resetCompleteCountdown, syncPreview }
+  return { phase, current, index, progress, selections, assetsReady, assetsError, faceReady, faceState, finalCountdown, completeCountdown, failure, native, cameraMessage, enter, prepareAssets, confirmConsent, begin, select, retry, finish, resetCompleteCountdown, syncPreview }
 }
