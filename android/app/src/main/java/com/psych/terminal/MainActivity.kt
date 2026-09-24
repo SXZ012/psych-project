@@ -56,6 +56,8 @@ class MainActivity : Activity() {
     private val launchHandler = Handler(Looper.getMainLooper())
     private var pageReady = false
     private var launchRetried = false
+    // 最近一次 loadEntry 实际使用的 BASE_URL；onResume 检测调试页改动后触发重载
+    private var lastLoadedBaseUrl: String? = null
     private val launchWatchdog = Runnable {
         if (pageReady) return@Runnable
         if (!launchRetried) {
@@ -332,6 +334,7 @@ class MainActivity : Activity() {
 
     private fun loadEntry() {
         val base = AppSettings.getBaseUrl(this)
+        lastLoadedBaseUrl = base
         if (base == null) {
             Toast.makeText(this, "请先在调试设置中配置后端地址（BASE_URL）", Toast.LENGTH_LONG).show()
             startActivity(Intent(this, DebugSettingsActivity::class.java))
@@ -406,8 +409,10 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         bridge.onHostResume()
-        // 从调试设置返回后刷新入口（BASE_URL 可能已修改）
-        if (AppSettings.getBaseUrl(this) != null && webView.url.isNullOrBlank()) loadEntry()
+        // 从调试设置返回后刷新入口：首次进入页面还没加载，或调试页里改过
+        // BASE_URL（旧页面仍指向旧后端，不重载会一直连不上/连错源）
+        val current = AppSettings.getBaseUrl(this)
+        if (current != null && (webView.url.isNullOrBlank() || current != lastLoadedBaseUrl)) loadEntry()
     }
 
     override fun onDestroy() {

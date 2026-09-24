@@ -70,6 +70,16 @@ class AndroidCameraBridge(
     private var pendingPreviewCb: String? = null
 
     init {
+        // 孤儿视频回收：进程被杀/用户中途放弃/BASE_URL 改动都会遗留已封存的 MP4。
+        // kiosk 长期运行若无回收磁盘会被耗尽；保留 24h 内的文件供人工排查。
+        Thread {
+            runCatching {
+                val keepAfter = System.currentTimeMillis() - 24 * 3_600_000L
+                videoDir().listFiles()?.forEach { f ->
+                    if (f.isFile && f.lastModified() < keepAfter && f != pendingFile) f.delete()
+                }
+            }
+        }.start()
         tts = TextToSpeech(context.applicationContext) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) tts?.language = Locale.SIMPLIFIED_CHINESE
@@ -401,6 +411,11 @@ class AndroidCameraBridge(
         val timelineVersion = payload.optString("question_protocol_version", payload.optString("timeline_version", "")).trim()
         val contentVersion = payload.optString("content_version", "").trim()
         val schedulingNotesJson = payload.optJSONArray("scheduling_notes")?.toString()
+        // 采集协议审计：中断计数/中断时长与知情同意版本（strict-continuous 升级；
+        // 后端 assessments.submit 已接收落库，此前桥接层解析时静默丢弃）
+        val interruptions = payload.optInt("interruptions", -1)
+        val interruptedMs = payload.optInt("interrupted_ms", -1)
+        val consentVersion = payload.optString("consent_version", "").trim()
 
         Thread {
             val r = AssessmentUploader.submit(
@@ -422,6 +437,9 @@ class AndroidCameraBridge(
                 timelineVersion = timelineVersion.takeIf { it.isNotEmpty() },
                 contentVersion = contentVersion.takeIf { it.isNotEmpty() },
                 schedulingNotesJson = schedulingNotesJson,
+                interruptions = interruptions.takeIf { it >= 0 },
+                interruptedMs = interruptedMs.takeIf { it >= 0 },
+                consentVersion = consentVersion.takeIf { it.isNotEmpty() },
             )
             if (r.ok) {
                 uploadedId = r.assessmentId
@@ -458,6 +476,7 @@ class AndroidCameraBridge(
 
     @JavascriptInterface
     fun setPreviewLayout(visible: Boolean, leftPct: Double, topPct: Double, widthPct: Double, heightPct: Double) {
+        if (!sameOriginWithBase()) return
         previewLayoutSetter(
             visible,
             leftPct.coerceIn(0.0, 100.0),
@@ -469,6 +488,7 @@ class AndroidCameraBridge(
 
     @JavascriptInterface
     fun setFaceGuideState(status: String) {
+        if (!sameOriginWithBase()) return
         previewGuideSetter(if (status in setOf("ok", "warning", "error")) status else "warning")
     }
 
@@ -476,7 +496,7 @@ class AndroidCameraBridge(
 
     @JavascriptInterface
     fun speakPrompt(text: String): String {
-        if (!ttsReady || text.isBlank()) return JSONObject().put("ok", false).toString()
+        if (!sameOriginWithBase() || !ttsReady || text.isBlank()) return JSONObject().put("ok", false).toString()
         tts?.speak(text.take(80), TextToSpeech.QUEUE_FLUSH, null, "quality-prompt")
         return JSONObject().put("ok", true).toString()
     }
@@ -553,17 +573,32 @@ class AndroidCameraBridge(
         }
     }
 
-    /** 来源校验：仅允许 BASE_URL 同源页面调用原生接口 */
+    /** origin 三要素（协议+主机+端口）；解析失败或非法返回 null */
+    private fun originOf(url: String?): String? {
+        val u = url?.let { runCatching { Uri.parse(it) }.getOrNull() } ?: return null
+        if (u.host.isNullOrBlank()) return null
+        // 只比 host 会放过同主机异端口/异协议的页面；origin 三要素全等才放行
+        val p = if (u.port > 0) u.port else if (u.scheme == "https") 443 else 80
+        return "${u.scheme}://${u.host}:$p"
+    }
+
+    /** 无回调接口用的来源校验（不通过时静默拒绝） */
+    private fun sameOriginWithBase(): Boolean {
+        val base = AppSettings.getBaseUrl(context) ?: return false
+        return originOf(currentUrl()) != null && originOf(currentUrl()) == originOf(base)
+    }
+
+    /** 来源校验：仅允许 BASE_URL 同源（协议+主机+端口）页面调用原生接口 */
     private fun guard(callback: String?): Boolean {
         val base = AppSettings.getBaseUrl(context)
         if (base == null) {
             fire(callback, err("BASE_URL 未配置"))
             return false
         }
-        val pageHost = currentUrl()?.let { runCatching { Uri.parse(it).host }.getOrNull() }
-        val baseHost = runCatching { Uri.parse(base).host }.getOrNull()
-        if (pageHost == null || baseHost == null || pageHost != baseHost) {
-            fire(callback, err("origin_not_allowed：仅允许后端页面调用原生接口（page=$pageHost base=$baseHost）"))
+        val pageOrigin = originOf(currentUrl())
+        val baseOrigin = originOf(base)
+        if (pageOrigin == null || baseOrigin == null || pageOrigin != baseOrigin) {
+            fire(callback, err("origin_not_allowed：仅允许后端页面调用原生接口（page=$pageOrigin base=$baseOrigin）"))
             return false
         }
         return true

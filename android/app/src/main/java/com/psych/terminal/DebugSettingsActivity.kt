@@ -41,7 +41,7 @@ class DebugSettingsActivity : Activity() {
         root.addView(text("后端地址（BASE_URL）", 14f))
 
         urlInput = EditText(this).apply {
-            hint = if (BuildConfig.DEBUG) "例：http://10.0.0.29:8000/login" else "例：https://api.example.com"
+            hint = if (BuildConfig.DEBUG) "例：http://10.0.0.3:8000/login" else "例：https://api.example.com"
             setText(AppSettings.getBaseUrl(this@DebugSettingsActivity) ?: "")
         }
         root.addView(urlInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))

@@ -41,6 +41,9 @@ class H264Recorder {
     companion object {
         const val MIME = MediaFormat.MIMETYPE_VIDEO_AVC   // "video/avc"
         const val TARGET_BITRATE = 5_000_000              // 5Mbps（建议区间 4~6Mbps）
+        // 成功判定的最小输出体积：60s@5Mbps 的正常产物在 MB 级；
+        // 小于该值必是空封装/半截 moov，播放不了也不该被上传
+        const val MIN_OUTPUT_BYTES = 8_192L
         const val IFRAME_INTERVAL_SEC = 1f                // I帧间隔 1~2s
     }
 
@@ -50,7 +53,6 @@ class H264Recorder {
     private var outputFile: File? = null
     private var startedAtMs = 0L
     private var videoTrack = -1
-    private val stopping = AtomicBoolean(false)
     private val muxerStarted = AtomicBoolean(false)
     private val sawEos = AtomicBoolean(false)
     private val drainError = AtomicReference<String?>(null)
@@ -100,7 +102,6 @@ class H264Recorder {
                 muxer = activeMuxer
                 this.outputFile = outputFile
                 videoTrack = -1
-                stopping.set(false)
                 muxerStarted.set(false)
                 sawEos.set(false)
                 drainError.set(null)
@@ -174,7 +175,6 @@ class H264Recorder {
         } catch (e: Exception) {
             "发送EOS失败: ${e.message}"
         }
-        stopping.set(true)
         val finished = drainDone.get().await(10, TimeUnit.SECONDS)
         codec = null
         muxer = null
@@ -189,9 +189,13 @@ class H264Recorder {
         if (drainErrMsg != null) {
             return StopResult(false, filePath = file?.absolutePath, durationMs = duration, error = drainErrMsg)
         }
-        if (file == null || !file.exists()) {
-            return StopResult(false, durationMs = duration, error = "输出文件不存在")
+        // 只查 exists 不查大小：预览失败后强行 stop 会产出 0 字节 MP4，
+        // 被当成功保留重试，直到后端 422"视频文件为空"才暴露。此处提前拦截。
+        val sizeBytes = file?.length() ?: 0L
+        if (file == null || !file.exists() || sizeBytes < MIN_OUTPUT_BYTES) {
+            runCatching { if (file != null && sizeBytes < MIN_OUTPUT_BYTES) file.delete() }
+            return StopResult(false, durationMs = duration, error = "输出文件异常（${sizeBytes} 字节）")
         }
-        return StopResult(true, filePath = file.absolutePath, fileSizeBytes = file.length(), durationMs = duration)
+        return StopResult(true, filePath = file.absolutePath, fileSizeBytes = sizeBytes, durationMs = duration)
     }
 }

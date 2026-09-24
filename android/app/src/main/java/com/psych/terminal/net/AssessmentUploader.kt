@@ -46,6 +46,10 @@ object AssessmentUploader {
         timelineVersion: String? = null,
         contentVersion: String? = null,
         schedulingNotesJson: String? = null,
+        // strict-continuous 升级的审计字段与知情同意版本（可选；null 不发送）
+        interruptions: Int? = null,
+        interruptedMs: Int? = null,
+        consentVersion: String? = null,
     ): Result {
         val url = URL(baseUrl.trimEnd('/') + "/api/v1/assessments/submit")
         val boundary = "----psychBoundary${System.currentTimeMillis()}"
@@ -81,6 +85,9 @@ object AssessmentUploader {
                 timelineVersion?.takeIf { it.isNotBlank() }?.let { fields["timeline_version"] = it }
                 contentVersion?.takeIf { it.isNotBlank() }?.let { fields["content_version"] = it }
                 schedulingNotesJson?.takeIf { it.isNotBlank() }?.let { fields["scheduling_notes"] = it }
+                interruptions?.let { fields["interruptions"] = it.toString() }
+                interruptedMs?.let { fields["interrupted_ms"] = it.toString() }
+                consentVersion?.takeIf { it.isNotBlank() }?.let { fields["consent_version"] = it }
                 Multipart.write(
                     out = it,
                     boundary = boundary,
