@@ -15,7 +15,7 @@ import type { ReportTab } from '@/types/report'
 import type { ReviewStatus } from '@/types/assessment'
 import { formatDateTime, maskId } from '@/utils/formatters'
 import { pageSummary, REPORT_TABS } from '@/utils/report'
-import { processLabel } from '@/utils/status'
+import { processLabel, reviewOptions } from '@/utils/status'
 
 const props = defineProps<{ id: string }>()
 const store = useAssessmentStore(), router = useRouter()
@@ -75,8 +75,12 @@ async function retryAnalysis() {
 
 onMounted(async () => {
   await store.open(props.id)
-  // 报告成功打开即标记为已查看；历史状态不强行改写。
-  if (store.current?.review_status === 'pending') await store.setReviewStatus(props.id, 'following')
+  try {
+    // 报告成功打开即标记为已查看；历史状态不强行改写。
+    if (store.current?.review_status === 'pending') await store.setReviewStatus(props.id, 'following')
+  } catch {
+    // 标记失败（瞬时 401/网络）不能中断表单同步——否则空 note 一保存会覆盖已有备注
+  }
   syncForm()
 })
 function syncForm() { if (!report.value) return; note.value = report.value.admin_note || ''; form.value = { name: report.value.name || '', subject_id: report.value.subject_id || '', id_card: report.value.id_card || '' } }
@@ -96,7 +100,7 @@ async function updateReviewStatus(event: Event) {
     <div v-if="store.detailLoading && !report" class="report-loading">正在读取完整报告…</div>
     <div v-else-if="store.error" class="report-error"><AppEmpty title="报告加载失败" :description="store.error"><button class="secondary-button" @click="router.push('/assessments')">返回列表</button></AppEmpty></div>
     <template v-else-if="report">
-      <section class="report-identity"><div class="report-identity__avatar">{{ (report.name || '?').slice(0, 1) }}</div><div><div class="eyebrow">AI VISUAL PSYCHOLOGICAL ASSESSMENT</div><h1>{{ report.name || '未填写姓名' }}的心理评估报告</h1><p>{{ report.subject_id || '受测者' }}<template v-if="report.id_card"> · {{ maskId(report.id_card) }}</template><template v-if="basicGenderAge"> · {{ basicGenderAge }}</template> · {{ formatDateTime(report.created_at) }}</p><div class="report-context"><span>本次状态记录</span><span>心理状态辅助参考</span></div></div><div class="report-identity__status"><AppStatus :label="processLabel(report.status)"/><label class="report-review-status">查看状态<select :value="report.review_status==='pending'?'pending':'following'" :class="{ 'is-viewed': report.review_status !== 'pending' }" @change="updateReviewStatus"><option value="pending">待查看</option><option value="following">已查看</option></select></label><small class="report-algorithm">算法版本：{{ report.result?.algorithm_version || '—' }}</small></div></section>
+      <section class="report-identity"><div class="report-identity__avatar">{{ (report.name || '?').slice(0, 1) }}</div><div><div class="eyebrow">AI VISUAL PSYCHOLOGICAL ASSESSMENT</div><h1>{{ report.name || '未填写姓名' }}的心理评估报告</h1><p>{{ report.subject_id || '受测者' }}<template v-if="report.id_card"> · {{ maskId(report.id_card) }}</template><template v-if="basicGenderAge"> · {{ basicGenderAge }}</template> · {{ formatDateTime(report.created_at) }}</p><div class="report-context"><span>本次状态记录</span><span>心理状态辅助参考</span></div></div><div class="report-identity__status"><AppStatus :label="processLabel(report.status)"/><label class="report-review-status">查看状态<select :value="report.review_status" :class="{ 'is-viewed': report.review_status !== 'pending' }" @change="updateReviewStatus"><option v-for="option in reviewOptions" :key="option.value" :value="option.value">{{ option.label }}</option></select></label><small class="report-algorithm">算法版本：{{ report.result?.algorithm_version || '—' }}</small></div></section>
 
       <!-- 社区记录不在当前终端报告中心展示：两套报告体系完全独立 -->
       <section v-if="report.scene === 'community'" class="report-state report-state--invalid" role="note">

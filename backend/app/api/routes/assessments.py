@@ -535,6 +535,7 @@ async def list_assessments(
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[str, Depends(require_admin_session)],
     limit: int = 50,
+    offset: int = 0,
     name: str | None = None,
     id_card: str | None = None,
     scene: str = "aviation",
@@ -547,7 +548,11 @@ async def list_assessments(
         stmt = stmt.where(Assessment.name.ilike(f"%{name.strip()}%"))
     if id_card:
         stmt = stmt.where(Assessment.id_card == id_card.strip())
-    stmt = stmt.order_by(Assessment.created_at.desc()).limit(min(limit, 100))
+    stmt = (
+        stmt.order_by(Assessment.created_at.desc())
+        .offset(max(0, offset))
+        .limit(min(limit, 100))
+    )
     return list((await db.execute(stmt)).scalars().all())
 
 

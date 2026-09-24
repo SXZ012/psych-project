@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { logout as apiLogout } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 import { useAssessmentStore } from '@/stores/assessments'
+import { beijingDate } from '@/utils/formatters'
 const router=useRouter(),route=useRoute(),auth=useAuthStore(),assessments=useAssessmentStore()
 const isListPage=computed(()=>route.path==='/assessments')
-const dates=computed(()=>{const groups=new Map<string,number>();assessments.records.forEach(item=>{const date=item.created_at.slice(0,10);groups.set(date,(groups.get(date)||0)+1)});return [...groups.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([date,count])=>({date,count}))})
+// 日期分桶按北京时间（表格展示时区一致）；按 UTC 切会在 16:00 后错一天
+const dates=computed(()=>{const groups=new Map<string,number>();assessments.records.forEach(item=>{const date=beijingDate(item.created_at);groups.set(date,(groups.get(date)||0)+1)});return [...groups.entries()].sort(([a],[b])=>b.localeCompare(a)).map(([date,count])=>({date,count}))})
 const statusCount=(value:'all'|'pending'|'viewed')=>value==='all'?assessments.records.length:assessments.records.filter(item=>assessments.reviewState(item)===value).length
 function selectAll(){assessments.dateFilter='all';assessments.reviewFilter='all'}
-function logout(){auth.clear();router.replace('/login')}
+async function logout(){try{await apiLogout()}catch{/* 服务端会话已失效也继续本地退出 */}auth.clear();router.replace('/login')}
 </script>
 <template><div class="admin-shell"><aside class="sidebar"><div class="brand"><div class="brand__mark">AI</div><div><strong>AI视觉心理评估终端</strong><span>管理与报告中心</span></div></div><nav class="side-nav"><RouterLink to="/assessments">测评报告</RouterLink></nav><template v-if="isListPage"><section class="sidebar-filters"><button class="sidebar-filter sidebar-filter--all" :class="{active:assessments.dateFilter==='all'&&assessments.reviewFilter==='all'}" @click="selectAll"><span>全部记录</span><b>{{ statusCount('all') }}</b></button><section class="sidebar-filter-group"><h2>按日期</h2><div class="sidebar-date-list"><button v-for="item in dates" :key="item.date" class="sidebar-filter" :class="{active:assessments.dateFilter===item.date}" @click="assessments.dateFilter=item.date"><span>{{ item.date }}</span><small>{{ item.count }} 份</small></button><p v-if="!dates.length" class="sidebar-filter-empty">暂无记录</p></div></section><section class="sidebar-filter-group sidebar-filter-group--status"><h2>查看状态</h2><button v-for="item in [{value:'all',label:'全部',tone:'neutral'},{value:'pending',label:'待查看',tone:'pending'},{value:'viewed',label:'已查看',tone:'viewed'}]" :key="item.value" class="sidebar-filter sidebar-filter--status" :class="[{active:assessments.reviewFilter===item.value},`is-${item.tone}`]" @click="assessments.reviewFilter=item.value as 'all'|'pending'|'viewed'"><i></i><span>{{ item.label }}</span><b>{{ statusCount(item.value as 'all'|'pending'|'viewed') }}</b></button></section></section></template><div class="sidebar__footer"><button class="text-button" @click="logout">退出登录</button></div></aside><main class="admin-main"><slot /></main></div></template>
 

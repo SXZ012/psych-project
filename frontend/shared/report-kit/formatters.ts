@@ -8,10 +8,14 @@ export function displayPercent(value: unknown) { const n = Number(value); if (!N
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function getAt(source: unknown, path: string, fallback: unknown = null): any { let current: any = source; for (const key of path.split('.')) { if (current == null || typeof current !== 'object' || !(key in current)) return fallback; current = current[key] } return current ?? fallback }
 
-/** 等级标签 → 语义色调；admin-web 的 statusTone 与终端徽章共用此规则。 */
+/** 等级标签 → 语义色调；admin-web 的 statusTone 与终端徽章共用此规则。
+ *
+ * 判定顺序即优先级：先危险后关注再良好——"偏低"必须在"低风险/低负荷"
+ * 之前拦截，否则心理筛查里"偏低"会显示成绿色通过（曾出现"绿徽章+
+ * 黄色重点关注边框"的自相矛盾）。 */
 export function statusTone(value: string): 'success' | 'warning' | 'danger' | 'neutral' {
-  if (/completed|closed|正常|稳定|良好|通过|低/.test(value)) return 'success'
-  if (/failed|invalid|失败|高风险|明显/.test(value)) return 'danger'
-  if (/processing|uploading|queued|following|偏高|关注|分散|干扰较高|需谨慎/.test(value)) return 'warning'
+  if (/failed|invalid|失败|无效|高风险|明显|异常/.test(value)) return 'danger'
+  if (/processing|uploading|queued|following|偏低|偏高|关注|分散|干扰|需谨慎/.test(value)) return 'warning'
+  if (/completed|closed|已完成|已结案|正常|稳定|良好|通过|低风险|低负荷/.test(value)) return 'success'
   return 'neutral'
 }
