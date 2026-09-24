@@ -8,6 +8,12 @@
 
 # 二进制：不做换行符处理与文本 diff
 *.png binary
+*.wav binary
+*.mp3 binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
 *.jpg binary
 *.jpeg binary
 *.gif binary
