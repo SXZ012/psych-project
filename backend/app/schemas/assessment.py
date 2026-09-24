@@ -55,6 +55,7 @@ class AssessmentOut(BaseModel):
     error_code: str | None = None
     error_message: str | None = None
     result_valid: bool | None = None  # V3 结果是否可作为正式可解释报告
+    scene: str = "aviation"  # aviation / community（管理端据此隔离展示）
     submitted_at: datetime | None = None
     processing_started_at: datetime | None = None
     report_generated_at: datetime | None = None
@@ -66,6 +67,18 @@ class AssessmentOut(BaseModel):
         return mask_id_card(value)
 
 
+class AssessmentSubmitOut(AssessmentOut):
+    """提交响应：新增报告查询码明文——仅创建成功时返回一次。
+
+    幂等重试命中已有记录（200）与社区提交时为 None；
+    服务端只存哈希，明文不落库、不写日志。
+    """
+
+    access_code: str | None = None
+
+
 class AssessmentDetail(AssessmentOut):
     result: AssessmentResultOut | None = None
     video_qa_json: dict | None = None  # 上传前 ffprobe 质检 + ffmpeg 修复报告（审计用）
+    basic_info: dict | None = None  # 终端登录页采集的性别/年龄（selections_data.basic_info）
+    capture_quality: dict | None = None  # 有效采集时长/暂停次数（仅管理端质量审计）

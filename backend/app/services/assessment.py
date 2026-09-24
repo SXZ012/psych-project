@@ -1,7 +1,11 @@
 """测评任务编排：Provider 流程 + 结果落库。
 
-Demo 阶段以 FastAPI BackgroundTasks 驱动（单进程内 asyncio）。
-真实联调（路线 A）下轮询可能耗时 80-90s，后续可平滑替换为 Celery worker。
+执行由持久化任务层驱动（services/processing.py：DB 任务表 + worker，
+同一事务入队、行锁领取、退避重试、服务重启恢复）。
+本函数分阶段落库，可从既有进度续跑（已有 v3_task_id 则续查，避免重复创建）。
+
+返回结局（供任务层区分"数据终态"与"处理故障"）：
+completed / invalid_result / qa_failed / failed
 """
 from __future__ import annotations
 
@@ -16,6 +20,7 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.db.base import AsyncSessionLocal
 from app.models.assessment import Assessment, AssessmentResult, AssessmentStatus
+from app.services.community import sync_community_order_status
 from app.services.oss.client import OSSClient
 from app.services.qwen.report import generate_report
 from app.services.v3.assets import cache_au_image
@@ -26,14 +31,14 @@ from app.services.video.qa import validate_and_repair
 logger = logging.getLogger(__name__)
 
 
-async def run_assessment(assessment_id: UUID) -> None:
-    """后台执行一次测评：上传 → 建任务 → 轮询 → 解析 → 落库。"""
+async def run_assessment(assessment_id: UUID) -> str:
+    """执行一次测评管道：上传 → 建任务 → 轮询 → 解析 → 落库。返回结局字符串。"""
     async with AsyncSessionLocal() as db:
         stmt = select(Assessment).where(Assessment.id == assessment_id)
         assessment = (await db.execute(stmt)).scalar_one_or_none()
         if assessment is None:
             logger.warning("assessment %s 不存在", assessment_id)
-            return
+            return "missing"
 
         assessment.status = AssessmentStatus.video_processing
         assessment.processing_started_at = datetime.now(timezone.utc)
@@ -48,20 +53,31 @@ async def run_assessment(assessment_id: UUID) -> None:
 
             # 上传前质量门禁 + 自动修复：只有“可识别时长 30–60s”的视频才进 V3。
             final_video_path_obj, qa_report = await validate_and_repair(video_path)
-            assessment.video_qa_json = qa_report
+            # 提交时已落库的首轮质检报告基于原始上传文件（含裁剪/修复步骤），
+            # 是上传前门禁的审计依据；此处仅复核门禁，不覆盖已有合格报告。
+            existing_qa = (
+                assessment.video_qa_json
+                if isinstance(assessment.video_qa_json, dict)
+                else None
+            )
+            if not (existing_qa and existing_qa.get("ok")):
+                assessment.video_qa_json = qa_report
             if not qa_report.get("ok"):
                 assessment.video_status = "qa_failed"
                 assessment.error_code = "VideoQAFailed"
                 assessment.error_message = qa_report.get("reason") or "视频质检未通过"
                 assessment.status = AssessmentStatus.failed
                 assessment.completed_at = datetime.now(timezone.utc)
+                await sync_community_order_status(db, assessment)
                 await db.commit()
                 logger.warning(
                     "assessment %s 视频质检未通过，未上传合作方: %s",
                     assessment_id,
                     qa_report.get("reason"),
                 )
-                return
+                await sync_community_order_status(db, assessment)
+                await db.commit()
+                return "qa_failed"
             final_video_path = Path(final_video_path_obj)
             assessment.video_status = "ready"
             await db.commit()
@@ -170,21 +186,32 @@ async def run_assessment(assessment_id: UUID) -> None:
             except Exception:  # noqa: BLE001
                 logger.exception("assessment %s AU图片持久化失败，稍后按需恢复", assessment_id)
 
-            ar = AssessmentResult(
-                assessment_id=assessment.id,
-                algorithm_version=result.get("algorithm_version"),
-                summary_json=summary,
-                overall_score=ov.get("score"),
-                overall_level_label=(ov.get("level") or {}).get("label"),
-                depression_classification=dep.get("classification"),
-                depression_label=dep.get("classification_label"),
-                depression_score=dep.get("score"),
-                anxiety_classification=anx.get("classification"),
-                anxiety_label=anx.get("classification_label"),
-                anxiety_score=anx.get("score"),
-                timeline_json=timeline_json,
-                timeline_url=timeline_url,
-            )
+            # 幂等：任务重试（或状态误判重跑）时同一测评可能已有结果行，
+            # 唯一约束 assessment_id 不允许二次 INSERT——改为更新已有行。
+            ar = (
+                await db.execute(
+                    select(AssessmentResult).where(
+                        AssessmentResult.assessment_id == assessment.id
+                    )
+                )
+            ).scalar_one_or_none()
+            if ar is not None:
+                logger.info(
+                    "assessment %s 结果行已存在，重试路径改为更新", assessment_id
+                )
+            ar = ar or AssessmentResult(assessment_id=assessment.id)
+            ar.algorithm_version = result.get("algorithm_version")
+            ar.summary_json = summary
+            ar.overall_score = ov.get("score")
+            ar.overall_level_label = (ov.get("level") or {}).get("label")
+            ar.depression_classification = dep.get("classification")
+            ar.depression_label = dep.get("classification_label")
+            ar.depression_score = dep.get("score")
+            ar.anxiety_classification = anx.get("classification")
+            ar.anxiety_label = anx.get("classification_label")
+            ar.anxiety_score = anx.get("score")
+            ar.timeline_json = timeline_json
+            ar.timeline_url = timeline_url
             db.add(ar)
 
             if result_valid:
@@ -205,6 +232,56 @@ async def run_assessment(assessment_id: UUID) -> None:
                         "assessment %s QwenPlus报告生成失败，保留V3结构化结果", assessment_id
                     )
                 assessment.status = AssessmentStatus.completed
+
+                # 社区模式：生成用户版 PDF + 推送模板消息(航空模式不走此分支)
+                if assessment.scene == "community":
+                    try:
+                        from app.services.pdf.report import generate_pdf
+                        pdf_path, oss_key = await generate_pdf(db, assessment.id)
+                        if pdf_path:
+                            assessment.report_pdf_key = oss_key or str(pdf_path)
+                            logger.info(
+                                "assessment %s 社区PDF已生成 | key=%s",
+                                assessment_id, assessment.report_pdf_key,
+                            )
+                        else:
+                            # 空结果保护：合作方数据不完整时不标记已完成，允许后续重试
+                            assessment.status = AssessmentStatus.invalid_result
+                            assessment.error_code = "PDFContentMissing"
+                            assessment.error_message = (
+                                oss_key or "合作方结果数据不完整，暂不生成报告"
+                            )
+                            logger.warning(
+                                "assessment %s 社区PDF拒绝生成 | %s",
+                                assessment_id,
+                                assessment.error_message,
+                            )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(
+                            "assessment %s 社区PDF生成失败(不影响主流程)", assessment_id
+                        )
+
+                    # 推送模板消息(如果配置了公众号)
+                    try:
+                        if assessment.customer_id:
+                            from app.models.community import Customer
+                            customer = await db.get(Customer, assessment.customer_id)
+                            if customer and customer.openid:
+                                from app.services.wechat.message import send_report_ready
+                                await send_report_ready(
+                                    openid=customer.openid,
+                                    # 社区用户 H5 独立于航空管理后台；公众号消息直达该用户的报告页。
+                                    report_url=f"/community/reports/{assessment.id}",
+                                )
+                                assessment.report_sent_at = datetime.now(timezone.utc)
+                                logger.info(
+                                    "assessment %s 模板消息已推送 | openid=%s...",
+                                    assessment_id, customer.openid[:12],
+                                )
+                    except Exception:  # noqa: BLE001
+                        logger.exception(
+                            "assessment %s 模板消息推送失败(不影响主流程)", assessment_id
+                        )
             else:
                 # 合作方未正确识别视频时长/分析结果无效：不作为正式可解释报告；
                 # 仍保留 V3 原始 summary/timeline 供排查。
@@ -230,8 +307,13 @@ async def run_assessment(assessment_id: UUID) -> None:
             except OSError:
                 assessment.video_status = "cleanup_failed"
                 logger.exception("assessment %s 临时视频清理失败", assessment_id)
+            # 分析到终态(completed/invalid_result)后回写社区订单状态；航空零副作用
+            await sync_community_order_status(db, assessment)
             await db.commit()
             logger.info("assessment %s 完成(status=%s)", assessment_id, assessment.status)
+            # 注意返回枚举成员的 value（'completed'）；str(enum) 会得到
+            # 'AssessmentStatus.completed'，任务层将误判为处理失败并重试。
+            return assessment.status.value
         except Exception as e:  # noqa: BLE001
             logger.exception("assessment %s 失败", assessment_id)
             await db.rollback()
@@ -245,4 +327,6 @@ async def run_assessment(assessment_id: UUID) -> None:
                 assessment.error_code = type(e).__name__
                 assessment.error_message = str(e)[:500]
                 assessment.completed_at = datetime.now(timezone.utc)
+                await sync_community_order_status(db, assessment)
                 await db.commit()
+            return "failed"

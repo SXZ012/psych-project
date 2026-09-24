@@ -1,11 +1,58 @@
 {
-  "content_version": "aviation-draft-v2",
+  "content_version": "aviation-continuous-v6",
   "scoring_mode": "observation_only",
+  "note": "v6：60 秒连续航空情境中设置 4 个轻量选择节点，选后立即回到连续场景；题目从完整题库随机抽取，不向受测者展示题目类型。图片沿用已发布 OSS 资源；题干为观察性引导，待心理学方审定后可整体替换。",
   "question_types": [
-    {"id":"A","dimension":"注意分配","scenario":"仪表监控","question":"当多个信息同时变化时，你通常更接近哪种处理方式？","option_a":"先确认最关键的信息，再依次处理其他变化。","option_b":"先快速浏览全部信息，再决定从哪里开始。","audio_url":"/static/assets/aviation/audio/a-attention.mp3?v=qwen-plus-1","images":["a01-instrument-monitoring.jpg","a02-instrument-panel.jpg","a03-flight-instruments.jpg","a04-cockpit-displays.jpg"]},
-    {"id":"B","dimension":"工作负荷","scenario":"时间压力","question":"当时间压力增加而任务仍未完成时，你更倾向于？","option_a":"重新确认优先级，按关键程度继续推进。","option_b":"尽量维持原有节奏，避免临时调整计划。","audio_url":"/static/assets/aviation/audio/b-workload.mp3?v=qwen-plus-1","images":["b01-workload.jpg","b02-pilot-operation.jpg","b03-active-control.jpg","b04-flight-operation.jpg"]},
-    {"id":"C","dimension":"情境意识","scenario":"运行条件变化","question":"当外部条件与预期逐渐出现偏差时，你更倾向于？","option_a":"及时更新判断，并为替代方案预留空间。","option_b":"继续观察变化，等信息更明确后再调整。","audio_url":"/static/assets/aviation/audio/c-awareness.mp3?v=qwen-plus-1","images":["c01-situation-awareness.jpg","c02-runway-dusk.jpg","c03-sunset-conditions.jpg","c04-runway-instruments.jpg"]},
-    {"id":"D","dimension":"程序与安全意识","scenario":"交叉检查","question":"在熟悉任务且时间紧张的情况下，你更接近哪种做法？","option_a":"仍按步骤完成必要复核，避免遗漏。","option_b":"依靠经验简化部分步骤，提高处理速度。","audio_url":"/static/assets/aviation/audio/d-procedure.mp3?v=qwen-plus-1","images":["d01-procedure-check.jpg","d02-navigation-check.jpg","d03-control-check.jpg","d04-cockpit-procedure.jpg"]},
-    {"id":"E","dimension":"机组沟通","scenario":"协同决策","question":"当同伴的判断与你不一致时，你更倾向于？","option_a":"说明依据并共同核对关键事实。","option_b":"先保留意见，等待后续情况进一步明确。","audio_url":"/static/assets/aviation/audio/e-communication.mp3?v=qwen-plus-1","images":["e01-crew-communication.jpg","e02-team-headsets.jpg","e03-two-pilots.jpg","e04-crew-collaboration.jpg"]}
+    {"id":"A1","dimension":"注意分配","scenario":"信息处理","question":"当多个信息同时变化时，你通常更接近哪种处理方式？","option_a":"先确认最关键的信息，再依次处理其他变化。","option_b":"先快速浏览全部信息，再决定从哪里开始。","audio_url":"/static/assets/aviation/audio/a1-attention.wav?v=female-huihui-1","images":["a01-instrument-monitoring.jpg"]},
+    {"id":"A2","dimension":"注意分配","scenario":"多线任务","question":"需要同时留意几件事时，你更容易？","option_a":"一件一件按顺序来，做完再换下一件。","option_b":"先大致扫一遍全部，再逐个回头处理。","audio_url":"/static/assets/aviation/audio/a2-attention.wav?v=female-huihui-1","images":["a02-instrument-panel.jpg"]},
+    {"id":"A3","dimension":"注意分配","scenario":"动态信息","question":"面对屏幕上不断刷新的信息，你倾向于？","option_a":"盯住最关键的位置，其余快速带过。","option_b":"轮流查看每一处变化，保持整体了解。","audio_url":"/static/assets/aviation/audio/a3-attention.wav?v=female-huihui-1","images":["a03-flight-instruments.jpg"]},
+    {"id":"A4","dimension":"注意分配","scenario":"任务切换","question":"几件事同时推进时，你的习惯更接近？","option_a":"集中先做完最重要的一件，其余暂时放一放。","option_b":"让每件事都保持一点进展，轮流照顾。","audio_url":"/static/assets/aviation/audio/a4-attention.wav?v=female-huihui-1","images":["a04-cockpit-displays.jpg"]},
+
+    {"id":"B1","dimension":"工作负荷","scenario":"时间压力","question":"当时间压力增加而任务仍未完成时，你更倾向于？","option_a":"重新确认优先级，按关键程度继续推进。","option_b":"尽量维持原有节奏，避免临时调整计划。","audio_url":"/static/assets/aviation/audio/b1-workload.wav?v=female-huihui-1","images":["b01-workload.jpg"]},
+    {"id":"B2","dimension":"工作负荷","scenario":"任务积压","question":"当手头的事情一时做不完，你更倾向于？","option_a":"列出清单，按轻重缓急逐项消化。","option_b":"先从顺手的事情做起，边做边理清头绪。","audio_url":"/static/assets/aviation/audio/b2-workload.wav?v=female-huihui-1","images":["b02-pilot-operation.jpg"]},
+    {"id":"B3","dimension":"工作负荷","scenario":"日程紧张","question":"感到日程排得比较满时，你通常会？","option_a":"主动压缩次要环节，给重要的事留出余地。","option_b":"按原计划执行，接受部分事情顺延完成。","audio_url":"/static/assets/aviation/audio/b3-workload.wav?v=female-huihui-1","images":["b03-active-control.jpg"]},
+    {"id":"B4","dimension":"工作负荷","scenario":"持续忙碌","question":"连续忙碌一段时间后，你更接近？","option_a":"加一把劲，尽快把事情收尾。","option_b":"适当放慢一点，优先保证完成质量。","audio_url":"/static/assets/aviation/audio/b4-workload.wav?v=female-huihui-1","images":["b04-flight-operation.jpg"]},
+
+    {"id":"C1","dimension":"情境意识","scenario":"条件变化","question":"当外部条件与预期逐渐出现偏差时，你更倾向于？","option_a":"及时更新判断，并为替代方案预留空间。","option_b":"继续观察变化，等信息更明确后再调整。","audio_url":"/static/assets/aviation/audio/c1-awareness.wav?v=female-huihui-1","images":["c01-situation-awareness.jpg"]},
+    {"id":"C2","dimension":"情境意识","scenario":"计划外变化","question":"计划外的变化突然出现时，你的第一反应更接近？","option_a":"先弄清变化的影响范围，再决定怎么应对。","option_b":"先按原计划继续，边做边看情况发展。","audio_url":"/static/assets/aviation/audio/c2-awareness.wav?v=female-huihui-1","images":["c02-runway-dusk.jpg"]},
+    {"id":"C3","dimension":"情境意识","scenario":"陌生环境","question":"来到不熟悉的环境时，你倾向于？","option_a":"先观察整体情况，再开始行动。","option_b":"边走边熟悉，遇到问题再停下来看。","audio_url":"/static/assets/aviation/audio/c3-awareness.wav?v=female-huihui-1","images":["c03-sunset-conditions.jpg"]},
+    {"id":"C4","dimension":"情境意识","scenario":"消息核实","question":"听到与预期不同的消息时，你通常会？","option_a":"立即核实消息的来源和细节。","option_b":"先不动，等更多信息出来再判断。","audio_url":"/static/assets/aviation/audio/c4-awareness.wav?v=female-huihui-1","images":["c04-runway-instruments.jpg"]},
+
+    {"id":"D1","dimension":"程序与安全意识","scenario":"必要复核","question":"在熟悉任务且时间紧张的情况下，你更接近哪种做法？","option_a":"仍按步骤完成必要复核，避免遗漏。","option_b":"依靠经验简化部分步骤，提高处理速度。","audio_url":"/static/assets/aviation/audio/d1-procedure.wav?v=female-huihui-1","images":["d01-procedure-check.jpg"]},
+    {"id":"D2","dimension":"程序与安全意识","scenario":"事前准备","question":"做重要的事情之前，你的习惯更接近？","option_a":"按既定步骤逐项确认，全部清楚再开始。","option_b":"凭经验直接上手，关键之处再仔细核对。","audio_url":"/static/assets/aviation/audio/d2-procedure.wav?v=female-huihui-1","images":["d02-navigation-check.jpg"]},
+    {"id":"D3","dimension":"程序与安全意识","scenario":"细节差异","question":"发现细节与记忆中的不一致时，你会？","option_a":"停下来重新核对，确认无误再继续。","option_b":"认为问题不大，先继续推进再说。","audio_url":"/static/assets/aviation/audio/d3-procedure.wav?v=female-huihui-1","images":["d03-control-check.jpg"]},
+    {"id":"D4","dimension":"程序与安全意识","scenario":"交叉确认","question":"请他人帮你核对结果时，你倾向于？","option_a":"主动列出关键位置，请对方重点检查。","option_b":"让对方自行查看，发现问题再沟通。","audio_url":"/static/assets/aviation/audio/d4-procedure.wav?v=female-huihui-1","images":["d04-cockpit-procedure.jpg"]},
+
+    {"id":"E1","dimension":"机组沟通","scenario":"意见分歧","question":"当同伴的判断与你不一致时，你更倾向于？","option_a":"说明依据并共同核对关键事实。","option_b":"先保留意见，等待后续情况进一步明确。","audio_url":"/static/assets/aviation/audio/e1-communication.wav?v=female-huihui-1","images":["e01-crew-communication.jpg"]},
+    {"id":"E2","dimension":"机组沟通","scenario":"协作分歧","question":"与人协作出现分歧时，你更倾向于？","option_a":"把各自的依据摆出来，一起对照核对。","option_b":"先各自按思路做，让结果来说明问题。","audio_url":"/static/assets/aviation/audio/e2-communication.wav?v=female-huihui-1","images":["e02-team-headsets.jpg"]},
+    {"id":"E3","dimension":"机组沟通","scenario":"善意提醒","question":"需要提醒同伴注意某件事时，你通常会？","option_a":"直接、明确地把事情说出来。","option_b":"用比较委婉的方式侧面提示。","audio_url":"/static/assets/aviation/audio/e3-communication.wav?v=female-huihui-1","images":["e03-two-pilots.jpg"]},
+    {"id":"E4","dimension":"机组沟通","scenario":"指令确认","question":"收到表达比较含糊的指令时，你会？","option_a":"当场问清楚具体要求，再动手去做。","option_b":"先按自己的理解做，边做边确认。","audio_url":"/static/assets/aviation/audio/e4-communication.wav?v=female-huihui-1","images":["e04-crew-collaboration.jpg"]},
+
+    {"id":"F1","dimension":"情绪调节与决策稳定性","scenario":"突发状况","question":"当突发状况出现且信息尚不完整时，你更倾向于？","option_a":"先稳定情绪，确认关键风险，再按程序推进处置。","option_b":"先凭直觉快速作出判断，再根据结果调整。","audio_url":"/static/assets/aviation/audio/f1-decision-stability.wav?v=female-huihui-1","images":["f01-headset-decision.jpg"]},
+    {"id":"F2","dimension":"情绪调节与决策稳定性","scenario":"情绪恢复","question":"遇到不顺心的事情后，你的恢复方式更接近？","option_a":"转移注意力，先做点别的事情。","option_b":"自己安静一会儿，让情绪慢慢平复。","audio_url":"/static/assets/aviation/audio/f2-decision-stability.wav?v=female-huihui-1","images":["f02-touchscreen-decision.jpg"]},
+    {"id":"F3","dimension":"情绪调节与决策稳定性","scenario":"重要选择","question":"面对比较重要的选择时，你更倾向于？","option_a":"想清楚再决定，宁可稍微慢一点。","option_b":"先定个大方向，边走边调整。","audio_url":"/static/assets/aviation/audio/f3-decision-stability.wav?v=female-huihui-1","images":["f03-instrument-decision.jpg"]},
+    {"id":"F4","dimension":"情绪调节与决策稳定性","scenario":"外部催促","question":"被人打断或催促时，你通常会？","option_a":"稳住自己的节奏，按步骤继续进行。","option_b":"加快速度，尽快把事情应付过去。","audio_url":"/static/assets/aviation/audio/f4-decision-stability.wav?v=female-huihui-1","images":["f04-control-decision.jpg"]},
+
+    {"id":"A5","dimension":"注意分配","scenario":"优先判断","question":"发现一项关键信息出现变化时，你通常会？","option_a":"先确认它是否影响当前任务，再决定是否处理。","option_b":"先把手头事情做完，再回头查看变化。","audio_url":"/static/assets/aviation/audio/a5-attention.wav?v=female-huihui-1","images":["a01-instrument-monitoring.jpg"]},
+    {"id":"A6","dimension":"注意分配","scenario":"信息核对","question":"需要在不同信息之间来回确认时，你更倾向于？","option_a":"建立固定顺序，逐项核对。","option_b":"看到哪里有变化就先看哪里。","audio_url":"/static/assets/aviation/audio/a6-attention.wav?v=female-huihui-1","images":["a02-instrument-panel.jpg"]},
+    {"id":"A7","dimension":"注意分配","scenario":"干扰处理","question":"周围信息较多、容易分心时，你通常会？","option_a":"先排除无关信息，把注意力放回当前重点。","option_b":"同时留意所有信息，避免错过任何变化。","audio_url":"/static/assets/aviation/audio/a7-attention.wav?v=female-huihui-1","images":["a04-cockpit-displays.jpg"]},
+
+    {"id":"B5","dimension":"工作负荷","scenario":"节奏调整","question":"任务节奏突然加快时，你更接近哪种做法？","option_a":"先稳定节奏，重新安排处理顺序。","option_b":"先加快手上动作，尽量跟上原有安排。","audio_url":"/static/assets/aviation/audio/b5-workload.wav?v=female-huihui-1","images":["b01-workload.jpg"]},
+    {"id":"B6","dimension":"工作负荷","scenario":"精力分配","question":"连续处理多项事务时，你通常会？","option_a":"给自己留出短暂核对时间，再继续下一项。","option_b":"趁状态还在，一口气尽量多做一些。","audio_url":"/static/assets/aviation/audio/b6-workload.wav?v=female-huihui-1","images":["b03-active-control.jpg"]},
+    {"id":"B7","dimension":"工作负荷","scenario":"资源不足","question":"可用时间比预期更少时，你倾向于？","option_a":"先保住关键步骤，明确暂缓非关键内容。","option_b":"每项都尽量推进一点，避免遗漏。","audio_url":"/static/assets/aviation/audio/b7-workload.wav?v=female-huihui-1","images":["b04-flight-operation.jpg"]},
+
+    {"id":"C5","dimension":"情境意识","scenario":"信息不全","question":"信息还不完整但需要继续判断时，你通常会？","option_a":"先标出不确定部分，并持续补充关键信息。","option_b":"先按最可能的情况行动，后续再修正。","audio_url":"/static/assets/aviation/audio/c5-awareness.wav?v=female-huihui-1","images":["c01-situation-awareness.jpg"]},
+    {"id":"C6","dimension":"情境意识","scenario":"异常线索","question":"发现一个与平时不同的小线索时，你会？","option_a":"把它和当前整体情况联系起来重新判断。","option_b":"先记下来，等出现更多变化再处理。","audio_url":"/static/assets/aviation/audio/c6-awareness.wav?v=female-huihui-1","images":["c03-sunset-conditions.jpg"]},
+    {"id":"C7","dimension":"情境意识","scenario":"前瞻准备","question":"即将进入下一阶段前，你更倾向于？","option_a":"提前想好可能的变化和应对顺序。","option_b":"先完成眼前步骤，到了再根据情况处理。","audio_url":"/static/assets/aviation/audio/c7-awareness.wav?v=female-huihui-1","images":["c04-runway-instruments.jpg"]},
+
+    {"id":"D5","dimension":"程序与安全意识","scenario":"异常处置","question":"遇到不常见的情况时，你通常会？","option_a":"先查明适用步骤，再按要求处理。","option_b":"先按以往经验处理，再补看相关步骤。","audio_url":"/static/assets/aviation/audio/d5-procedure.wav?v=female-huihui-1","images":["d01-procedure-check.jpg"]},
+    {"id":"D6","dimension":"程序与安全意识","scenario":"关键节点","question":"完成一个关键环节后，你更倾向于？","option_a":"主动复查结果，再进入下一环节。","option_b":"感觉顺利就继续，出现问题再回头检查。","audio_url":"/static/assets/aviation/audio/d6-procedure.wav?v=female-huihui-1","images":["d02-navigation-check.jpg"]},
+    {"id":"D7","dimension":"程序与安全意识","scenario":"交接确认","question":"将一项工作交给他人或接手他人工作时，你会？","option_a":"确认当前状态和待办事项后再交接。","option_b":"简单说明主要情况，细节后续再补充。","audio_url":"/static/assets/aviation/audio/d7-procedure.wav?v=female-huihui-1","images":["d04-cockpit-procedure.jpg"]},
+
+    {"id":"E5","dimension":"机组沟通","scenario":"信息同步","question":"发现可能影响他人的信息时，你通常会？","option_a":"尽早说明重点，并确认对方已理解。","option_b":"等信息完全确定后再统一说明。","audio_url":"/static/assets/aviation/audio/e5-communication.wav?v=female-huihui-1","images":["e01-crew-communication.jpg"]},
+    {"id":"E6","dimension":"机组沟通","scenario":"复述确认","question":"与同伴确认一项重要信息时，你更接近？","option_a":"复述关键内容，确认双方理解一致。","option_b":"默认彼此理解一致，继续下一项。","audio_url":"/static/assets/aviation/audio/e6-communication.wav?v=female-huihui-1","images":["e04-crew-collaboration.jpg"]},
+
+    {"id":"F5","dimension":"情绪调节与决策稳定性","scenario":"意外干扰","question":"原有计划被意外情况打乱时，你通常会？","option_a":"先停一下梳理现状，再决定新的处理顺序。","option_b":"立即选一个可行方向，边处理边调整。","audio_url":"/static/assets/aviation/audio/f5-decision-stability.wav?v=female-huihui-1","images":["f01-headset-decision.jpg"]},
+    {"id":"F6","dimension":"情绪调节与决策稳定性","scenario":"结果不如预期","question":"当刚完成的事情结果不如预期时，你更倾向于？","option_a":"先确认原因和影响，再调整下一步。","option_b":"先继续后面的任务，稍后再回头处理。","audio_url":"/static/assets/aviation/audio/f6-decision-stability.wav?v=female-huihui-1","images":["f03-instrument-decision.jpg"]}
   ]
 }

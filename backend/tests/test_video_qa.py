@@ -2,6 +2,7 @@
 
 需要 ffmpeg/ffprobe；用 lavfi 生成合格/过短夹具，并用真实“无时长 WebM”样本验证修复。
 """
+
 import asyncio
 import shutil
 import subprocess
@@ -16,19 +17,32 @@ FFPROBE = shutil.which("ffprobe")
 REPO = Path(__file__).resolve().parents[2]
 REAL_BROKEN = REPO / "data" / "videos" / "858f597697ba2474eb0c54421cafffb8.webm"
 
-pytestmark = pytest.mark.skipif(
-    not (FFMPEG and FFPROBE), reason="本测试需要 ffmpeg / ffprobe"
-)
+pytestmark = pytest.mark.skipif(not (FFMPEG and FFPROBE), reason="本测试需要 ffmpeg / ffprobe")
 
 
 def _gen(path: Path, seconds: float) -> None:
     """用 lavfi 生成一段指定时长的 H.264 视频（无音频）。"""
     subprocess.run(
         [
-            FFMPEG, "-hide_banner", "-loglevel", "error", "-y",
-            "-f", "lavfi", "-i", "testsrc=size=640x480:rate=30",
-            "-t", str(seconds), "-c:v", "libx264", "-preset", "ultrafast",
-            "-pix_fmt", "yuv420p", "-an", str(path),
+            FFMPEG,
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc=size=640x480:rate=30",
+            "-t",
+            str(seconds),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            str(path),
         ],
         check=True,
     )

@@ -49,6 +49,16 @@ class Pair(Base):
     scoring_mode: Mapped[str] = mapped_column(
         String(32), default="observation_only", nullable=False
     )
+    # 双场景：题库归属场景 + 内容类型
+    scene: Mapped[str] = mapped_column(
+        String(20), default="aviation", nullable=False, index=True
+    )  # aviation | community
+    content_type: Mapped[str] = mapped_column(
+        String(20), default="image", nullable=False
+    )  # image | video | animation (核心录像段默认 image)
+    media_url: Mapped[str | None] = mapped_column(
+        String(512), nullable=True
+    )  # video/animation 文件 URL (image 类型用 image.url)
     active: Mapped[bool] = mapped_column(default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

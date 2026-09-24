@@ -1,0 +1,306 @@
+{
+  "content_version": "community-photo-v3",
+  "scoring_mode": "observation_only",
+  "questions": [
+    {
+      "id": "C1-1",
+      "image": "images/bank/16822114.jpg",
+      "question": "过去一周，你的整体心情更接近哪一种？",
+      "option_a": "平稳、轻松一些",
+      "option_b": "低落、沉重一些",
+      "dimension": "情绪状态",
+      "scenario": "日常心境",
+      "audio_url": ""
+    },
+    {
+      "id": "C1-2",
+      "image": "images/bank/18386434.jpg",
+      "question": "开始新的一天时，你通常感觉？",
+      "option_a": "有些期待和动力",
+      "option_b": "提不起精神",
+      "dimension": "情绪状态",
+      "scenario": "日常心境",
+      "audio_url": ""
+    },
+    {
+      "id": "C1-3",
+      "image": "images/bank/35091112.jpg",
+      "question": "遇到小变化时，你更常出现？",
+      "option_a": "能较快适应",
+      "option_b": "容易烦躁或不安",
+      "dimension": "情绪状态",
+      "scenario": "日常心境",
+      "audio_url": ""
+    },
+    {
+      "id": "C1-4",
+      "image": "images/bank/8964561.jpg",
+      "question": "独处安静下来时，你的内心更接近？",
+      "option_a": "平静、自在",
+      "option_b": "空落或压抑",
+      "dimension": "情绪状态",
+      "scenario": "日常心境",
+      "audio_url": ""
+    },
+    {
+      "id": "C1-5",
+      "image": "ux/38239121.jpg",
+      "question": "最近让你感到愉快的时刻？",
+      "option_a": "比较容易感受到",
+      "option_b": "比以前少一些",
+      "dimension": "情绪状态",
+      "scenario": "日常心境",
+      "audio_url": ""
+    },
+    {
+      "id": "C2-1",
+      "image": "images/bank/15663393.jpg",
+      "question": "面对每天的任务，你更常觉得？",
+      "option_a": "大体能够掌控",
+      "option_b": "常常被事情推着走",
+      "dimension": "压力负荷",
+      "scenario": "日常压力",
+      "audio_url": ""
+    },
+    {
+      "id": "C2-2",
+      "image": "images/bank/2962589.jpg",
+      "question": "忙碌过后，你通常能否放松下来？",
+      "option_a": "能够逐渐放松",
+      "option_b": "仍会持续紧绷",
+      "dimension": "压力负荷",
+      "scenario": "日常压力",
+      "audio_url": ""
+    },
+    {
+      "id": "C2-3",
+      "image": "images/bank/36649334.jpg",
+      "question": "遇到计划外的事情时，你更接近？",
+      "option_a": "可以从容处理",
+      "option_b": "会明显慌乱",
+      "dimension": "压力负荷",
+      "scenario": "日常压力",
+      "audio_url": ""
+    },
+    {
+      "id": "C2-4",
+      "image": "images/bank/36678705.jpg",
+      "question": "最近身体的紧张感如何？",
+      "option_a": "较少出现",
+      "option_b": "经常能感觉到",
+      "dimension": "压力负荷",
+      "scenario": "日常压力",
+      "audio_url": ""
+    },
+    {
+      "id": "C2-5",
+      "image": "images/bank/6123962.jpg",
+      "question": "休息时，你的思绪通常？",
+      "option_a": "能慢慢安静",
+      "option_b": "仍停不下来",
+      "dimension": "压力负荷",
+      "scenario": "日常压力",
+      "audio_url": ""
+    },
+    {
+      "id": "C3-1",
+      "image": "images/bank/31540471.jpg",
+      "question": "最近入睡的过程更接近？",
+      "option_a": "比较顺利",
+      "option_b": "需要很久",
+      "dimension": "睡眠恢复",
+      "scenario": "睡眠与精力",
+      "audio_url": ""
+    },
+    {
+      "id": "C3-2",
+      "image": "images/bank/33611286.jpg",
+      "question": "早晨醒来后，你通常感觉？",
+      "option_a": "精力有所恢复",
+      "option_b": "仍然很疲惫",
+      "dimension": "睡眠恢复",
+      "scenario": "睡眠与精力",
+      "audio_url": ""
+    },
+    {
+      "id": "C3-3",
+      "image": "images/bank/35461811.jpg",
+      "question": "夜间睡眠中断的情况？",
+      "option_a": "很少或没有",
+      "option_b": "经常醒来",
+      "dimension": "睡眠恢复",
+      "scenario": "睡眠与精力",
+      "audio_url": ""
+    },
+    {
+      "id": "C3-4",
+      "image": "images/bank/38103285.jpg",
+      "question": "白天的困倦感如何？",
+      "option_a": "不太影响活动",
+      "option_b": "常影响专注",
+      "dimension": "睡眠恢复",
+      "scenario": "睡眠与精力",
+      "audio_url": ""
+    },
+    {
+      "id": "C3-5",
+      "image": "ux/33500208.jpg",
+      "question": "最近的作息规律程度？",
+      "option_a": "基本规律",
+      "option_b": "经常打乱",
+      "dimension": "睡眠恢复",
+      "scenario": "睡眠与精力",
+      "audio_url": ""
+    },
+    {
+      "id": "C4-1",
+      "image": "images/bank/19156757.jpg",
+      "question": "有心事时，你是否愿意向人倾诉？",
+      "option_a": "愿意找到合适的人",
+      "option_b": "更习惯一个人承受",
+      "dimension": "社会支持",
+      "scenario": "关系与支持",
+      "audio_url": ""
+    },
+    {
+      "id": "C4-2",
+      "image": "images/bank/36763393.jpg",
+      "question": "与亲友相处时，你通常感觉？",
+      "option_a": "放松、有连接",
+      "option_b": "疏离或费力",
+      "dimension": "社会支持",
+      "scenario": "关系与支持",
+      "audio_url": ""
+    },
+    {
+      "id": "C4-3",
+      "image": "images/bank/36763394.jpg",
+      "question": "需要帮助时，你更接近？",
+      "option_a": "能够主动开口",
+      "option_b": "很难向别人求助",
+      "dimension": "社会支持",
+      "scenario": "关系与支持",
+      "audio_url": ""
+    },
+    {
+      "id": "C4-4",
+      "image": "images/bank/5838871.jpg",
+      "question": "参加社交活动后，你通常？",
+      "option_a": "得到一些能量",
+      "option_b": "感到非常消耗",
+      "dimension": "社会支持",
+      "scenario": "关系与支持",
+      "audio_url": ""
+    },
+    {
+      "id": "C4-5",
+      "image": "images/bank/6146941.jpg",
+      "question": "最近你感到被理解的程度？",
+      "option_a": "经常能感受到",
+      "option_b": "很少能感受到",
+      "dimension": "社会支持",
+      "scenario": "关系与支持",
+      "audio_url": ""
+    },
+    {
+      "id": "C5-1",
+      "image": "images/bank/11648021.jpg",
+      "question": "最近你是否给自己留出休息时间？",
+      "option_a": "基本能够做到",
+      "option_b": "很少顾得上",
+      "dimension": "自我照顾",
+      "scenario": "生活照护",
+      "audio_url": ""
+    },
+    {
+      "id": "C5-2",
+      "image": "images/bank/17279644.jpg",
+      "question": "身体出现疲劳信号时，你通常？",
+      "option_a": "会留意并调整",
+      "option_b": "常常继续硬撑",
+      "dimension": "自我照顾",
+      "scenario": "生活照护",
+      "audio_url": ""
+    },
+    {
+      "id": "C5-3",
+      "image": "images/bank/19872069.jpg",
+      "question": "连续忙碌时，你会不会主动暂停？",
+      "option_a": "会安排短暂休息",
+      "option_b": "通常不会停下来",
+      "dimension": "自我照顾",
+      "scenario": "生活照护",
+      "audio_url": ""
+    },
+    {
+      "id": "C5-4",
+      "image": "images/bank/28963830.jpg",
+      "question": "面对超出承受范围的要求，你更接近？",
+      "option_a": "能够适当拒绝",
+      "option_b": "很难说不",
+      "dimension": "自我照顾",
+      "scenario": "生活照护",
+      "audio_url": ""
+    },
+    {
+      "id": "C5-5",
+      "image": "images/bank/31146888.jpg",
+      "question": "最近是否仍在做让自己愉快的小事？",
+      "option_a": "经常会做",
+      "option_b": "几乎没有",
+      "dimension": "自我照顾",
+      "scenario": "生活照护",
+      "audio_url": ""
+    },
+    {
+      "id": "C6-1",
+      "image": "images/bank/15575139.jpg",
+      "question": "想到接下来一个月，你更接近？",
+      "option_a": "有一些期待",
+      "option_b": "感到担忧或迷茫",
+      "dimension": "希望与适应",
+      "scenario": "未来感受",
+      "audio_url": ""
+    },
+    {
+      "id": "C6-2",
+      "image": "images/bank/29051621.jpg",
+      "question": "遇到难题时，你通常相信？",
+      "option_a": "能逐步找到办法",
+      "option_b": "很难改变现状",
+      "dimension": "希望与适应",
+      "scenario": "未来感受",
+      "audio_url": ""
+    },
+    {
+      "id": "C6-3",
+      "image": "images/bank/29079800.jpg",
+      "question": "最近有没有想完成的小目标？",
+      "option_a": "有明确或简单目标",
+      "option_b": "暂时没有方向",
+      "dimension": "希望与适应",
+      "scenario": "未来感受",
+      "audio_url": ""
+    },
+    {
+      "id": "C6-4",
+      "image": "images/bank/30712585.jpg",
+      "question": "经历不顺后，你通常？",
+      "option_a": "能慢慢恢复",
+      "option_b": "很久难以缓过来",
+      "dimension": "希望与适应",
+      "scenario": "未来感受",
+      "audio_url": ""
+    },
+    {
+      "id": "C6-5",
+      "image": "images/bank/34735091.jpg",
+      "question": "对日常生活的兴趣和动力如何？",
+      "option_a": "仍保留一些兴趣",
+      "option_b": "明显减少",
+      "dimension": "希望与适应",
+      "scenario": "未来感受",
+      "audio_url": ""
+    }
+  ]
+}

@@ -36,7 +36,9 @@ async def test_real_client_full_flow_and_stream_upload(tmp_path):
             payload = json.loads((await request.aread()).decode())
             assert payload["file_md5"] == hashlib.md5(b"video-bytes").hexdigest()
             assert request.headers["Authorization"] == "Token secret-token"
-            return httpx.Response(200, json={"id": 42, "presigned_put_url": "https://storage.test/upload"})
+            return httpx.Response(
+                200, json={"id": 42, "presigned_put_url": "https://storage.test/upload"}
+            )
         if request.url.host == "storage.test" and request.method == "PUT":
             assert await request.aread() == b"video-bytes"
             assert "authorization" not in request.headers
@@ -49,7 +51,10 @@ async def test_real_client_full_flow_and_stream_upload(tmp_path):
             assert json.loads(payload["input_params"])["file_id"] == 42
             return httpx.Response(200, json={"id": 99, "status": 3})
         if request.url.path.endswith("/task-record/99"):
-            result = {"summary": {"overall": {"score": 61.2}}, "timeline": "https://storage.test/timeline"}
+            result = {
+                "summary": {"overall": {"score": 61.2}},
+                "timeline": "https://storage.test/timeline",
+            }
             return httpx.Response(200, json={"id": 99, "status": 0, "result": json.dumps(result)})
         raise AssertionError(f"unexpected request: {request.method} {request.url}")
 

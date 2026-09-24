@@ -1,5 +1,5 @@
 {
-  "content_version":"aviation-draft-v2",
+  "content_version":"aviation-draft-v3",
   "usage_note":"Twenty real aviation photographs for an observation-only content draft. Not a validated aviation psychological scale.",
   "license_pages":{"Pexels License":"https://www.pexels.com/license/","Unsplash License":"https://unsplash.com/license"},
   "assets":[
@@ -22,6 +22,10 @@
     {"file":"e01-crew-communication.jpg","author":"Mael Balland","source_page":"https://www.pexels.com/photo/two-men-sitting-inside-helicopter-3099037/","license":"Pexels License"},
     {"file":"e02-team-headsets.jpg","author":"Rachel Claire","source_page":"https://www.pexels.com/photo/people-sitting-in-a-cockpit-7276731/","license":"Pexels License"},
     {"file":"e03-two-pilots.jpg","author":"K","source_page":"https://www.pexels.com/photo/two-pilots-flying-an-airplane-2898316/","license":"Pexels License"},
-    {"file":"e04-crew-collaboration.jpg","author":"Rafael Cosquiere","source_page":"https://www.pexels.com/photo/two-pilots-sitting-inside-plane-2064123/","license":"Pexels License"}
+    {"file":"e04-crew-collaboration.jpg","author":"Rafael Cosquiere","source_page":"https://www.pexels.com/photo/two-pilots-sitting-inside-plane-2064123/","license":"Pexels License"},
+    {"file":"f01-headset-decision.jpg","author":"Horizon flights","source_page":"https://unsplash.com/photos/pilot-wearing-headset-in-aircraft-cockpit-Y2WxZ11viuQ","license":"Unsplash License"},
+    {"file":"f02-touchscreen-decision.jpg","author":"Horizon flights","source_page":"https://unsplash.com/photos/pilot-using-touchscreen-in-airplane-cockpit-Toi4q54_4w4","license":"Unsplash License"},
+    {"file":"f03-instrument-decision.jpg","author":"Kyle Hinkson","source_page":"https://unsplash.com/photos/pilot-in-cockpit-with-instruments-jKYlc0hangQ","license":"Unsplash License"},
+    {"file":"f04-control-decision.jpg","author":"Horizon flights","source_page":"https://unsplash.com/photos/pilots-hands-adjusting-controls-in-airplane-cockpit-wLstmuP_rIM","license":"Unsplash License"}
   ]
 }

@@ -23,11 +23,25 @@ class Settings(BaseSettings):
     SQL_ECHO: bool = False  # 打印 SQL（调试用；默认关，保持日志清爽）
     SECRET_KEY: str = "change-me"
     ADMIN_PASSWORD: str = "psych-admin"  # 后台 /admin 登录口令（生产改强密码，走 .env）
+    REVIEWER_PASSWORD: str = ""  # 复核员口令（空=未开通；终端/后台按角色区分）
     CORS_ORIGINS: str = "*"
     API_V1_PREFIX: str = "/api/v1"
     ASSESSMENT_DURATION_SECONDS: int = 60  # 方案：60秒快筛
-    SESSION_PAIR_COUNT: int = 5  # 单次测评轮播图片数（5 张 × 10s = 50s，即 5~55s）
+    SESSION_PAIR_COUNT: int = 6  # 单次测评轮播图片数（6 张 × 10s = 60 秒核心分析段）
     CREATE_TABLES_ON_START: bool = True  # dev 便捷：启动即建表（生产改用 Alembic）
+    # ---- 自助报告查询 ----
+    # 查询码哈希 pepper：泄漏数据库无法直接比对出明文码；生产必改。
+    REPORT_TOKEN_PEPPER: str = "change-me-report-pepper"
+    # 查询失败限频：window 秒内最多 max_attempts 次（按 subject_id + 客户端 IP）
+    REPORT_LOOKUP_WINDOW_SECONDS: int = 300
+    REPORT_LOOKUP_MAX_ATTEMPTS: int = 5
+    # ---- 持久化后台任务 ----
+    INPROCESS_WORKER: bool = True  # API 进程内启动轻量 worker（生产用独立 worker 时关掉）
+    WORKER_POLL_INTERVAL: float = 2.0  # worker 空闲轮询间隔（秒）
+    WORKER_BATCH: int = 4  # 单轮最多领取任务数
+    TASK_MAX_ATTEMPTS: int = 3
+    TASK_BACKOFF_BASE_SECONDS: int = 30  # 退避：attempt*n*base
+    TASK_LEASE_SECONDS: int = 600  # 领取租约；崩溃后超时任务可被重新领取
 
     # ---- 路线开关 (方案 Demo 路线 A/B) ----
     PROVIDER_MODE: str = "mock"  # mock | real
@@ -55,6 +69,17 @@ class Settings(BaseSettings):
     DASHSCOPE_API_KEY: str = ""
     QWEN_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
     QWEN_MODEL: str = "qwen-plus"
+
+    # ---- 微信公众号(社区场景: OAuth + 支付 + 模板消息) ----
+    WECHAT_APP_ID: str = ""           # 公众号 AppID(未填 = Mock 模式)
+    WECHAT_APP_SECRET: str = ""       # 公众号 AppSecret
+    WECHAT_TEMPLATE_ID: str = ""      # 模板消息模板 ID
+    WECHAT_MCH_ID: str = ""           # 微信支付商户号(未填 = Mock 支付)
+    WECHAT_API_V3_KEY: str = ""       # 支付 APIv3 密钥
+    WECHAT_MCH_SERIAL_NO: str = ""    # 商户证书序列号
+    WECHAT_MCH_PRIVATE_KEY_PATH: str = ""  # 商户私钥文件路径
+    WECHAT_PAY_NOTIFY_URL: str = ""   # 支付回调地址(上云后填)
+    WECHAT_OAUTH_REDIRECT_URL: str = ""    # OAuth 回调地址(上云后填)
 
     # ---- 阿里云 OSS（诱发图片库 + 我方视频备份，私有Bucket）----
     OSS_BACKUP_ENABLED: bool = False
