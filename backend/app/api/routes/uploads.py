@@ -1,9 +1,10 @@
-"""图片上传到 OSS（诱发图片库用）。"""
+"""图片上传到 OSS（诱发图片库用；运维/管理端工具接口，需管理会话）。"""
 from typing import Annotated
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from starlette.concurrency import run_in_threadpool
 
+from app.core.admin_auth import require_admin_session
 from app.services.oss.client import OSSClient
 
 router = APIRouter()
@@ -12,7 +13,10 @@ MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10MB 上限
 
 
 @router.post("/images")
-async def upload_image(file: Annotated[UploadFile, File()]) -> dict:
+async def upload_image(
+    file: Annotated[UploadFile, File()],
+    _admin: Annotated[str, Depends(require_admin_session)],
+) -> dict:
     if not (file.content_type or "").startswith("image/"):
         raise HTTPException(status_code=400, detail="仅支持图片文件")
     data = await file.read()

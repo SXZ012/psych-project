@@ -48,6 +48,7 @@ async def _authorize(db: AsyncSession, payload: LookupIn) -> Assessment:
     token_hash = hash_access_code(payload.access_code)
     stmt = (
         select(Assessment).options(selectinload(Assessment.result)).where(
+            Assessment.scene == "aviation",  # 终端查询接口只服务航空报告，社区走 H5
             Assessment.subject_id == payload.subject_id.strip(),
             Assessment.report_access_token_hash == token_hash,
         ).order_by(Assessment.created_at.desc()).limit(1)
@@ -59,10 +60,15 @@ async def _authorize(db: AsyncSession, payload: LookupIn) -> Assessment:
 
 
 async def _authorize_report_id(db: AsyncSession, report_id: str) -> Assessment:
-    """按 UUID 前缀精确定位；碰撞时拒绝查询，绝不猜测记录。"""
+    """按 UUID 前缀精确定位；碰撞时拒绝查询，绝不猜测记录。
+
+    只查航空场景：社区报告无查询码，由微信 H5 按用户令牌访问，
+    不得经终端 8 位编号通道读出。
+    """
     prefix = report_id.strip().lower()
     stmt = select(Assessment).options(selectinload(Assessment.result)).where(
-        cast(Assessment.id, String).like(f"{prefix}%")
+        Assessment.scene == "aviation",
+        cast(Assessment.id, String).like(f"{prefix}%"),
     )
     records = (await db.execute(stmt)).scalars().all()
     if len(records) != 1:

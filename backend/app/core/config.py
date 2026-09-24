@@ -2,6 +2,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/app/core/config.py -> parents[3] 即仓库根目录
@@ -87,6 +88,28 @@ class Settings(BaseSettings):
     OSS_ACCESS_KEY_SECRET: str = ""
     OSS_ENDPOINT: str = ""
     OSS_BUCKET_NAME: str = ""
+
+    @model_validator(mode="after")
+    def _prod_weak_value_guard(self) -> "Settings":
+        """ENV=prod 时拒绝默认弱密钥/口令启动（dev 不受影响）。
+
+        SECRET_KEY 签发社区 JWT、ADMIN_PASSWORD 是后台口令、
+        REPORT_TOKEN_PEPPER 保护查询码哈希——任何一个用默认值上生产
+        都等于裸奔，这里直接 fail-fast。
+        """
+        if self.ENV == "prod":
+            weak = []
+            if self.SECRET_KEY == "change-me":
+                weak.append("SECRET_KEY")
+            if self.ADMIN_PASSWORD == "psych-admin":
+                weak.append("ADMIN_PASSWORD")
+            if self.REPORT_TOKEN_PEPPER == "change-me-report-pepper":
+                weak.append("REPORT_TOKEN_PEPPER")
+            if weak:
+                raise ValueError(
+                    f"ENV=prod 仍在使用默认弱值: {', '.join(weak)}；请在 .env 中覆盖后再启动"
+                )
+        return self
 
     @property
     def sqlalchemy_database_url(self) -> str:

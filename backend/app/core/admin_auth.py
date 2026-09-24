@@ -10,6 +10,7 @@
 """
 import secrets
 import time
+from collections import defaultdict, deque
 from dataclasses import dataclass
 
 from fastapi import Cookie, HTTPException, status
@@ -17,6 +18,37 @@ from fastapi import Cookie, HTTPException, status
 _SESSION_TTL_SECONDS = 8 * 60 * 60
 
 ROLES = ("terminal_user", "reviewer", "administrator")
+
+
+# ── 登录尝试限频（进程内滑窗，思路同 report_access；多进程部署需换共享存储）──
+_LOGIN_WINDOW_SECONDS = 300
+_LOGIN_MAX_FAILURES = 10
+_LOGIN_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
+
+
+class LoginRateLimited(Exception):
+    """登录失败尝试超出频次。"""
+
+
+def check_login_rate_limit(client_ip: str) -> None:
+    now = time.monotonic()
+    bucket = _LOGIN_BUCKETS[client_ip]
+    while bucket and now - bucket[0] > _LOGIN_WINDOW_SECONDS:
+        bucket.popleft()
+    if len(bucket) >= _LOGIN_MAX_FAILURES:
+        raise LoginRateLimited()
+    if len(_LOGIN_BUCKETS) > 10_000:
+        stale = [k for k, v in _LOGIN_BUCKETS.items() if not v or now - v[0] > _LOGIN_WINDOW_SECONDS]
+        for k in stale:
+            _LOGIN_BUCKETS.pop(k, None)
+
+
+def record_login_failure(client_ip: str) -> None:
+    _LOGIN_BUCKETS[client_ip].append(time.monotonic())
+
+
+def clear_login_failures(client_ip: str) -> None:
+    _LOGIN_BUCKETS.pop(client_ip, None)
 
 
 @dataclass

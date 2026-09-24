@@ -294,6 +294,9 @@ class MockPayNotifyRequest(BaseModel):
 @router.post("/pay/mock-notify")
 async def mock_pay_notify(body: MockPayNotifyRequest, db: AsyncSession = DB) -> dict:
     """Mock 支付回调(仅联调阶段使用，生产环境移除或加鉴权)。"""
+    if settings.WECHAT_MCH_ID:
+        # 配置真实商户号后关闭该入口，防止伪造回调标记订单已支付
+        raise HTTPException(status_code=404, detail="Mock 回调仅在开发模式可用")
     order_id = UUID(body.order_id)
     ok = await handle_payment_callback(db, order_id, body.wechat_txn_id)
     if not ok:

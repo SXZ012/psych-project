@@ -7,14 +7,18 @@ import hashlib
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.admin_auth import (
+    LoginRateLimited,
+    check_login_rate_limit,
+    clear_login_failures,
     create_admin_session,
     drop_session,
+    record_login_failure,
     require_admin_session,
     require_role,
 )
@@ -41,13 +45,21 @@ class LoginIn(BaseModel):
 
 
 @router.post("/login")
-async def login(body: LoginIn, response: Response) -> dict:
+async def login(body: LoginIn, response: Response, request: Request) -> dict:
     """工作人员口令校验，按口令映射角色（服务端鉴权，不依赖前端隐藏按钮）。
 
     - ADMIN_PASSWORD → administrator（设备/任务/凭证/复核全部能力）
     - REVIEWER_PASSWORD（非空时）→ reviewer（仅报告查看与复核）
+    - 失败限频：300 秒窗口内 10 次失败后 429（按客户端 IP）
     生产环境应改用账号体系 + SSO/RBAC。
     """
+    client_ip = request.client.host if request.client else "unknown"
+    try:
+        check_login_rate_limit(client_ip)
+    except LoginRateLimited as exc:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail="尝试过于频繁，请稍后再试"
+        ) from exc
     password = body.password or ""
     role = body.role
     if role == "administrator":
@@ -55,7 +67,9 @@ async def login(body: LoginIn, response: Response) -> dict:
     else:
         ok = settings.REVIEWER_PASSWORD and password == settings.REVIEWER_PASSWORD
     if not ok:
+        record_login_failure(client_ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="密码错误")
+    clear_login_failures(client_ip)
     response.set_cookie(
         "admin_session",
         create_admin_session(role=role),
