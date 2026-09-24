@@ -105,8 +105,7 @@ watch(() => flow.phase.value, async phase => {
     :interrupt-reason="flow.interruptReason.value" :final-hint="flow.finalHint.value"
     @select="flow.select"
   />
-  <!-- 10. 可选放松互动（摄像头已关 · 上传后台进行 · 可跳过） -->
-  <!-- 11. 整理本次体验（真实状态驱动） -->
+  <!-- 10. 整理本次体验（真实状态驱动） -->
   <JourneyClosing
     v-else-if="flow.phase.value === 'closing'"
     :step="flow.closingStep.value" :uploading="flow.uploading.value" :error="flow.closingError.value"

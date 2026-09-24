@@ -10,6 +10,7 @@ import { classifySubmitError, formatSessionCode } from '@/community/flowSteps'
 import { QuestionScheduler } from '@/aviation/QuestionScheduler'
 import type { SchedulerCard, SessionQuestion } from '@/aviation/types'
 import type { CommunityPhase } from '@/types/community'
+import { fetchWithTimeout, UPLOAD_TIMEOUT_MS } from '@/utils/net'
 import { SCENE_SWITCHER_ENABLED } from '@/config/sceneSwitcher'
 
 /**
@@ -125,6 +126,7 @@ export function useCommunityFlow(deviceId: string, questionCount: number = COMMU
   let countdownTimer: number | null = null
   let payTimer: number | null = null
   let reportTimer: number | null = null
+  let submitFailTimer: number | null = null
   let captureController: CaptureController | null = null
   let scheduler: QuestionScheduler | null = null
   let sealedElapsedMs = 0
@@ -629,7 +631,9 @@ export function useCommunityFlow(deviceId: string, questionCount: number = COMMU
     if (result !== true) {
       closingError.value = '你的体验记录暂时没有保存成功'
       failure.value = result || '提交失败'
-      window.setTimeout(() => { phase.value = 'submit_failed' }, 2000)
+      // 纳入定时器跟踪：2 秒内点"重新提交"进入新一轮 closing 时，旧跳转不得再触发
+      clear(submitFailTimer)
+      submitFailTimer = window.setTimeout(() => { phase.value = 'submit_failed' }, 2000)
       return
     }
     closingStep.value = 4
@@ -674,7 +678,7 @@ export function useCommunityFlow(deviceId: string, questionCount: number = COMMU
       form.append('self_report', payload.self_report)
       form.append('client_token', clientToken)
       form.append('video', video, 'assessment.webm')
-      const r = await fetch('/api/v1/assessments/submit', { method: 'POST', body: form })
+      const r = await fetchWithTimeout('/api/v1/assessments/submit', { method: 'POST', body: form }, UPLOAD_TIMEOUT_MS)
       if (!r.ok) {
         const text = await r.text().catch(() => '')
         if (classifySubmitError(text) === 'already-submitted') return true
@@ -750,10 +754,14 @@ export function useCommunityFlow(deviceId: string, questionCount: number = COMMU
 
   function cleanup() {
     stopCaptureClock()
-    clear(countdownTimer); clear(reportTimer); stopPayPolling()
+    clear(countdownTimer); clear(reportTimer); clear(submitFailTimer); stopPayPolling()
     scheduler = null
     card.value = { kind: 'none' }
-    communityAudio.stop(); native.stopPromptAudio(); native.stopPreview()
+    communityAudio.stop(); native.stopPromptAudio()
+    // 采集/上传中途退出也要停掉原生录制会话，释放编码器与摄像头
+    //（浏览器路径 browser.stop 已覆盖；未在录制时原生层自行忽略）
+    try { void native.stopRecording() } catch { /* no-op */ }
+    native.stopPreview()
     browserFace.stop(); browser.stop()
   }
   onBeforeUnmount(() => { document.removeEventListener('visibilitychange', onVisibilityChange); cleanup() })

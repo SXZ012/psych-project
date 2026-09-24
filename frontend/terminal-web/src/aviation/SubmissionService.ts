@@ -13,6 +13,7 @@
  *   与采集协议审计字段。
  */
 import type { SubmitPayload } from './types.ts'
+import { fetchWithTimeout, UPLOAD_TIMEOUT_MS } from '../utils/net.ts'
 
 export type SubmitOutcome =
   | { status: 'succeeded'; assessmentId: string | null; accessCode: string | null }
@@ -73,10 +74,11 @@ export class SubmissionService {
         return this.classifyError(result.error || '原生上传失败')
       }
       if (!video) return { status: 'video_invalid', message: 'no_video' }
-      const response = await (this.adapters.fetchImpl ?? fetch)(SUBMIT_URL, {
-        method: 'POST',
-        body: buildForm(withToken, video),
-      })
+      const init: RequestInit = { method: 'POST', body: buildForm(withToken, video) }
+      // 挂起不等于失败：默认实现带超时，abort 走 catch 分支，视频仍在可重试
+      const response = this.adapters.fetchImpl
+        ? await this.adapters.fetchImpl(SUBMIT_URL, init)
+        : await fetchWithTimeout(SUBMIT_URL, init, UPLOAD_TIMEOUT_MS)
       if (response.ok) {
         const body = await response.json().catch(() => ({}))
         this.assessmentId = String((body as { id?: string }).id || '') || this.assessmentId

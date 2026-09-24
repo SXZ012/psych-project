@@ -50,7 +50,7 @@ async function authenticate() {
 
 async function checkNetwork() {
   try {
-    const response = await fetch('/api/v1/health', { cache: 'no-store' })
+    const response = await fetch('/health', { cache: 'no-store' })
     networkOk.value = response.ok
   } catch {
     networkOk.value = false
@@ -126,10 +126,6 @@ onBeforeUnmount(() => { if (authed) void fetch('/api/v1/admin/logout', { method:
         <div class="staff-row">
           <span>{{ MESSAGES.staff.panelScene }}</span>
           <b>{{ device.scene.value === 'community' ? '心理社区' : '航空' }}</b>
-        </div>
-        <div class="staff-row">
-          <span>{{ MESSAGES.staff.panelVersion }}</span>
-          <b>{{ device.config.value?.scene ?? 'aviation' }}</b>
         </div>
         <div class="staff-row">
           <span>网络检查</span>

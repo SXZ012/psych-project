@@ -181,6 +181,8 @@ export function useAviationFlow() {
   function onVisibilityChange() {
     if (document.hidden && phase.value === 'assess') captureController?.reportQuality(false, '页面切到后台')
   }
+  // 终端不刷新页面连轴接待多位用户：监听挂在组件生命周期上，
+  // finish() 只重置业务状态不移除监听，否则第二位用户起失去"切后台"检测。
   document.addEventListener('visibilitychange', onVisibilityChange)
 
   // ═══════════════ 素材准备 ═══════════════
@@ -582,7 +584,7 @@ export function useAviationFlow() {
       // 严格零中断：effectiveContinuousMs 即可证明的连续有效时长
       effective_duration_seconds: Math.round(summary.effectiveContinuousMs / 1000),
       paused_count: 0,
-      client_token: '',
+      client_token: submission.token ?? '',
       protocol_version: summary.protocolVersion,
       question_protocol_version: QUESTION_PROTOCOL_VERSION,
       content_version: sessionBuild?.contentVersion,
@@ -679,7 +681,6 @@ export function useAviationFlow() {
     try { native.stopPromptAudio(); native.stopPreview() } catch { /* no-op */ }
     browserFace.stop()
     browser.stop()
-    document.removeEventListener('visibilitychange', onVisibilityChange)
     // 清空终端身份与答题状态；不删除任何服务端历史视频/记录/数据
     identity.value = null
     failure.value = ''
@@ -725,6 +726,9 @@ export function useAviationFlow() {
   provide(CAMERA_SINK_KEY, { attach: browser.attach, detach: browser.detach } satisfies CameraSink)
 
   onBeforeUnmount(finish)
+  // finish() 不再移除 visibilitychange（连轴接待时第二位用户起仍需后台检测），
+  // 真正的解绑只在组件卸载时做一次。
+  onBeforeUnmount(() => document.removeEventListener('visibilitychange', onVisibilityChange))
 
   return {
     // 状态
