@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import socket
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -187,16 +188,39 @@ async def execute_task(task: ProcessingTask) -> None:
 
 
 def _worker_id() -> str:
-    return f"{socket.gethostname()}:{hex(id(asyncio.get_event_loop()))[-6:]}"
+    try:  # get_event_loop 在 3.12+ 已弃用；仅在事件循环内调用本函数
+        loop_id = hex(id(asyncio.get_running_loop()))[-6:]
+    except RuntimeError:
+        loop_id = "noloop"
+    return f"{socket.gethostname()}:{loop_id}"
+
+
+async def community_expiry_sweep() -> None:
+    """社区过期清扫：批量过期超时会话与未支付订单。
+
+    终端放弃轮询后，会话/订单只能靠这里收尾（路由侧懒过期覆盖不到
+    不再回来的客户端）；随 worker 循环周期性执行，失败不影响任务处理。
+    """
+    from app.services.community import expire_stale_orders_bulk, expire_stale_sessions
+
+    try:
+        async with AsyncSessionLocal() as db:
+            await expire_stale_sessions(db)
+            await expire_stale_orders_bulk(db)
+    except Exception:  # noqa: BLE001
+        logger.exception("社区过期清扫失败（下一轮重试）")
 
 
 class ProcessingWorker:
     """轮询 worker。生产部署用独立进程（python -m app.worker）；开发可内嵌。"""
 
+    SWEEP_INTERVAL_SECONDS = 60.0
+
     def __init__(self, worker_id: str | None = None, poll_interval: float | None = None):
         self.worker_id = worker_id or _worker_id()
         self.poll_interval = poll_interval or settings.WORKER_POLL_INTERVAL
         self._stop = asyncio.Event()
+        self._next_sweep = 0.0  # monotonic；0 = 首轮立即清扫一次
 
     def stop(self) -> None:
         self._stop.set()
@@ -208,6 +232,10 @@ class ProcessingWorker:
         )
         try:
             while not self._stop.is_set():
+                now = time.monotonic()
+                if now >= self._next_sweep:
+                    self._next_sweep = now + self.SWEEP_INTERVAL_SECONDS
+                    await community_expiry_sweep()
                 try:
                     task = await claim_next_task(self.worker_id)
                 except Exception:  # noqa: BLE001

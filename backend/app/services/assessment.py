@@ -75,8 +75,6 @@ async def run_assessment(assessment_id: UUID) -> str:
                     assessment_id,
                     qa_report.get("reason"),
                 )
-                await sync_community_order_status(db, assessment)
-                await db.commit()
                 return "qa_failed"
             final_video_path = Path(final_video_path_obj)
             assessment.video_status = "ready"
@@ -217,8 +215,7 @@ async def run_assessment(assessment_id: UUID) -> str:
             if result_valid:
                 # 结果有效：生成正式 Qwen 报告并标记完成。
                 assessment.status = AssessmentStatus.report_generating
-                assessment.report_generated_at = datetime.now(timezone.utc)
-                assessment.completed_at = datetime.now(timezone.utc)
+                assessment.report_status = "generating"
                 await db.commit()
 
                 # 1.0保留QwenPlus：仅将V3事实层整理为供管理员复核的专业报告，
@@ -240,6 +237,9 @@ async def run_assessment(assessment_id: UUID) -> str:
                         pdf_path, oss_key = await generate_pdf(db, assessment.id)
                         if pdf_path:
                             assessment.report_pdf_key = oss_key or str(pdf_path)
+                            assessment.report_status = "ready"
+                            from app.services.report_view import REPORT_TEMPLATE_VERSION
+                            ar.report_template_version = REPORT_TEMPLATE_VERSION
                             logger.info(
                                 "assessment %s 社区PDF已生成 | key=%s",
                                 assessment_id, assessment.report_pdf_key,
@@ -251,12 +251,14 @@ async def run_assessment(assessment_id: UUID) -> str:
                             assessment.error_message = (
                                 oss_key or "合作方结果数据不完整，暂不生成报告"
                             )
+                            assessment.report_status = "failed"
                             logger.warning(
                                 "assessment %s 社区PDF拒绝生成 | %s",
                                 assessment_id,
                                 assessment.error_message,
                             )
                     except Exception:  # noqa: BLE001
+                        assessment.report_status = "failed"
                         logger.exception(
                             "assessment %s 社区PDF生成失败(不影响主流程)", assessment_id
                         )
@@ -308,6 +310,15 @@ async def run_assessment(assessment_id: UUID) -> str:
                 assessment.video_status = "cleanup_failed"
                 logger.exception("assessment %s 临时视频清理失败", assessment_id)
             # 分析到终态(completed/invalid_result)后回写社区订单状态；航空零副作用
+            if assessment.status == AssessmentStatus.completed:
+                # 终态时间戳在报告生成之后落：completed_at 不再早于报告产物
+                assessment.completed_at = (
+                    assessment.completed_at or datetime.now(timezone.utc)
+                )
+                assessment.report_generated_at = datetime.now(timezone.utc)
+                if assessment.report_status == "generating":
+                    # 航空无 PDF 环节，Qwen 结构化报告即成品；社区已由 PDF 分支置 ready/failed
+                    assessment.report_status = "ready"
             await sync_community_order_status(db, assessment)
             await db.commit()
             logger.info("assessment %s 完成(status=%s)", assessment_id, assessment.status)

@@ -118,6 +118,25 @@ async def expire_stale_sessions(db: AsyncSession) -> int:
     return result.rowcount
 
 
+async def expire_stale_orders_bulk(db: AsyncSession) -> int:
+    """批量关闭全部超时未支付订单(created → expired)，与过期会话清扫配套。
+
+    不按会话过滤：终端放弃轮询后其会话与订单只能靠这里的批量清扫收尾。
+    """
+    result = await db.execute(
+        update(PaymentOrder)
+        .where(
+            PaymentOrder.status == "created",
+            PaymentOrder.expires_at < datetime.now(timezone.utc),
+        )
+        .values(status="expired")
+    )
+    await db.commit()
+    if result.rowcount:
+        logger.info("过期订单(批量) | count=%d", result.rowcount)
+    return result.rowcount or 0
+
+
 # ================== 订单管理 ==================
 
 
@@ -319,8 +338,17 @@ async def authorize_community_submission(
     通过后返回 (会话, 已支付订单, 支付用户)，由调用方把订单/用户/终端绑定
     写入 Assessment 并将会话状态推进为 submitted。
     任何校验失败抛 SessionBindingError(状态码, 中文原因)。
+
+    会话行加 FOR UPDATE 行锁：并发双提交在锁上串行化，后到者必然
+    看到 submitted 状态被拒，杜绝"一单两测"。
     """
-    session = await get_session(db, session_id)
+    session = (
+        await db.execute(
+            select(AssessmentSession)
+            .where(AssessmentSession.id == session_id)
+            .with_for_update()
+        )
+    ).scalar_one_or_none()
     if session is None:
         raise SessionBindingError(404, "测评会话不存在")
 
@@ -328,9 +356,10 @@ async def authorize_community_submission(
         raise SessionBindingError(403, "会话场景不匹配，该入口仅支持社区会话")
 
     if session.status in ("created", "awaiting_payment"):
-        # 顺手做懒过期，保证终端轮询与提交侧状态一致
+        # 顺手做懒过期，保证终端轮询与提交侧状态一致；同时关闭其未支付订单
         if session.expires_at and session.expires_at <= datetime.now(timezone.utc):
             session.status = "expired"
+            await expire_stale_orders(db, session.id)
             await db.commit()
             raise SessionBindingError(410, "会话已过期，请重新扫码发起测评")
         raise SessionBindingError(402, "会话尚未支付，无法提交测评")
@@ -347,6 +376,7 @@ async def authorize_community_submission(
 
     if session.expires_at and session.expires_at <= datetime.now(timezone.utc):
         session.status = "expired"
+        await expire_stale_orders(db, session.id)
         await db.commit()
         raise SessionBindingError(410, "会话已过期，请重新扫码发起测评")
 

@@ -148,6 +148,23 @@ async def submit_assessment(
             parsed_session_id = UUID(session_id.strip())
         except ValueError as exc:
             raise HTTPException(status_code=422, detail="session_id 格式非法") from exc
+        # 社区幂等重试：首次提交已落库（含后台任务）但响应丢失时，原样返回
+        # 已有测评（200），不因 409 让已付款用户陷入"已提交却拿不到报告"。
+        existing_community = (
+            await db.execute(
+                select(Assessment)
+                .where(
+                    Assessment.assessment_session_id == parsed_session_id,
+                    Assessment.scene == "community",
+                )
+                .order_by(Assessment.created_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if existing_community is not None:
+            response.status_code = status.HTTP_200_OK
+            payload = AssessmentOut.model_validate(existing_community).model_dump(mode="json")
+            return AssessmentSubmitOut.model_validate({**payload, "access_code": None})
         try:
             community = await authorize_community_submission(db, parsed_session_id)
         except SessionBindingError as exc:

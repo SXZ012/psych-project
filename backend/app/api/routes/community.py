@@ -3,6 +3,8 @@
 联调阶段使用 Mock(不需要微信商户号)；商户号下来后将 Mock 替换为真实微信调用。
 """
 import logging
+import time
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
@@ -16,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.base import get_db
 from app.models.assessment import Assessment
-from app.models.community import Customer, Device
+from app.models.community import Customer, Device, PaymentOrder
 from app.services.community import (
     COMMUNITY_PRICE_FEN,
     SessionBindingError,
@@ -66,6 +68,22 @@ async def get_current_customer(
 
 # ================== 授权登录 ==================
 
+# /auth 限频（进程内滑窗，按 IP 计所有尝试）：Mock 模式 code 即 openid，
+# 不限频可无限制造 Customer 行。
+_AUTH_WINDOW_SECONDS = 300
+_AUTH_MAX_ATTEMPTS = 20
+_AUTH_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
+
+
+def _check_auth_rate_limit(client_ip: str) -> None:
+    now = time.monotonic()
+    bucket = _AUTH_BUCKETS[client_ip]
+    while bucket and now - bucket[0] > _AUTH_WINDOW_SECONDS:
+        bucket.popleft()
+    if len(bucket) >= _AUTH_MAX_ATTEMPTS:
+        raise HTTPException(status_code=429, detail="尝试过于频繁，请稍后再试")
+    bucket.append(now)
+
 
 class AuthRequest(BaseModel):
     code: str  # wx.login() 返回的临时授权码
@@ -79,12 +97,19 @@ class AuthResponse(BaseModel):
 
 
 @router.post("/auth", response_model=AuthResponse)
-async def wechat_auth(body: AuthRequest, db: AsyncSession = DB) -> AuthResponse:
+async def wechat_auth(
+    body: AuthRequest, request: Request, db: AsyncSession = DB
+) -> AuthResponse:
     """H5 页面 OAuth 回调：code 换 OpenID + 签发 JWT。
 
     Mock 模式(未配置 AppID): 用 code 生成假 OpenID。
     真实模式(配置了 AppID): 调微信 OAuth API 换取 OpenID。
     """
+    client_ip = request.client.host if request.client else "unknown"
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        client_ip = forwarded.split(",")[0].strip()
+    _check_auth_rate_limit(client_ip)
     if not body.code:
         raise HTTPException(status_code=400, detail="code 不能为空")
 
@@ -247,17 +272,46 @@ async def create_payment(
     if session.status not in ("created", "awaiting_payment"):
         raise HTTPException(status_code=400, detail="该会话已支付或已过期")
 
+    now = datetime.now(timezone.utc)
+    # 过期会话不再收款（收款后提交必 410，等于白付），顺手关闭未支付订单
+    if session.expires_at and session.expires_at <= now:
+        session.status = "expired"
+        await expire_stale_orders(db, session.id)
+        await db.commit()
+        raise HTTPException(status_code=410, detail="会话已过期，请重新扫码发起测评")
+    # 首个扫码支付的用户独占会话，防止两人各付一单抢同一测评
+    if session.customer_id and session.customer_id != customer.id:
+        raise HTTPException(status_code=409, detail="该会话已由其他用户发起支付")
+
     # 绑定用户到会话
     session.customer_id = customer.id
     await db.commit()
 
-    # 创建订单
-    order = await create_order(
-        db,
-        customer_id=customer.id,
-        assessment_session_id=session.id,
-        amount_fen=COMMUNITY_PRICE_FEN,
-    )
+    # 复用该会话未支付且未过期的订单；重复扫码不再另开新单（避免双收款）
+    order = (
+        await db.execute(
+            select(PaymentOrder)
+            .where(
+                PaymentOrder.assessment_session_id == session.id,
+                PaymentOrder.status.in_(("created", "paid", "assessing", "analyzing")),
+            )
+            .order_by(PaymentOrder.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if order is not None and order.status != "created":
+        raise HTTPException(status_code=400, detail="该会话已支付，无需重复下单")
+    if order is not None and order.expires_at and order.expires_at <= now:
+        order.status = "expired"
+        await db.commit()
+        order = None
+    if order is None:
+        order = await create_order(
+            db,
+            customer_id=customer.id,
+            assessment_session_id=session.id,
+            amount_fen=COMMUNITY_PRICE_FEN,
+        )
 
     # 调微信支付服务(Mock 或真实模式自动切换)
     from app.services.wechat.pay import create_jsapi_order

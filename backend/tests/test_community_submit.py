@@ -2,6 +2,8 @@
 
 from uuid import UUID, uuid4
 
+from sqlalchemy import select
+
 from app.models.assessment import Assessment
 from app.models.community import AssessmentSession, PaymentOrder
 from tests.community_helpers import (
@@ -85,6 +87,11 @@ async def test_unknown_and_malformed_session_rejected(db, client):
 
 
 async def test_used_session_rejected_on_second_submit(db, client):
+    """同会话二次提交幂等返回已有测评(200)，不重复建记录。
+
+    首次 201 落库后响应丢失时，终端"再试一次"必须能拿回同一测评——
+    已付款用户不能因网络抖动陷入"已提交却拿不到报告"。
+    """
     paid = await paid_session_via_api(db, client)
     first = await client.post(
         "/api/v1/assessments/submit",
@@ -98,7 +105,15 @@ async def test_used_session_rejected_on_second_submit(db, client):
         data=_community_form(paid["session_id"]),
         files={"video": fake_video()},
     )
-    assert second.status_code == 409
+    assert second.status_code == 200
+    assert second.json()["id"] == first.json()["id"]
+    # 仍然只有一条测评记录
+    rows = (
+        await db.execute(
+            select(Assessment).where(Assessment.scene == "community")
+        )
+    ).scalars().all()
+    assert len(rows) == 1
 
 
 async def test_community_submit_binds_session_customer_order_device(db, client):

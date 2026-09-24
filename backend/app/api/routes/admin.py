@@ -4,6 +4,7 @@ Demo 级权限（共享口令）；生产应换账号体系 + RBAC + 审计日�
 所有写接口均不触碰分数与结果标签——只改身份信息与后台管理字段。
 """
 import hashlib
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
@@ -306,8 +307,22 @@ async def regenerate_community_pdf(
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"PDF 生成失败: {exc}") from exc
     if not pdf_path:
+        assessment.report_status = "failed"
+        await db.commit()
         raise HTTPException(status_code=400, detail="暂无可用的分析结果，无法生成 PDF")
     assessment.report_pdf_key = oss_key or str(pdf_path)
+    assessment.report_status = "ready"
+    assessment.report_generated_at = datetime.now(timezone.utc)
+    from app.models.assessment import AssessmentResult
+    from app.services.report_view import REPORT_TEMPLATE_VERSION
+
+    result_row = (
+        await db.execute(
+            select(AssessmentResult).where(AssessmentResult.assessment_id == assessment.id)
+        )
+    ).scalar_one_or_none()
+    if result_row is not None:
+        result_row.report_template_version = REPORT_TEMPLATE_VERSION
     await db.commit()
     return {"ok": True, "report_pdf_key": assessment.report_pdf_key, "id": str(assessment.id)}
 
