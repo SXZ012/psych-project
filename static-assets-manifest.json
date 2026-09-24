@@ -1,0 +1,1105 @@
+{
+  "version": 1,
+  "cdn_base_url": "https://psych-test-bucket.oss-cn-shenzhen.aliyuncs.com",
+  "assets": [
+    {
+      "source": "backend/app/static/assets/aviation/audio/a1-attention.wav",
+      "key": "static-assets/assets/aviation/audio/a1-attention.wav",
+      "size": 229654,
+      "sha256": "010fb96cf2f0b2df26f8afd6e0ef781a1a607b5b8ee99fc9ebff1c06390c7f57",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/a2-attention.wav",
+      "key": "static-assets/assets/aviation/audio/a2-attention.wav",
+      "size": 154030,
+      "sha256": "711205a73817db438c1cfc96dba0217f7c1b8e6f14a1950f63ca7490ae0a428b",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/a3-attention.wav",
+      "key": "static-assets/assets/aviation/audio/a3-attention.wav",
+      "size": 174004,
+      "sha256": "963d3d33570bbc7f41ce68ee80f16f9a210e88def7a0878f01a6124a89bba4ff",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/a4-attention.wav",
+      "key": "static-assets/assets/aviation/audio/a4-attention.wav",
+      "size": 163906,
+      "sha256": "a1b88bfd13e35b2da5a84dbf9c851ae9f4c1d9e9d97e58693ec46ecbbdab5294",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/a5-attention.wav",
+      "key": "static-assets/assets/aviation/audio/a5-attention.wav",
+      "size": 189404,
+      "sha256": "c1a417bec45ddcef7a5e57f96ad68f37d20eb773ce64af42cd6c86bdf200045e",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/a6-attention.wav",
+      "key": "static-assets/assets/aviation/audio/a6-attention.wav",
+      "size": 200942,
+      "sha256": "3030033adc5fe426646b5fd6cfd3b35880bb06ae2a374f4790141c35335529b0",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/a7-attention.wav",
+      "key": "static-assets/assets/aviation/audio/a7-attention.wav",
+      "size": 188202,
+      "sha256": "fc030a15242e8dc67c2ec95c0a8bbe98bcee9a332510255b17e18d418b50da50",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/b1-workload.wav",
+      "key": "static-assets/assets/aviation/audio/b1-workload.wav",
+      "size": 206814,
+      "sha256": "e0645f6540b671a5fc1359dfd14e18781fbacc06f3eebb647895be47113ea6e8",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/b2-workload.wav",
+      "key": "static-assets/assets/aviation/audio/b2-workload.wav",
+      "size": 174430,
+      "sha256": "e94538941a0c81037efefb225c3f16f833c191fcdb7904f5f4d4d279f3d3b2a6",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/b3-workload.wav",
+      "key": "static-assets/assets/aviation/audio/b3-workload.wav",
+      "size": 159692,
+      "sha256": "c139ca7d8fdc8dc02eb38847e24a54b480c5782750b97398927592296a5f89da",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/b4-workload.wav",
+      "key": "static-assets/assets/aviation/audio/b4-workload.wav",
+      "size": 146604,
+      "sha256": "cededaf42d4349b1acd5fa9055625b0899ab9af833530abacdc9a9d690454591",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/b5-workload.wav",
+      "key": "static-assets/assets/aviation/audio/b5-workload.wav",
+      "size": 177758,
+      "sha256": "ce5c321885cef381e2ed15f9609dc21a6d81b3e42dfcf35e225bcc55e563ff64",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/b6-workload.wav",
+      "key": "static-assets/assets/aviation/audio/b6-workload.wav",
+      "size": 150148,
+      "sha256": "9c76e6028aacf80a905fb0940e9fe73f2b16283921930a270ae585e88befa6b0",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/b7-workload.wav",
+      "key": "static-assets/assets/aviation/audio/b7-workload.wav",
+      "size": 162460,
+      "sha256": "c2586d1c35afbd95294aa4008ecc002ecba42b9f8e9287fb0b7f5f378a56282c",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/c1-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/c1-awareness.wav",
+      "size": 213032,
+      "sha256": "4dce2a74356ed12fe3c9aedb09492f0c925cefc52f5eda2a0f51fa184f48ff64",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/c2-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/c2-awareness.wav",
+      "size": 197278,
+      "sha256": "8ec7931b518faf613f21f9ab816d35053a6aa34d2a58e517968c2e117ff1e611",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/c3-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/c3-awareness.wav",
+      "size": 154374,
+      "sha256": "13b25f3637fbe30a0210499e63de0930a3d8924ee8f6da7f2bf5f9788d81ce39",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/c4-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/c4-awareness.wav",
+      "size": 162678,
+      "sha256": "767a883ae695a964d25e9fb5c35d1c258077ce4eba01c0726fa676a7d2e95bf5",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/c5-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/c5-awareness.wav",
+      "size": 193840,
+      "sha256": "2c7a7de086d2de8ad49a78038ea2f62d2d2d7a4891c1e83cf69f70e2ea3af7c3",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/c6-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/c6-awareness.wav",
+      "size": 180092,
+      "sha256": "37961e2b51ac20d6578a3cade8cc756cdfba9d09e12d1e2c87585b2140ad95ee",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/c7-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/c7-awareness.wav",
+      "size": 160024,
+      "sha256": "eb376aeef438493b0aa8d26c4677ad903ee45c61954fe479c21b8087075f6147",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/d1-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/d1-procedure.wav",
+      "size": 221560,
+      "sha256": "141d1c1f3c38b4e38efdc5671923219f010c2625ae8d6691eb201012c0c70fe7",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/d2-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/d2-procedure.wav",
+      "size": 161464,
+      "sha256": "ef696b9e0acb7a1da22829a2a00c28dcd129a79d1abb8d1577f46ea085bb8d01",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/d3-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/d3-procedure.wav",
+      "size": 162460,
+      "sha256": "f45fbb6b7b679717ae4c4e7a9c204e9a5fccc8ac6ef114cf9aa1837274b89cdf",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/d4-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/d4-procedure.wav",
+      "size": 163364,
+      "sha256": "8a7fc3d554bb5558d91a6d0e765325890be40e71c6437a187e0a657a03614ae6",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/d5-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/d5-procedure.wav",
+      "size": 148828,
+      "sha256": "f7b7b99f02eeddda9854fd958a89ccac34d97d90e5097dc825937d598814dc01",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/d6-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/d6-procedure.wav",
+      "size": 163584,
+      "sha256": "8beb7d656c38e49789db973f4e1670d1a13a62d3abf89868da1f28da7cc90ca7",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/d7-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/d7-procedure.wav",
+      "size": 200048,
+      "sha256": "8d466a482d9847591e6e9973bce54e24d0dd869de26da061e7e7bfeb2b12d304",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/e1-communication.wav",
+      "key": "static-assets/assets/aviation/audio/e1-communication.wav",
+      "size": 180204,
+      "sha256": "3144933cf1bce9374827a04f0a0385a7121dd5c2467a925a4a40edeb27e21fd7",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/e2-communication.wav",
+      "key": "static-assets/assets/aviation/audio/e2-communication.wav",
+      "size": 164236,
+      "sha256": "53c79f3a191c0f300189b6d1dbb344a864a961acd2a085daaa1e8f9d69853887",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/e3-communication.wav",
+      "key": "static-assets/assets/aviation/audio/e3-communication.wav",
+      "size": 177434,
+      "sha256": "192024d1d9f2e03c9a2d8cb9f9480238237ed5265c33af94e1081f3f60b81dc6",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/e4-communication.wav",
+      "key": "static-assets/assets/aviation/audio/e4-communication.wav",
+      "size": 156802,
+      "sha256": "fcf66d53b695a8faa4177a3471617e5cf6dc875ca3e72434e1748cddbb796a71",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/e5-communication.wav",
+      "key": "static-assets/assets/aviation/audio/e5-communication.wav",
+      "size": 179652,
+      "sha256": "769c23cea6ab228d560a39b01cea51aba96796b20e69883a4732695cd22b2da9",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/e6-communication.wav",
+      "key": "static-assets/assets/aviation/audio/e6-communication.wav",
+      "size": 172442,
+      "sha256": "b08cae282a91feb565adb58d1387db1e979c6ca7ca3252f4c38d16797644e6e3",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/f1-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/f1-decision-stability.wav",
+      "size": 218688,
+      "sha256": "7800e9388e4aafe253f51694f5e01d9057397880ebc8c322725b65155e5fa46f",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/f2-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/f2-decision-stability.wav",
+      "size": 183086,
+      "sha256": "6c133f75d28255d5d9f37333f19ab3b64858c650d56f3d045b24bb3183c6d033",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/f3-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/f3-decision-stability.wav",
+      "size": 165556,
+      "sha256": "5db295a5c2cb6abebae2f765af79b9479dfd32f435d5f20ede8737fcc96a9695",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/f4-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/f4-decision-stability.wav",
+      "size": 143070,
+      "sha256": "37dbe14d11ab63e00f8a29f07e2cd360c2f9ea55f8d6160174e157bfde1f50ab",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/f5-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/f5-decision-stability.wav",
+      "size": 177102,
+      "sha256": "840ba40d354fa731762aaf6e8652746f0b20be0fde9bdcc02f98d4320e712df5",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/f6-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/f6-decision-stability.wav",
+      "size": 196168,
+      "sha256": "7e18f1aa7d6941973d82cb68e0e31513c50b7b2031216462b128fc8cd355d41e",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/a1-attention.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/a1-attention.wav",
+      "size": 229654,
+      "sha256": "010fb96cf2f0b2df26f8afd6e0ef781a1a607b5b8ee99fc9ebff1c06390c7f57",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/a2-attention.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/a2-attention.wav",
+      "size": 154030,
+      "sha256": "711205a73817db438c1cfc96dba0217f7c1b8e6f14a1950f63ca7490ae0a428b",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/a3-attention.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/a3-attention.wav",
+      "size": 174004,
+      "sha256": "963d3d33570bbc7f41ce68ee80f16f9a210e88def7a0878f01a6124a89bba4ff",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/a4-attention.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/a4-attention.wav",
+      "size": 163906,
+      "sha256": "a1b88bfd13e35b2da5a84dbf9c851ae9f4c1d9e9d97e58693ec46ecbbdab5294",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/a5-attention.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/a5-attention.wav",
+      "size": 189404,
+      "sha256": "c1a417bec45ddcef7a5e57f96ad68f37d20eb773ce64af42cd6c86bdf200045e",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/a6-attention.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/a6-attention.wav",
+      "size": 200942,
+      "sha256": "3030033adc5fe426646b5fd6cfd3b35880bb06ae2a374f4790141c35335529b0",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/a7-attention.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/a7-attention.wav",
+      "size": 188202,
+      "sha256": "fc030a15242e8dc67c2ec95c0a8bbe98bcee9a332510255b17e18d418b50da50",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/b1-workload.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/b1-workload.wav",
+      "size": 206814,
+      "sha256": "e0645f6540b671a5fc1359dfd14e18781fbacc06f3eebb647895be47113ea6e8",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/b2-workload.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/b2-workload.wav",
+      "size": 174430,
+      "sha256": "e94538941a0c81037efefb225c3f16f833c191fcdb7904f5f4d4d279f3d3b2a6",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/b3-workload.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/b3-workload.wav",
+      "size": 159692,
+      "sha256": "c139ca7d8fdc8dc02eb38847e24a54b480c5782750b97398927592296a5f89da",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/b4-workload.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/b4-workload.wav",
+      "size": 146604,
+      "sha256": "cededaf42d4349b1acd5fa9055625b0899ab9af833530abacdc9a9d690454591",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/b5-workload.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/b5-workload.wav",
+      "size": 177758,
+      "sha256": "ce5c321885cef381e2ed15f9609dc21a6d81b3e42dfcf35e225bcc55e563ff64",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/b6-workload.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/b6-workload.wav",
+      "size": 150148,
+      "sha256": "9c76e6028aacf80a905fb0940e9fe73f2b16283921930a270ae585e88befa6b0",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/b7-workload.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/b7-workload.wav",
+      "size": 162460,
+      "sha256": "c2586d1c35afbd95294aa4008ecc002ecba42b9f8e9287fb0b7f5f378a56282c",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/c1-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/c1-awareness.wav",
+      "size": 213032,
+      "sha256": "4dce2a74356ed12fe3c9aedb09492f0c925cefc52f5eda2a0f51fa184f48ff64",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/c2-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/c2-awareness.wav",
+      "size": 197278,
+      "sha256": "8ec7931b518faf613f21f9ab816d35053a6aa34d2a58e517968c2e117ff1e611",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/c3-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/c3-awareness.wav",
+      "size": 154374,
+      "sha256": "13b25f3637fbe30a0210499e63de0930a3d8924ee8f6da7f2bf5f9788d81ce39",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/c4-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/c4-awareness.wav",
+      "size": 162678,
+      "sha256": "767a883ae695a964d25e9fb5c35d1c258077ce4eba01c0726fa676a7d2e95bf5",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/c5-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/c5-awareness.wav",
+      "size": 193840,
+      "sha256": "2c7a7de086d2de8ad49a78038ea2f62d2d2d7a4891c1e83cf69f70e2ea3af7c3",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/c6-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/c6-awareness.wav",
+      "size": 180092,
+      "sha256": "37961e2b51ac20d6578a3cade8cc756cdfba9d09e12d1e2c87585b2140ad95ee",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/c7-awareness.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/c7-awareness.wav",
+      "size": 160024,
+      "sha256": "eb376aeef438493b0aa8d26c4677ad903ee45c61954fe479c21b8087075f6147",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/closing.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/closing.wav",
+      "size": 291642,
+      "sha256": "71357b99ecbadb19a8153e9f65b240bdbbb66926c684398dd1d6927f5d7d0f17",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/complete.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/complete.wav",
+      "size": 202152,
+      "sha256": "82c82df9046b587763b5cb4f44b8e4787e7d5e760e81312118215f09364ee3cd",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/countdown-1.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/countdown-1.wav",
+      "size": 49848,
+      "sha256": "aae9f88989a69cf91261668a1246f85fa75c066c2e7e991f37959d5f7ab0bd5c",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/countdown-2.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/countdown-2.wav",
+      "size": 49848,
+      "sha256": "8a6949223f83fc294441ce20d84ea254020f07643820764c3b8740e67ff39519",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/countdown-3.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/countdown-3.wav",
+      "size": 53818,
+      "sha256": "dadf60c2cfc52962f9b73b7ecb2df696f4a16a27b8edb818b8d2c0c2a6ebbe30",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/d1-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/d1-procedure.wav",
+      "size": 221560,
+      "sha256": "141d1c1f3c38b4e38efdc5671923219f010c2625ae8d6691eb201012c0c70fe7",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/d2-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/d2-procedure.wav",
+      "size": 161464,
+      "sha256": "ef696b9e0acb7a1da22829a2a00c28dcd129a79d1abb8d1577f46ea085bb8d01",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/d3-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/d3-procedure.wav",
+      "size": 162460,
+      "sha256": "f45fbb6b7b679717ae4c4e7a9c204e9a5fccc8ac6ef114cf9aa1837274b89cdf",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/d4-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/d4-procedure.wav",
+      "size": 163364,
+      "sha256": "8a7fc3d554bb5558d91a6d0e765325890be40e71c6437a187e0a657a03614ae6",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/d5-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/d5-procedure.wav",
+      "size": 148828,
+      "sha256": "f7b7b99f02eeddda9854fd958a89ccac34d97d90e5097dc825937d598814dc01",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/d6-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/d6-procedure.wav",
+      "size": 163584,
+      "sha256": "8beb7d656c38e49789db973f4e1670d1a13a62d3abf89868da1f28da7cc90ca7",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/d7-procedure.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/d7-procedure.wav",
+      "size": 200048,
+      "sha256": "8d466a482d9847591e6e9973bce54e24d0dd869de26da061e7e7bfeb2b12d304",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/deviation.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/deviation.wav",
+      "size": 138226,
+      "sha256": "445f9e1087f5635f6a898b04ff197bbf8769e55dd5b6b423d43336cdd12fc9f0",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/e1-communication.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/e1-communication.wav",
+      "size": 180204,
+      "sha256": "3144933cf1bce9374827a04f0a0385a7121dd5c2467a925a4a40edeb27e21fd7",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/e2-communication.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/e2-communication.wav",
+      "size": 164236,
+      "sha256": "53c79f3a191c0f300189b6d1dbb344a864a961acd2a085daaa1e8f9d69853887",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/e3-communication.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/e3-communication.wav",
+      "size": 177434,
+      "sha256": "192024d1d9f2e03c9a2d8cb9f9480238237ed5265c33af94e1081f3f60b81dc6",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/e4-communication.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/e4-communication.wav",
+      "size": 156802,
+      "sha256": "fcf66d53b695a8faa4177a3471617e5cf6dc875ca3e72434e1748cddbb796a71",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/e5-communication.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/e5-communication.wav",
+      "size": 179652,
+      "sha256": "769c23cea6ab228d560a39b01cea51aba96796b20e69883a4732695cd22b2da9",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/e6-communication.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/e6-communication.wav",
+      "size": 172442,
+      "sha256": "b08cae282a91feb565adb58d1387db1e979c6ca7ca3252f4c38d16797644e6e3",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/f1-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/f1-decision-stability.wav",
+      "size": 218688,
+      "sha256": "7800e9388e4aafe253f51694f5e01d9057397880ebc8c322725b65155e5fa46f",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/f2-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/f2-decision-stability.wav",
+      "size": 183086,
+      "sha256": "6c133f75d28255d5d9f37333f19ab3b64858c650d56f3d045b24bb3183c6d033",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/f3-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/f3-decision-stability.wav",
+      "size": 165556,
+      "sha256": "5db295a5c2cb6abebae2f765af79b9479dfd32f435d5f20ede8737fcc96a9695",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/f4-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/f4-decision-stability.wav",
+      "size": 143070,
+      "sha256": "37dbe14d11ab63e00f8a29f07e2cd360c2f9ea55f8d6160174e157bfde1f50ab",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/f5-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/f5-decision-stability.wav",
+      "size": 177102,
+      "sha256": "840ba40d354fa731762aaf6e8652746f0b20be0fde9bdcc02f98d4320e712df5",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/f6-decision-stability.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/f6-decision-stability.wav",
+      "size": 196168,
+      "sha256": "7e18f1aa7d6941973d82cb68e0e31513c50b7b2031216462b128fc8cd355d41e",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/far.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/far.wav",
+      "size": 122806,
+      "sha256": "0f0530a7069a986ce291a59644210c2935db4aa9628a65b380e844c4a859b275",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/invalid.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/invalid.wav",
+      "size": 342562,
+      "sha256": "4d8a01e1e5cb303ce1275cce6adc9f41dcdda17f10922328b2df66811bffbf56",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/near.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/near.wav",
+      "size": 156528,
+      "sha256": "c1efcbfd308b10e6690d5cb7849c06336e4b9cd7772d076cad179c2635a3639e",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/practice-complete.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/practice-complete.wav",
+      "size": 624926,
+      "sha256": "2d2c08b48d53ae976380dc71b3cc99d8ad723a9c17e69b51a0e15f51bb8b824d",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/practice-skipped.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/practice-skipped.wav",
+      "size": 291426,
+      "sha256": "c8a8bc09401829bd58f9d5765a51865fdd92752632e89bfc6e83d13e5b3165b5",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/aviation/audio/paired-v1/start.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/start.wav",
+      "size": 123026,
+      "sha256": "d9386edd787c1294460387d8e22e066aad5a90255a48efeb4731239b137c767e",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "backend/app/static/assets/login-wellbeing-hero.png",
+      "key": "static-assets/assets/login-wellbeing-hero.png",
+      "size": 1395448,
+      "sha256": "8dfd0a3c3ce78d7d90f4da2af935d8b856ff6d31f8a253f1c37f53f9b42586cb",
+      "content_type": "image/png"
+    },
+    {
+      "source": "backend/app/static/assets/login-wellbeing-lake.png",
+      "key": "static-assets/assets/login-wellbeing-lake.png",
+      "size": 2235425,
+      "sha256": "123700b179c5bfdbed91ffc2cf23c95a7378b84d8c3f47b78b38da45c76a02b2",
+      "content_type": "image/png"
+    },
+    {
+      "source": "backend/app/static/assets/login-wellbeing-lake.webp",
+      "key": "static-assets/assets/login-wellbeing-lake.webp",
+      "size": 110508,
+      "sha256": "a5ad29ce10e04855888a6d691490c6ce82b7ca4b1c4ae4cdd77f1d527cd197a0",
+      "content_type": "image/webp"
+    },
+    {
+      "source": "community-assets/audio/cm-ambience-wind.mp3",
+      "key": "static-assets/community/audio/cm-ambience-wind.mp3",
+      "size": 56515,
+      "sha256": "2f187487b2b0dc8406ececaf3ac72f65dd6ac3ff2ebcc1a20634467c6ad2ca3a",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/audio/cm-psychology-intro.mp3",
+      "key": "static-assets/community/audio/cm-psychology-intro.mp3",
+      "size": 288900,
+      "sha256": "758af02187c8ac6d26ebffbcf78724000c824ca3e91ce605a195bb67edc62c89",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/images/bank/11648021.jpg",
+      "key": "static-assets/community/images/bank/11648021.jpg",
+      "size": 241777,
+      "sha256": "3b4e9e57a400622ec2e4ccb0b1c2b3fa8386992aa371b3a6d2cd79e6f1facb10",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/15575139.jpg",
+      "key": "static-assets/community/images/bank/15575139.jpg",
+      "size": 91661,
+      "sha256": "8fca269c6663d2b9d47c5d0979b18c7406e94de63e4ed88d324ee13946f4b235",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/15663393.jpg",
+      "key": "static-assets/community/images/bank/15663393.jpg",
+      "size": 211913,
+      "sha256": "90f7d7bc5b7b73a6f60664f99bfb9422b75bc9471e0c4a908ddff3c11236abe9",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/16822114.jpg",
+      "key": "static-assets/community/images/bank/16822114.jpg",
+      "size": 338754,
+      "sha256": "f17ff807fa66e39cf450d65b8c04c255167ba3b6bd08c43c56e2a22f65f619a4",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/17279644.jpg",
+      "key": "static-assets/community/images/bank/17279644.jpg",
+      "size": 104080,
+      "sha256": "6e84b999dac2c8df8a125610ee38d1feb0ce7d4ec0b2f46918f1578f95ac584d",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/18386434.jpg",
+      "key": "static-assets/community/images/bank/18386434.jpg",
+      "size": 133050,
+      "sha256": "fa2b48aeb8b06fa3dfd489cac4c0a4680e0101106f174ad21be5c03f0381124a",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/19156757.jpg",
+      "key": "static-assets/community/images/bank/19156757.jpg",
+      "size": 256522,
+      "sha256": "271e41098bb4c752769c171789cf03233f700b93a90f9a2ecab5c0ca6c1a0cac",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/19872069.jpg",
+      "key": "static-assets/community/images/bank/19872069.jpg",
+      "size": 162782,
+      "sha256": "24442e19613b9bd0651ad1fa047b1cc685f6174c06226fd6af784d6d25b8d07a",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/28963830.jpg",
+      "key": "static-assets/community/images/bank/28963830.jpg",
+      "size": 308118,
+      "sha256": "045e5e6ef6b7727b795c91a98db60c4c57d1a759e502039cc7813fb2a6d65b03",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/29051621.jpg",
+      "key": "static-assets/community/images/bank/29051621.jpg",
+      "size": 67539,
+      "sha256": "8c9e0f00c4b97604db79b61fc7b1d30e7d43f530bbb544de4008dc909952a09e",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/29079800.jpg",
+      "key": "static-assets/community/images/bank/29079800.jpg",
+      "size": 88869,
+      "sha256": "088bcb4e293e6bed18efb2b03df5b33a4a63333aa8aa08f39fc356648e4914c1",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/2962589.jpg",
+      "key": "static-assets/community/images/bank/2962589.jpg",
+      "size": 428698,
+      "sha256": "03ce034fe836407cb62c17722b1cb299080a258317c97e2da946fc2b889b9c80",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/30712585.jpg",
+      "key": "static-assets/community/images/bank/30712585.jpg",
+      "size": 129376,
+      "sha256": "2c76752a94fed7c204c5f77124ea087059dfa4689b69c4441ccb5c6dd2aa869e",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/31146888.jpg",
+      "key": "static-assets/community/images/bank/31146888.jpg",
+      "size": 315258,
+      "sha256": "51460c6c61eddae177dfe88d577c51e5a504ecf8be19c8dd894966894c3730d8",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/31540471.jpg",
+      "key": "static-assets/community/images/bank/31540471.jpg",
+      "size": 319353,
+      "sha256": "a52efd4a853bb110b953a968dec168e5acb8613584f97fcbb4afcb1fddb0087f",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/33611286.jpg",
+      "key": "static-assets/community/images/bank/33611286.jpg",
+      "size": 1180605,
+      "sha256": "9daddb22be8cfe0b1ede3bb8b4ac48f9b24551f64bcad114fdce6f31e7e74fa8",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/34735091.jpg",
+      "key": "static-assets/community/images/bank/34735091.jpg",
+      "size": 102892,
+      "sha256": "57c739ab788dc17d45bf7bb4fc2579b27ebb44946d190d47f859b828c6a8ba1d",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/35091112.jpg",
+      "key": "static-assets/community/images/bank/35091112.jpg",
+      "size": 144635,
+      "sha256": "f10ffe3a4f50af34b790e52f53541686c73f70aa83799c59ba3969a14d3b9c89",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/35461811.jpg",
+      "key": "static-assets/community/images/bank/35461811.jpg",
+      "size": 113712,
+      "sha256": "db61fe673ba1925617696de7e3bd77c5980cb8b52619010242d503e6a3c77af6",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/36649334.jpg",
+      "key": "static-assets/community/images/bank/36649334.jpg",
+      "size": 140429,
+      "sha256": "a82851e9a56563783490661eb0d2bb772f2d5a04aa698a57a71a26799798a82f",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/36678705.jpg",
+      "key": "static-assets/community/images/bank/36678705.jpg",
+      "size": 192990,
+      "sha256": "a39e28d588c7fe08027733f1940384d6f85d9b5833f0219bc06a851a9b82c50c",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/36763393.jpg",
+      "key": "static-assets/community/images/bank/36763393.jpg",
+      "size": 232533,
+      "sha256": "fb4c4b71e3ce6eaae77b81c19af9763fafeb2535eb8c05cfb7320deecef39e96",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/36763394.jpg",
+      "key": "static-assets/community/images/bank/36763394.jpg",
+      "size": 233696,
+      "sha256": "e4d2caea63e5c98dad75ab7cc0c943231365094f41b969704cd6a5b8f57e0d2d",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/38103285.jpg",
+      "key": "static-assets/community/images/bank/38103285.jpg",
+      "size": 341178,
+      "sha256": "ee4425aa3e85993b26b2225e90fb89e9fc9fd1787f5324941645771c79987d82",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/5838871.jpg",
+      "key": "static-assets/community/images/bank/5838871.jpg",
+      "size": 274280,
+      "sha256": "70f08ab3ef99299f91bc08018eb45211679d5372c40a60a532550db9150374a8",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/6123962.jpg",
+      "key": "static-assets/community/images/bank/6123962.jpg",
+      "size": 213128,
+      "sha256": "e19172f72080fcaf962871a7c343003be990a91073ae8490f0e1b491953f8992",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/6146941.jpg",
+      "key": "static-assets/community/images/bank/6146941.jpg",
+      "size": 246495,
+      "sha256": "e652aa131cb63aef0f0973752d33d40c558ce26e517f99384c76c513d3b3a843",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/images/bank/8964561.jpg",
+      "key": "static-assets/community/images/bank/8964561.jpg",
+      "size": 110943,
+      "sha256": "c0634d48cc41a2604ea5534166798494151b4258c8e5f9f06dd6f4a8d824e8a7",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/intro-production/output/community-mental-health-original-60s.mp4",
+      "key": "static-assets/community/intro-production/output/community-mental-health-original-60s.mp4",
+      "size": 68894799,
+      "sha256": "3920615a68b6a4ddf40e8fdd8b794c9e22035804acbc3cfc87263380800f0a80",
+      "content_type": "video/mp4"
+    },
+    {
+      "source": "community-assets/intro-production/public/audio/01-morning.mp3",
+      "key": "static-assets/community/intro-production/public/audio/01-morning.mp3",
+      "size": 68218,
+      "sha256": "bf30f9c5b27194a0bafceef364bb38a9ab44ac01b9aa31a0209020cb3f9bafc5",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/intro-production/public/audio/02-pause.mp3",
+      "key": "static-assets/community/intro-production/public/audio/02-pause.mp3",
+      "size": 64038,
+      "sha256": "bbabcaeb73ff81add1081118f07523af4d0552d8e4f7186e3f5afabee71fd3ef",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/intro-production/public/audio/03-weather.mp3",
+      "key": "static-assets/community/intro-production/public/audio/03-weather.mp3",
+      "size": 144286,
+      "sha256": "9d5c48d2cad1e60881014f219f12dd717e3cf207fbd72f76c87d53b1c524af55",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/intro-production/public/audio/04-care.mp3",
+      "key": "static-assets/community/intro-production/public/audio/04-care.mp3",
+      "size": 142197,
+      "sha256": "d27259c0b2da294e2b5b922d9efbc6352b67af9bcfd55bffae5c208016d71e4a",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/intro-production/public/audio/05-support.mp3",
+      "key": "static-assets/community/intro-production/public/audio/05-support.mp3",
+      "size": 135927,
+      "sha256": "ef9e2b7c9c871b5fa54d7030d290b4694e03444d2fd342e63a7edc57de0078e2",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/intro-production/public/audio/06-assessment.mp3",
+      "key": "static-assets/community/intro-production/public/audio/06-assessment.mp3",
+      "size": 140943,
+      "sha256": "5166ad1a68bd5042625f8663bfb113401282deba4858b1b83f8389fcc97fa2e5",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/intro-production/public/audio/07-ready.mp3",
+      "key": "static-assets/community/intro-production/public/audio/07-ready.mp3",
+      "size": 141361,
+      "sha256": "d632eaaf89df7cd0456c37439f86d50762e73f633406d11f8ebc3c2ca9d1bc32",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/intro-production/public/audio/ambience.mp3",
+      "key": "static-assets/community/intro-production/public/audio/ambience.mp3",
+      "size": 56515,
+      "sha256": "2f187487b2b0dc8406ececaf3ac72f65dd6ac3ff2ebcc1a20634467c6ad2ca3a",
+      "content_type": "audio/mpeg"
+    },
+    {
+      "source": "community-assets/intro-production/public/scenes/01-morning.png",
+      "key": "static-assets/community/intro-production/public/scenes/01-morning.png",
+      "size": 2170723,
+      "sha256": "5b7d50d1ba6fbc34e6701d43f9fdf221819d9505865b6c877375227b9f23b7b9",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/scenes/02-weather.png",
+      "key": "static-assets/community/intro-production/public/scenes/02-weather.png",
+      "size": 2276967,
+      "sha256": "227fd80832006a0e697c843a7d00c33c0bba7482bbfa0246371acf7548cdf69a",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/scenes/03-connection.png",
+      "key": "static-assets/community/intro-production/public/scenes/03-connection.png",
+      "size": 2586186,
+      "sha256": "4ebc5c25c4a2d2996b66dc7403820546040063bc3b6fbc8463d983bef8197f08",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/scenes/04-assessment.png",
+      "key": "static-assets/community/intro-production/public/scenes/04-assessment.png",
+      "size": 1865327,
+      "sha256": "2b977f5774ac352ad9ca60aa9d9eccc7e89a7626b6a2f69cd9e37dabe2ebfbfd",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/apartment-background.png",
+      "key": "static-assets/community/intro-production/public/story-v2/apartment-background.png",
+      "size": 2075812,
+      "sha256": "867ee2d3d2fc563aa291742d57a86ded1ea54ad01bdd45a65bd990d341a7dd5b",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/breath-cycle-alpha.png",
+      "key": "static-assets/community/intro-production/public/story-v2/breath-cycle-alpha.png",
+      "size": 1173782,
+      "sha256": "f8ebc8eeb9ce24d2de97c54822cbe09c2574975643f51750b4e03c9e06022d73",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/breath-cycle.png",
+      "key": "static-assets/community/intro-production/public/story-v2/breath-cycle.png",
+      "size": 1517408,
+      "sha256": "cc9a43b6b113af7cb070a60c7f1d1cad4619b0c16f2227b746463d68af2e8b21",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/walk-cycle-alpha.png",
+      "key": "static-assets/community/intro-production/public/story-v2/walk-cycle-alpha.png",
+      "size": 1157184,
+      "sha256": "af161aa5a395e69a4312c49730787423cb69ba4621474c818c8850654787b1ea",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/walk-cycle.png",
+      "key": "static-assets/community/intro-production/public/story-v2/walk-cycle.png",
+      "size": 1495622,
+      "sha256": "1f9c3034321263fb02c77e499771fed5b784d4334c59328ce4762960099cb98d",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/walk-stop-v2-alpha.png",
+      "key": "static-assets/community/intro-production/public/story-v2/walk-stop-v2-alpha.png",
+      "size": 2236396,
+      "sha256": "ee6ee152cdf9a9505b80b2d1d2dfa471fef4232773a826028daa764feef22ca7",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/walk-stop-v2-clean.png",
+      "key": "static-assets/community/intro-production/public/story-v2/walk-stop-v2-clean.png",
+      "size": 2166727,
+      "sha256": "e8eaf071557197edb7dab6368f72c0301de56b1abef61eb9c1f81d4db682f3a4",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/walk-stop-v2-green.png",
+      "key": "static-assets/community/intro-production/public/story-v2/walk-stop-v2-green.png",
+      "size": 1534108,
+      "sha256": "b3c29e70015a0aa9d90c531af0987b25186ab84173f7c90587b794b88d7fd730",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/public/story-v2/walk-stop-v2.png",
+      "key": "static-assets/community/intro-production/public/story-v2/walk-stop-v2.png",
+      "size": 2318038,
+      "sha256": "8702d7556d1b75aef2b1fe77d4a6e3a6b4a4f0cf576a05189e0a0fcd1dfeed42",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/intro-production/story-v2/storyboard-first15s.png",
+      "key": "static-assets/community/intro-production/story-v2/storyboard-first15s.png",
+      "size": 2027495,
+      "sha256": "2e73f2a8220736c25c8399539582394bd832da9baaebba03c62ae013551ec690",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/ux/28945280.jpg",
+      "key": "static-assets/community/ux/28945280.jpg",
+      "size": 60899,
+      "sha256": "789f773d3392ce06a9cc55be380e2a8a839b0a7b31d4321205e5b8a7203e2e1b",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/ux/29065905.jpg",
+      "key": "static-assets/community/ux/29065905.jpg",
+      "size": 87910,
+      "sha256": "749137cfcfd1b39badc94a2b6cd8b30a370808033234c54d135468246e0917fa",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/ux/33500208.jpg",
+      "key": "static-assets/community/ux/33500208.jpg",
+      "size": 557128,
+      "sha256": "89ddbc6a5e70de88cadf531a6fb1c5d91913b123434f35d8e8ff8cc5a7d44c9c",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/ux/35394159.jpg",
+      "key": "static-assets/community/ux/35394159.jpg",
+      "size": 1262055,
+      "sha256": "c319d0c1853b2885f8eb0a3980266946c5487411f57e07c41614907879d54ad6",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/ux/37443455.jpg",
+      "key": "static-assets/community/ux/37443455.jpg",
+      "size": 235989,
+      "sha256": "3c65a9db757b9eaa8cef6372ee74d4f5e2f6aa1dfc91e1d68cf3cefefa69619f",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/ux/38239121.jpg",
+      "key": "static-assets/community/ux/38239121.jpg",
+      "size": 151125,
+      "sha256": "850a745240c5d6fcc38240c276f63029754f75d70842418df816e6503f476405",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/ux/5392095.jpg",
+      "key": "static-assets/community/ux/5392095.jpg",
+      "size": 151278,
+      "sha256": "e1d9045ef61fcd548c0c9b5f8b7cff222fe0e22f2325e94c11b30f43e0201659",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/ux/community-selfcare-illustration-v1.png",
+      "key": "static-assets/community/ux/community-selfcare-illustration-v1.png",
+      "size": 1399208,
+      "sha256": "6670698796c82f4f4f77c964d9c87f38fee8420413793e9fc7b87bc2f44a8613",
+      "content_type": "image/png"
+    },
+    {
+      "source": "community-assets/ux/meadow-sunlight-pixabay.jpg",
+      "key": "static-assets/community/ux/meadow-sunlight-pixabay.jpg",
+      "size": 520790,
+      "sha256": "9c4ec2f8e85ed322d11de608b88d8c9d75945a9741babdd22c029dfb63352b4c",
+      "content_type": "image/jpeg"
+    }
+  ]
+}

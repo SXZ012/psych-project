@@ -247,6 +247,19 @@ Mock 数据必须明确标识为演示数据，不代表被测者真实心理状
 - 题库：更新配置和静态资源后重新导入
 - 报告表达：修改管理前端或 Qwen 受约束摘要规则，不修改合作方原始结果
 
+## 静态媒体迁移到 OSS/CDN
+
+运行时媒体默认复用现有 OSS Bucket 与凭证，放入独立的 `static-assets/` 前缀并逐对象设为公共读。不会改变整个 Bucket 的读权限；报告、测评视频等已有对象保持原状。也可以用 `ASSET_OSS_*` 覆盖成独立 Bucket。
+
+1. 默认复用根目录 `.env` 里已有的 `OSS_ACCESS_KEY_ID`、`OSS_ACCESS_KEY_SECRET`、`OSS_ENDPOINT` 和 `OSS_BUCKET_NAME`。如需独立 Bucket，再填写 `ASSET_OSS_*` 覆盖项。
+2. 先生成本地清单：`node backend/scripts/migrate-static-assets.mjs`。默认写入根目录 `static-assets-manifest.json`，记录源路径、OSS 对象键、大小和 SHA-256，不会上传文件。
+3. 运行 `node backend/scripts/migrate-static-assets.mjs --upload`。文件放入 `static-assets/` 前缀、逐对象公共读，脚本会逐一检查匿名访问和文件大小；源文件会保留。
+4. 可选：配置 CDN 指向该 Bucket，并在 `.env` 设置 `ASSET_CDN_BASE_URL`，例如 `https://static.example.com`。没有 CDN 地址时，后端直接使用 OSS 域名。
+5. 在 OSS/CDN 上抽查图片、WAV/MP3 和 MP4。确认终端和社区场景设备都能访问后，再从部署包和 Git 中移除已迁移的源媒体；Android 独立 drawable 资源不在本次清单内。
+6. 删除本地源文件前运行 `node backend/scripts/migrate-static-assets.mjs --prune-local`。此命令会再次校验 OSS 对象和本地 SHA-256，通过后才删除清单内文件；以后用 `node backend/scripts/migrate-static-assets.mjs --download` 按原目录与 SHA-256 完整恢复。修改或重建场景素材前先恢复资源。已有清单比本地媒体多时，普通运行会拒绝覆盖它。
+
+清单包含 `backend/app/static/assets` 与 `community-assets` 下的图片、音频和视频文件，不包含脚本、字体、前端代码或用户上传数据。
+
 ## 测试
 
 ```bash

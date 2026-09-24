@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -34,6 +34,10 @@ logger = logging.getLogger("app.main")
 _STATIC_DIR = Path(__file__).resolve().parent / "static"
 # 社区素材与前后端代码分离，放在项目根目录的独立文件夹中。
 _COMMUNITY_ASSETS_DIR = Path(__file__).resolve().parents[2] / "community-assets"
+_CDN_MEDIA_SUFFIXES = {
+    ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif",
+    ".wav", ".mp3", ".mp4", ".webm", ".ogg", ".m4a",
+}
 
 
 def _serve_spa(dist_name: str, path: str, label: str):
@@ -262,6 +266,34 @@ app.mount(
 
 # 本地前端依赖（人脸检测脚本、模型和 WASM），避免终端依赖境外 CDN。
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+
+@app.middleware("http")
+async def redirect_static_assets_to_cdn(request: Request, call_next):
+    """保留已有静态 URL，将媒体请求转到资源 CDN；未配置时继续本地服务。"""
+    cdn_base = settings.static_asset_base_url
+    path = request.url.path
+    if cdn_base and request.method in {"GET", "HEAD"}:
+        if path.startswith("/static/assets/community/"):
+            object_path = "static-assets/community/" + path.removeprefix(
+                "/static/assets/community/"
+            )
+        elif path.startswith("/static/assets/"):
+            object_path = "static-assets/assets/" + path.removeprefix(
+                "/static/assets/"
+            )
+        else:
+            object_path = ""
+        if object_path and Path(path).suffix.lower() in _CDN_MEDIA_SUFFIXES:
+            target = f"{cdn_base}/{object_path}"
+            if request.url.query:
+                target = f"{target}?{request.url.query}"
+            return RedirectResponse(
+                target,
+                status_code=307,
+                headers={"Cache-Control": "public, max-age=300"},
+            )
+    return await call_next(request)
 
 
 @app.middleware("http")

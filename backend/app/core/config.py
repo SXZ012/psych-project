@@ -89,6 +89,43 @@ class Settings(BaseSettings):
     OSS_ENDPOINT: str = ""
     OSS_BUCKET_NAME: str = ""
 
+    # ---- 公共运行时静态资源（独立于保存测评/报告的私有 OSS Bucket）----
+    ASSET_OSS_ACCESS_KEY_ID: str = ""
+    ASSET_OSS_ACCESS_KEY_SECRET: str = ""
+    ASSET_OSS_ENDPOINT: str = ""  # 空值复用 OSS_ENDPOINT
+    ASSET_OSS_BUCKET_NAME: str = ""
+    ASSET_CDN_BASE_URL: str = ""  # 例如 https://static.example.com
+
+    @property
+    def static_asset_access_key_id(self) -> str:
+        return self.ASSET_OSS_ACCESS_KEY_ID or self.OSS_ACCESS_KEY_ID
+
+    @property
+    def static_asset_access_key_secret(self) -> str:
+        return self.ASSET_OSS_ACCESS_KEY_SECRET or self.OSS_ACCESS_KEY_SECRET
+
+    @property
+    def static_asset_endpoint(self) -> str:
+        return (self.ASSET_OSS_ENDPOINT or self.OSS_ENDPOINT).removeprefix(
+            "https://"
+        ).removeprefix("http://").rstrip("/")
+
+    @property
+    def static_asset_bucket_name(self) -> str:
+        return self.ASSET_OSS_BUCKET_NAME or self.OSS_BUCKET_NAME
+
+    @property
+    def static_asset_base_url(self) -> str:
+        cdn_base = self.ASSET_CDN_BASE_URL.strip().rstrip("/")
+        if cdn_base:
+            return cdn_base
+        if self.static_asset_bucket_name and self.static_asset_endpoint:
+            return (
+                f"https://{self.static_asset_bucket_name}."
+                f"{self.static_asset_endpoint}"
+            )
+        return ""
+
     @model_validator(mode="after")
     def _prod_weak_value_guard(self) -> "Settings":
         """ENV=prod 时拒绝默认弱密钥/口令启动（dev 不受影响）。

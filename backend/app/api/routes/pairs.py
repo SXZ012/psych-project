@@ -6,7 +6,7 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,6 +37,7 @@ _STATIC_MEDIA_TYPES = {
     ".webp": "image/webp",
     ".gif": "image/gif",
 }
+_CDN_IMAGE_SUFFIXES = {".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
 
 def _validate_scene(scene: str) -> str:
@@ -76,6 +77,30 @@ async def terminal_image(
     ).scalar_one_or_none()
     if image is None:
         raise HTTPException(status_code=404, detail="题库图片不存在或已停用")
+
+    cdn_base = settings.static_asset_base_url
+    asset_url, _, asset_query = image.url.partition("?")
+    if (
+        cdn_base
+        and asset_url.startswith("/static/assets/")
+        and Path(asset_url).suffix.lower() in _CDN_IMAGE_SUFFIXES
+    ):
+        if asset_url.startswith("/static/assets/community/"):
+            object_path = "static-assets/community/" + asset_url.removeprefix(
+                "/static/assets/community/"
+            )
+        else:
+            object_path = "static-assets/assets/" + asset_url.removeprefix(
+                "/static/assets/"
+            )
+        target = f"{cdn_base}/{object_path}"
+        if asset_query:
+            target = f"{target}?{asset_query}"
+        return RedirectResponse(
+            target,
+            status_code=307,
+            headers={"Cache-Control": "public, max-age=300"},
+        )
 
     local = _serve_local_static(image.url)
     if local is not None:
