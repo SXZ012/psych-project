@@ -56,11 +56,14 @@ export function useAndroidCamera() {
   }
   async function startRecording() { return call('startRecording') }
   async function stopRecording() { return call('stopRecording') }
+  /** 社区录制封存后关闭 Camera2，但保留原生 READY 状态以允许提交或重试。 */
+  async function releasePreviewForUpload() { return call('releasePreviewForUpload') }
   async function submitAssessment(payload: object) { return call('submitAssessment', JSON.stringify(payload)) }
-  function stopPreview() { hide(); cameraOn.value = false; try { window.AndroidCamera?.stopPreview?.('__acNoop') } catch { /* no-op */ } }
+  function stopPreview() { hide(); cameraOn.value = false; try { window.AndroidCamera?.stopPreview?.('') } catch { /* no-op */ } }
   function stopPromptAudio() { try { window.AndroidCamera?.stopPromptAudio?.() } catch { /* no-op */ } }
   function playIntroAudio() { try { window.AndroidCamera?.playIntroAudio?.() } catch { /* no-op */ } }
   function playOutroAudio() { try { window.AndroidCamera?.playOutroAudio?.() } catch { /* no-op */ } }
+  function speakPrompt(text: string) { try { window.AndroidCamera?.speakPrompt?.(text) } catch { /* no-op */ } }
 
-  return { available, cameraOn, message, faceResult, call, place, hide, setGuideState, startPreview, startRecording, stopRecording, submitAssessment, stopPreview, stopPromptAudio, playIntroAudio, playOutroAudio }
+  return { available, cameraOn, message, faceResult, call, place, hide, setGuideState, startPreview, startRecording, stopRecording, releasePreviewForUpload, submitAssessment, stopPreview, stopPromptAudio, playIntroAudio, playOutroAudio, speakPrompt }
 }

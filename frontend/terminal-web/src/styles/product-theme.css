@@ -1,0 +1,94 @@
+/*
+ * 终端产品主题：以心理服务的可信、清晰与亲和为目标。
+ * 只提供颜色、文字与阴影令牌；页面结构、尺寸和流程由各组件保持不变。
+ */
+:root {
+  --surface-page: #f4f7f6;
+  --surface-card: #ffffff;
+  --surface-soft: #edf3f1;
+  --line-soft: #d7e2df;
+  --tx-strong: #263746;
+  --tx-medium: #405765;
+  --tx-soft: #667884;
+  --tx-faint: #7a8b92;
+  --brand-aviation: #2f5d7c;
+  --brand-aviation-dark: #264d67;
+  --brand-community: #4f8d82;
+  --ok-border: #4f8d82;
+  --error-border: #b85c5c;
+  --warn-tx: #a97125;
+  --accent-clock: #2f5d7c;
+  --accent-progress: #4f8d82;
+  --stage-bg: linear-gradient(180deg, #edf3f5 0%, #f7f9f8 100%);
+  --aq-bg: #ffffff;
+  --aq-border: #d7e2e7;
+  --aq-shadow: 0 10px 28px rgba(38, 55, 70, .08);
+  --aq-option-border: #d7e2e0;
+  --aq-option-bg: #f9fbfa;
+  --aq-selected-bg: #e5f0ed;
+  --aq-selected-border: #4f8d82;
+  --aq-badge-bg: #eaf1f5;
+  --aq-badge-tx: #406981;
+  color: var(--tx-strong);
+  background: var(--surface-page);
+}
+
+html, body, #app { min-height: 100dvh; background: var(--surface-page); }
+.eyebrow { color: #4f766f; letter-spacing: .1em; }
+.muted { color: var(--tx-soft); }
+.primary { color: #fff; background: var(--brand-aviation); box-shadow: 0 6px 16px rgba(47, 93, 124, .18); }
+.primary:hover { background: var(--brand-aviation-dark); }
+.secondary { color: var(--brand-aviation); background: #fff; border-color: #bdced7; }
+
+.terminal-shell { color: var(--tx-strong); background: linear-gradient(145deg, #f5f8f8 0%, #edf3f4 100%); }
+.terminal-shell:before, .terminal-shell:after { opacity: .16; filter: blur(72px); }
+.terminal-shell:before { background: #90b8c7; }
+.terminal-shell:after { background: #a8c9bd; }
+
+/* 航空信息确认：保留现有背景图，只将深色遮罩和玻璃卡片改为轻盈服务感。 */
+.identity-screen { background: #eaf0f1; }
+.identity-screen:before { background: linear-gradient(90deg, rgba(231, 240, 242, .18), rgba(246, 249, 248, .92) 72%); }
+.identity-brand { color: #34586d; background: rgba(255, 255, 255, .84); border-color: #d8e4e7; }
+.identity-card { color: var(--tx-strong); background: rgba(255, 255, 255, .94); border-color: #fff; box-shadow: 0 14px 36px rgba(38, 55, 70, .12); }
+.identity-card h1 { color: #263f50; }
+.identity-card label { color: #49616e; }
+.identity-card input { color: var(--tx-strong); background: #fbfcfc; border-color: #c9d8dc; }
+.identity-card input:focus { border-color: #5f8b9f; box-shadow: 0 0 0 4px rgba(95, 139, 159, .14); }
+.input-meta, .identity-card small { color: #72848b; }
+.form-error { color: #a85454; }
+
+/* 公共白色服务卡片：不再使用黑底、霓虹描边或重阴影。 */
+.consent-card { color: var(--tx-strong); background: rgba(255,255,255,.96); box-shadow: 0 14px 38px rgba(38,55,70,.12); }
+.consent-card h1, .consent-card h2 { color: #294354; }
+.consent-card header p:not(.eyebrow), .consent-card article { color: #60727a; }
+.consent-card footer label { color: #4f626a; }
+
+.face-preview { background: #dce8eb; box-shadow: 0 12px 32px rgba(38,55,70,.16); }
+.face-oval { border-color: rgba(47,93,124,.58); box-shadow: 0 0 0 999px rgba(237,243,244,.18) inset; }
+.face-oval.ready { border-color: #4f8d82; box-shadow: 0 0 0 3px rgba(79,141,130,.14), 0 0 0 999px rgba(237,243,244,.1) inset; }
+.face-check h1 { color: #294354; }
+.face-check p, .face-check > small { color: #647780; }
+.loading-dots i { background: #6f99a8; }
+.camera-monitor__view { background: #dce8eb; border-color: #5f8b9f; box-shadow: 0 6px 18px rgba(38,55,70,.14); }
+.camera-monitor p { color: #314c5a; background: rgba(255,255,255,.9); }
+
+/* 旧版通用问题舞台也同步降噪，避免切入任一流程时突然出现黑底科技感。 */
+.intro-stage h1 { color: #294354; text-shadow: none; }
+.intro-stage p { color: #647780; }
+.terminal-shell.result-state { color: #eef2fb; background: radial-gradient(1100px 700px at 72% -10%, #273361, #070a16 62%); }
+.result-state h1 { color: #fff; text-shadow: none; }
+.result-state p { color: rgba(255,255,255,.6); }
+.intro-orb { background: radial-gradient(circle, #b8d4d1 0%, rgba(184,212,209,.36) 55%, transparent 73%); }
+.question-stage__shade { background: rgba(23, 48, 60, .42); }
+.question-card button { color: #263746; background: rgba(255,255,255,.9); border-color: #d5e2df; backdrop-filter: none; }
+.question-card button.selected { color: #244e48; background: #e4f0ed; border-color: #5b978a; box-shadow: none; }
+
+/* 管理员开发切换仅作为现场工具，视觉也保持低干扰。 */
+.test-scene-switcher { color: #466270; background: rgba(255,255,255,.94); border-color: #cfdbde; box-shadow: 0 5px 16px rgba(38,55,70,.12); }
+.test-scene-switcher button { color: #496571; }
+.test-scene-switcher button.active { color: #fff; background: #4f8d82; border-color: #4f8d82; }
+
+
+
+/* 主操作保持通行绿；其他页面颜色沿用上一版蓝色主题。 */
+.primary{background:#4f8d82;box-shadow:0 6px 16px rgba(79,141,130,.2)}.primary:hover{background:#3f756b}.primary:disabled{background:#b8c8c4;color:#f7faf8;opacity:1}

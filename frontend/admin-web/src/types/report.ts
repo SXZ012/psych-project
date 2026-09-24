@@ -9,4 +9,8 @@ export interface DetailedMetricView {
   aviationMeaning:string;limitation:string;recommendation:string;confidence:string
   direction:'higher_load'|'higher_better';source:string;weakReference:boolean
   originalLevel?:string
+  /** 合作方结构化严重程度：0=参考范围 1=偏离 2=明显偏离；缺失为 null */
+  severity?:number|null
+  /** 合作方筛查风险档：low/uncertain/high/unavailable；仅筛查项提供 */
+  riskBand?:string|null
 }

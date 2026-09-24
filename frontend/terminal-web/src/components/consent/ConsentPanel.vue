@@ -1,12 +1,46 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { MESSAGES } from '@/aviation/messages'
 
-defineProps<{ assetsReady: boolean; assetsError: string }>()
-const agreed = ref(false)
+defineProps<{
+  assetsReady: boolean
+  assetsError: string
+}>()
 const emit = defineEmits<{ confirm: []; retryAssets: [] }>()
+const agreed = ref(false)
 </script>
-<template><main class="terminal-shell consent-shell"><section class="consent-card"><header><p class="eyebrow">INFORMED CONSENT</p><h1>知情同意书</h1><p>请上下滑动阅读全部条款后确认同意。</p></header><article class="consent-body"><section><h2>一、测评目的与适用范围</h2><p>本测评通过面部微表情与生理信号采集，对当前心理生理状态进行辅助评估，输出压力负荷、情绪状态、注意与恢复等维度的参考指标。本测评不构成医学或精神障碍诊断。</p></section><section><h2>二、敏感个人信息处理</h2><p>本测评将处理面部影像（生物识别信息）、姓名及身份证号，用于微表情和生理信号分析、身份核验与测评记录关联。上述信息属于敏感个人信息，需要取得您的单独同意。</p></section><section><h2>三、数据采集方式</h2><p>系统将通过设备摄像头录制约 60 秒面部视频。开始测评即表示您同意在本次测评期间采集该视频；您可在开始前拒绝或退出。</p></section><section><h2>四、数据处理与第三方共享</h2><p>视频经加密传输，由合作方心理生理评估算法进行分析，并按固定规则生成后台报告。信息处理遵循最小必要、目的限制原则，未经同意不用于本测评目的之外。</p></section><section><h2>五、存储与保密</h2><p>评估结果加密存储于受控数据库，仅授权管理人员可查阅。面部视频用于本次分析与必要的受控留存、审计；未经您的书面同意，不向与岗位评估无关的第三方披露。</p></section><section><h2>六、结果用途与限制</h2><p>本测评结果仅作为心理状态维度的参考数据，严禁直接作为录用、晋升或淘汰的唯一依据。本系统不具备医疗资质，输出结果不构成医学诊断或精神障碍鉴定。</p></section><section><h2>七、您的权利</h2><p>您享有查阅、复制、更正、补充、删除个人信息及撤回同意的权利；撤回不影响此前基于同意进行的信息处理。您可按管理方公布的方式提出申请。</p></section><section><h2>八、自愿参与</h2><p>本测评面向成年从业者并遵循自愿原则。您可在任何阶段中止测评，若您未满 18 周岁，请在监护人陪同下进行。</p></section></article><footer><label><input v-model="agreed" type="checkbox"> 我已完整阅读、理解并同意上述全部条款</label><p v-if="!assetsReady && !assetsError" class="asset-state">正在准备本次测评图片，请稍候…</p><p v-else-if="assetsError" class="asset-state asset-state--error">{{ assetsError }} <button type="button" @click="emit('retryAssets')">重新加载</button></p><button class="primary" :disabled="!agreed || !assetsReady" @click="emit('confirm')">确认进入测评</button></footer></section></main></template>
+
+<template>
+  <main class="terminal-shell consent-shell"><section class="consent-card">
+    <header><p class="eyebrow">INFORMED CONSENT</p><h1>心理状态辅助评估</h1><p>请上下滑动阅读全部条款后确认同意。</p><div class="consent-summary"><span v-for="item in MESSAGES.consent.summary" :key="item">{{ item }}</span></div></header>
+    <article class="consent-body">
+      <section><h2>一、测评目的与适用范围</h2><p>本测评通过面部微表情与生理信号采集，对当前心理生理状态进行辅助评估，输出压力负荷、情绪状态、注意与恢复等维度的参考指标。本测评不构成医学或精神障碍诊断。</p></section>
+      <section><h2>二、敏感个人信息处理</h2><p>本测评将处理面部影像（生物识别信息）、姓名及工号，用于微表情和生理信号分析、身份关联与测评记录管理。上述信息属于敏感个人信息，需要取得您的单独同意。</p></section>
+      <section><h2>三、数据采集方式</h2><p>正式测评开始前设有三道操作预训练题。正式测评通过摄像头连续录制约 60 秒面部视频，期间请按自己的节奏完成图题：点击选项后自动进入下一题；未作答时当前题会保留。请保持面部在取景范围内，您可在开始前拒绝或退出。</p></section>
+      <section><h2>四、数据处理与第三方共享</h2><p>视频经加密传输，由合作方心理生理评估算法进行分析，并按固定规则生成后台报告。信息处理遵循最小必要、目的限制原则，未经同意不用于本测评目的之外。</p></section>
+      <section><h2>五、存储与保密</h2><p>评估结果加密存储于受控数据库，仅授权管理人员可查阅。面部视频用于本次分析与必要的受控留存、审计；未经您的书面同意，不向与岗位评估无关的第三方披露。</p></section>
+      <section><h2>六、结果用途与限制</h2><p>本测评结果仅作为心理状态维度的参考数据，严禁直接作为录用、晋升或淘汰的唯一依据。本系统不具备医疗资质，输出结果不构成医学诊断或精神障碍鉴定。</p></section>
+      <section><h2>七、您的权利</h2><p>您享有查阅、复制、更正、补充、删除个人信息及撤回同意的权利；撤回不影响此前基于同意进行的信息处理。您可按管理方公布的方式提出申请。</p></section>
+      <section><h2>八、自愿参与</h2><p>本测评面向成年从业者并遵循自愿原则。您可在任何阶段中止测评，若您未满 18 周岁，请在监护人陪同下进行。</p></section>
+    </article>
+    <footer>
+      <label><input v-model="agreed" type="checkbox"> 我已完整阅读、理解并同意上述全部条款</label>
+      <p v-if="!assetsReady && !assetsError" class="asset-state">
+        {{ MESSAGES.assets.loading }}
+      </p>
+      <p v-else-if="assetsError" class="asset-state asset-state--error">{{ MESSAGES.assets.failedPrefix }}{{ assetsError }} <button type="button" @click="emit('retryAssets')">{{ MESSAGES.assets.retry }}</button></p>
+      <button class="primary" :disabled="!agreed || !assetsReady" @click="emit('confirm')">确认并进入采集准备</button>
+    </footer>
+  </section></main>
+</template>
 
 <style scoped>
-.consent-card{height:min(680px,calc(100vh - 48px));min-height:0}.consent-body{flex:1 1 auto;min-height:0;overflow-y:scroll;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}.consent-body section{margin:0 0 18px}.consent-body section:last-child{padding-bottom:4px}.consent-body h2{margin:0 0 4px}.consent-body p{margin:0}.consent-body::-webkit-scrollbar{width:7px}.consent-body::-webkit-scrollbar-thumb{border-radius:9px;background:#91aaa0}.asset-state{margin:0 0 12px;color:#6e857a;font-size:13px;text-align:center}.asset-state--error{color:#bf5c5c}.asset-state button{margin-left:8px;border:0;background:transparent;color:inherit;text-decoration:underline}
+.consent-card{height:min(680px,calc(100vh - 48px));min-height:0}.consent-body{flex:1 1 auto;min-height:0;overflow-y:scroll;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}.consent-body section{margin:0 0 18px}.consent-body section:last-child{padding-bottom:4px}.consent-body h2{margin:0 0 4px}.consent-body p{margin:0}.consent-body::-webkit-scrollbar{width:7px}.consent-body::-webkit-scrollbar-thumb{border-radius:9px;background:#91aaa0}.asset-state{display:flex;align-items:center;gap:10px;margin:0 0 12px;color:#6e857a;font-size:13px;text-align:left}.asset-state--error{color:#bf5c5c}.asset-state button{margin-left:8px;border:0;background:transparent;color:inherit;text-decoration:underline}.consent-summary{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.consent-summary span{padding:4px 8px;border-radius:999px;background:#edf5f1;color:#426c5b;font-size:11px}
+</style>
+
+
+
+<style scoped>
+/* 连续测评阶段统一舞台色：知情同意 → 采集准备 → 预训练 → 倒计时 → 正式答题。 */
+.consent-shell{background:#8badb1}.consent-shell:before,.consent-shell:after{display:none}
 </style>
