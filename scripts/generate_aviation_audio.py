@@ -21,6 +21,17 @@ from app.core.config import settings  # noqa: E402
 
 DEFAULT_ENDPOINT = "https://dashscope.aliyuncs.com/api/v1/services/audio/tts/SpeechSynthesizer"
 
+GUIDES = {
+    "practice-welcome": {
+        "audio_url": "/static/assets/aviation/audio/practice-welcome.wav",
+        "text": (
+            "欢迎进入 AI视觉心理评估终端。正式测评开始前，我们将先完成三道简短操作体验题。"
+            "请保持自然坐姿，将面部完整置于右上角画面框内。当边框变为绿色，即表示位置合适。"
+            "本体验环节不会录制，不会上传，也不会生成测评结果。"
+        ),
+    },
+}
+
 
 def output_path(audio_url: str) -> Path:
     prefix = "/static/assets/aviation/"
@@ -46,13 +57,16 @@ def find_audio_url(body: dict) -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate five aviation question audio files")
+    parser = argparse.ArgumentParser(description="Generate reusable aviation question audio files")
+    # 使用同一款 CosyVoice v3 女声。旧默认 longanyang 为男声，且题库曾分批
+    # 生成，不能保证现场听感一致。
     parser.add_argument("--model", default="cosyvoice-v3-flash")
-    parser.add_argument("--voice", default="longanyang")
+    parser.add_argument("--voice", default="longanhuan")
     parser.add_argument("--rate", type=float, default=0.92)
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument("--force", action="store_true")
-    parser.add_argument("--only", choices=list("ABCDE"), help="Only generate one question type")
+    parser.add_argument("--only", help="Only generate one question id")
+    parser.add_argument("--guide", choices=sorted(GUIDES), help="Generate one fixed guidance prompt")
     parser.add_argument("--suffix", default="", help="Append a suffix before .mp3 for voice previews")
     args = parser.parse_args()
     if not settings.DASHSCOPE_API_KEY:
@@ -60,8 +74,13 @@ def main() -> None:
 
     content = json.loads((STATIC_ROOT / "content.json").read_text(encoding="utf-8"))
     headers = {"Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}", "Content-Type": "application/json"}
+    items = content["question_types"]
+    if args.guide:
+        guide = GUIDES[args.guide]
+        items = [{"id": args.guide, "audio_url": guide["audio_url"], "question": guide["text"]}]
+
     with httpx.Client(timeout=90, follow_redirects=True) as client:
-        for question_type in content["question_types"]:
+        for question_type in items:
             if args.only and question_type["id"] != args.only:
                 continue
             target = output_path(question_type["audio_url"])
@@ -85,6 +104,11 @@ def main() -> None:
                 },
             }
             response = client.post(args.endpoint, headers=headers, json=payload)
+            if response.is_error:
+                raise RuntimeError(
+                    f"TTS request failed for {question_type['id']}: "
+                    f"HTTP {response.status_code} {response.text[:500]}"
+                )
             response.raise_for_status()
             remote_url = find_audio_url(response.json())
             audio = client.get(remote_url)

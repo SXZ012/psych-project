@@ -38,6 +38,14 @@ class CodecSelectorTest {
     }
 
     @Test
+    fun `返回全部硬件候选供录制器依次尝试`() {
+        val names = CodecSelector.hardwareCandidates(
+            listOf("OMX.rk.video_encoder.avc", "c2.rk.avc.encoder", "c2.android.avc.encoder"),
+        )
+        assertEquals(listOf("OMX.rk.video_encoder.avc", "c2.rk.avc.encoder"), names)
+    }
+
+    @Test
     fun `空候选列表返回null且非硬件`() {
         val c = CodecSelector.select(emptyList())
         assertNull(c.name)

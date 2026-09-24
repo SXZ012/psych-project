@@ -67,47 +67,61 @@ class H264Recorder {
     fun start(outputFile: File, width: Int, height: Int, fps: Int, bitrate: Int = TARGET_BITRATE): StartResult {
         if (codec != null) return StartResult(false, error = "编码器已在运行，拒绝重复 start")
 
-        val choice = CodecSelector.select(availableEncoderNames())
-        if (!choice.isHardware || choice.name == null) {
+        val available = availableEncoderNames()
+        val hardwareCandidates = CodecSelector.hardwareCandidates(available)
+        if (hardwareCandidates.isEmpty()) {
+            val choice = CodecSelector.select(available)
             return StartResult(false, codecName = choice.name, isHardware = false, error = choice.reason)
         }
-        return try {
-            val c = MediaCodec.createByCodecName(choice.name)
-            val fmt = MediaFormat.createVideoFormat(MIME, width, height).apply {
-                setInteger(
-                    MediaFormat.KEY_COLOR_FORMAT,
-                    android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface,
-                )
-                setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
-                setInteger(MediaFormat.KEY_FRAME_RATE, fps)
-                setFloat(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL_SEC)
+
+        val failures = mutableListOf<String>()
+        for (codecName in hardwareCandidates) {
+            var c: MediaCodec? = null
+            var m: MediaMuxer? = null
+            try {
+                val activeCodec = MediaCodec.createByCodecName(codecName)
+                c = activeCodec
+                val fmt = MediaFormat.createVideoFormat(MIME, width, height).apply {
+                    setInteger(
+                        MediaFormat.KEY_COLOR_FORMAT,
+                        android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface,
+                    )
+                    setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
+                    setInteger(MediaFormat.KEY_FRAME_RATE, fps)
+                    setFloat(MediaFormat.KEY_I_FRAME_INTERVAL, IFRAME_INTERVAL_SEC)
+                }
+                activeCodec.configure(fmt, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+                val surface = activeCodec.createInputSurface()
+                activeCodec.start()
+                val activeMuxer = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+                m = activeMuxer
+
+                codec = activeCodec
+                muxer = activeMuxer
+                this.outputFile = outputFile
+                videoTrack = -1
+                stopping.set(false)
+                muxerStarted.set(false)
+                sawEos.set(false)
+                drainError.set(null)
+                startedAtMs = System.currentTimeMillis()
+                drainDone.set(CountDownLatch(1))
+                startDrain(activeCodec, activeMuxer)
+
+                return StartResult(ok = true, inputSurface = surface, codecName = codecName, isHardware = true)
+            } catch (e: Exception) {
+                runCatching { c?.stop() }
+                runCatching { c?.release() }
+                runCatching { m?.release() }
+                failures += "$codecName: ${e.message ?: e.javaClass.simpleName}"
             }
-            c.configure(fmt, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-            val surface = c.createInputSurface()
-            c.start()
-            val m = MediaMuxer(outputFile.absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-
-            codec = c
-            muxer = m
-            this.outputFile = outputFile
-            videoTrack = -1
-            stopping.set(false)
-            muxerStarted.set(false)
-            sawEos.set(false)
-            drainError.set(null)
-            startedAtMs = System.currentTimeMillis()
-            drainDone.set(CountDownLatch(1))
-            startDrain(c, m)
-
-            StartResult(ok = true, inputSurface = surface, codecName = choice.name, isHardware = true)
-        } catch (e: Exception) {
-            runCatching { codec?.stop() }
-            runCatching { codec?.release() }
-            runCatching { muxer?.release() }
-            codec = null
-            muxer = null
-            StartResult(false, codecName = choice.name, isHardware = false, error = "编码器启动失败: ${e.message}")
         }
+        return StartResult(
+            false,
+            codecName = hardwareCandidates.first(),
+            isHardware = false,
+            error = "硬件编码器均无法初始化：${failures.joinToString("；")}",
+        )
     }
 
     private fun startDrain(c: MediaCodec, m: MediaMuxer) {

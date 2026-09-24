@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 深色湖绿背景与登录页视觉一致，消白屏突兀感 -->
+    <!-- 与终端首页一致的深蓝绿启动背景，消除启动页与网页首屏的跳变。 -->
     <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@drawable/launch_background</item>
-        <item name="android:statusBarColor">#E8F0ED</item>
-        <item name="android:navigationBarColor">#E8F0ED</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#10243D</item>
+        <item name="android:navigationBarColor">#10243D</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

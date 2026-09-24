@@ -15,10 +15,17 @@ object CodecSelector {
 
     data class CodecChoice(val name: String?, val isHardware: Boolean, val reason: String)
 
+    /**
+     * 返回全部候选硬件编码器，按系统枚举顺序尝试。
+     * 部分 RK3568 固件会同时暴露 OMX 与 c2 编码器，其中任一项都可能因驱动状态
+     * 无法初始化，因此调用方不能在第一个候选失败后直接放弃。
+     */
+    fun hardwareCandidates(candidates: List<String>): List<String> = candidates.filter { name ->
+        SOFTWARE_MARKERS.none { marker -> name.contains(marker, ignoreCase = true) }
+    }
+
     fun select(candidates: List<String>): CodecChoice {
-        val hw = candidates.firstOrNull { name ->
-            SOFTWARE_MARKERS.none { name.contains(it, ignoreCase = true) }
-        }
+        val hw = hardwareCandidates(candidates).firstOrNull()
         if (hw != null) return CodecChoice(hw, true, "已选择硬件 AVC 编码器：$hw")
 
         val sw = candidates.firstOrNull()

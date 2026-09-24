@@ -5,6 +5,11 @@
 - `v3.2_api_integration_guide.md` — 合作方 V3.2 算法对接指南（当前对接版本）
 - `v3.2_report_sample.html` — V3.2 五页报告静态样例
 
+## 场景文档
+
+- `aviation-architecture.md` — 航空测评流程架构（自定节奏 v1）：控制器职责、
+  后端契约变更、视觉协作者接手入口、验证结果与待真机验证清单。
+
 ## 当前联调结论
 
 - 真实 V3 已完成独立联调：视频上传、`start-task`、轮询、`result` 与 `timeline` 下载均已验证；

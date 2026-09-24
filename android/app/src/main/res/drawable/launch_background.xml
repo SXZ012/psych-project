@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <color android:color="#E8F0ED" />
-    </item>
-    <item>
-        <bitmap
-            android:gravity="fill"
-            android:src="@drawable/login_wellbeing_lake" />
-    </item>
-</layer-list>
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <!-- 原生启动页与首页共用深蓝绿基调，避免绿色图片闪现。 -->
+    <gradient
+        android:angle="315"
+        android:startColor="#28516D"
+        android:centerColor="#173750"
+        android:endColor="#10243D" />
+</shape>

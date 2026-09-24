@@ -23,6 +23,8 @@ import com.psych.terminal.hw.CameraEngine
 class DebugSettingsActivity : Activity() {
 
     private lateinit var urlInput: EditText
+    private lateinit var deviceIdInput: EditText
+    private lateinit var deviceTokenInput: EditText
     private lateinit var cameraGroup: RadioGroup
     private var candidates = mutableListOf<com.psych.terminal.core.CameraCandidate>()
 
@@ -64,6 +66,37 @@ class DebugSettingsActivity : Activity() {
             }
         }
         root.addView(saveUrl)
+
+        root.addView(text("", 10f))
+        root.addView(text("设备场景绑定", 14f))
+
+        deviceIdInput = EditText(this).apply {
+            hint = "例：community-dev-01（留空表示不绑定）"
+            setText(AppSettings.getDeviceId(this@DebugSettingsActivity) ?: "")
+        }
+        root.addView(deviceIdInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        deviceTokenInput = EditText(this).apply {
+            hint = "设备密钥（后端未配置密钥校验时可留空）"
+            setText(AppSettings.getDeviceToken(this@DebugSettingsActivity) ?: "")
+        }
+        root.addView(deviceTokenInput, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        root.addView(
+            text(
+                "绑定后由后端按设备配置进入航空或社区场景；留空保持现有航空终端行为，" +
+                    "场景以后端为准，终端无法自行指定。绑定信息仅在启动时一次性传给页面。",
+                12f,
+            ),
+        )
+
+        val saveDevice = Button(this).apply {
+            text = "保存设备绑定"
+            setOnClickListener {
+                AppSettings.setDeviceId(this@DebugSettingsActivity, deviceIdInput.text.toString())
+                AppSettings.setDeviceToken(this@DebugSettingsActivity, deviceTokenInput.text.toString())
+                Toast.makeText(this@DebugSettingsActivity, "设备绑定已保存，重启终端后生效", Toast.LENGTH_LONG).show()
+            }
+        }
+        root.addView(saveDevice)
 
         root.addView(text("", 10f))
         root.addView(text("摄像头选择（RGB 彩色优先，避免误选 IR 灰度）", 14f))

@@ -2,6 +2,7 @@ package com.psych.terminal.bridge
 
 import android.content.Context
 import android.net.Uri
+import android.speech.tts.TextToSpeech
 import android.webkit.JavascriptInterface
 import android.view.Surface
 import com.psych.terminal.AppSettings
@@ -15,6 +16,7 @@ import com.psych.terminal.net.AssessmentUploader
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -46,6 +48,8 @@ class AndroidCameraBridge(
     enum class State { IDLE, PREVIEWING, RECORDING, STOPPING, READY, UPLOADING, UPLOADED }
 
     private val state = AtomicReference(State.IDLE)
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
 
     // 选择结果缓存
     private var candidates: List<CameraCandidate> = emptyList()
@@ -66,6 +70,10 @@ class AndroidCameraBridge(
     private var pendingPreviewCb: String? = null
 
     init {
+        tts = TextToSpeech(context.applicationContext) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            if (ttsReady) tts?.language = Locale.SIMPLIFIED_CHINESE
+        }
         faceAnalyzer.listener = object : NativeFaceAnalyzer.Listener {
             override fun onResult(result: NativeFaceAnalyzer.Result) {
                 val json = JSONObject()
@@ -227,6 +235,21 @@ class AndroidCameraBridge(
         fire(callback, JSONObject().put("ok", true))
     }
 
+    /**
+     * 社区流程在录制封存后立即关闭摄像头，但仍需保留 READY 状态和待上传 MP4。
+     * 不能复用 stopPreview()：后者会将状态复位为 IDLE，从而导致 submitAssessment 被拒绝。
+     */
+    @JavascriptInterface
+    fun releasePreviewForUpload(callback: String) {
+        if (!guard(callback)) return
+        if (state.get() != State.READY) {
+            fire(callback, err("当前状态 ${state.get()} 不允许关闭预览后上传（需先完成 stopRecording）"))
+            return
+        }
+        engine.release()
+        fire(callback, JSONObject().put("ok", true))
+    }
+
     // ================== 录制 ==================
 
     @JavascriptInterface
@@ -355,7 +378,9 @@ class AndroidCameraBridge(
             return
         }
         val name = payload.optString("name", "").trim()
-        if (name.isEmpty()) {
+        val sessionId = payload.optString("session_id", "").trim()
+        // 社区提交允许匿名：姓名由后端从支付用户推导；航空提交仍必须携带姓名
+        if (name.isEmpty() && sessionId.isEmpty()) {
             state.set(State.READY)
             fire(callback, err("payload.name 不能为空（后端必填）"))
             return
@@ -363,6 +388,19 @@ class AndroidCameraBridge(
         val idCard = payload.optString("id_card", "")
         val selections = payload.optJSONArray("selections") ?: JSONArray()
         val duration = payload.optInt("duration_seconds", 60)
+        val effectiveDuration = payload.optInt("effective_duration_seconds", 0)
+        val pausedCount = payload.optInt("paused_count", 0)
+        val selfReportJson = payload.optJSONObject("self_report")?.toString()
+        // 终端登录页四项（v4 起采集；旧页面不传即为空，不影响既有请求）
+        val subjectId = payload.optString("subject_id", "").trim()
+        val gender = payload.optString("gender", "").trim()
+        val age = payload.optInt("age", 0).takeIf { it > 0 }?.toString().orEmpty()
+        // 幂等令牌 + 采集协议审计（自定节奏调度升级；旧页面不传即为空）
+        val clientToken = payload.optString("client_token", "").trim()
+        val protocolVersion = payload.optString("protocol_version", "").trim()
+        val timelineVersion = payload.optString("question_protocol_version", payload.optString("timeline_version", "")).trim()
+        val contentVersion = payload.optString("content_version", "").trim()
+        val schedulingNotesJson = payload.optJSONArray("scheduling_notes")?.toString()
 
         Thread {
             val r = AssessmentUploader.submit(
@@ -371,7 +409,19 @@ class AndroidCameraBridge(
                 idCard = idCard,
                 selectionsJson = selections.toString(),
                 durationSeconds = duration,
+                effectiveDurationSeconds = effectiveDuration,
+                pausedCount = pausedCount,
                 videoFile = file,
+                sessionId = sessionId.takeIf { it.isNotEmpty() },
+                selfReportJson = selfReportJson,
+                subjectId = subjectId.takeIf { it.isNotEmpty() },
+                gender = gender.takeIf { it.isNotEmpty() },
+                age = age.takeIf { it.isNotEmpty() },
+                clientToken = clientToken.takeIf { it.isNotEmpty() },
+                protocolVersion = protocolVersion.takeIf { it.isNotEmpty() },
+                timelineVersion = timelineVersion.takeIf { it.isNotEmpty() },
+                contentVersion = contentVersion.takeIf { it.isNotEmpty() },
+                schedulingNotesJson = schedulingNotesJson,
             )
             if (r.ok) {
                 uploadedId = r.assessmentId
@@ -383,11 +433,17 @@ class AndroidCameraBridge(
                     JSONObject()
                         .put("ok", true)
                         .put("assessment_id", r.assessmentId ?: "")
+                        .put("access_code", r.accessCode ?: "")
                         .put("httpCode", r.httpCode)
                 }
             } else {
                 lastError = r.error
-                state.set(State.READY) // 文件保留，可重试
+                // 服务端已经明确判定质量不合格时，旧文件不应保留或允许重复提交。
+                if (r.error?.contains("VideoQAFailed") == true) {
+                    runCatching { file.delete() }
+                    pendingFile = null
+                }
+                state.set(State.READY) // 网络失败保留文件可重试；质量失败已清理，需重新采集
                 postResult(callback) {
                     JSONObject()
                         .put("ok", false)
@@ -416,7 +472,14 @@ class AndroidCameraBridge(
         previewGuideSetter(if (status in setOf("ok", "warning", "error")) status else "warning")
     }
 
-    // ================== 音频接口：仅预留，本轮不实现 ==================
+    // ================== 音频提示 ==================
+
+    @JavascriptInterface
+    fun speakPrompt(text: String): String {
+        if (!ttsReady || text.isBlank()) return JSONObject().put("ok", false).toString()
+        tts?.speak(text.take(80), TextToSpeech.QUEUE_FLUSH, null, "quality-prompt")
+        return JSONObject().put("ok", true).toString()
+    }
 
     @JavascriptInterface
     fun playIntroAudio(): String = audioNotConfigured()
@@ -425,7 +488,10 @@ class AndroidCameraBridge(
     fun playOutroAudio(): String = audioNotConfigured()
 
     @JavascriptInterface
-    fun stopPromptAudio(): String = audioNotConfigured()
+    fun stopPromptAudio(): String {
+        tts?.stop()
+        return JSONObject().put("ok", true).toString()
+    }
 
     private fun audioNotConfigured(): String = JSONObject()
         .put("status", "not_configured")
@@ -452,6 +518,7 @@ class AndroidCameraBridge(
 
     fun release() {
         engine.release()
+        tts?.stop(); tts?.shutdown(); tts = null; ttsReady = false
         state.set(State.IDLE)
     }
 

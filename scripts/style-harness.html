@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>cascade harness</title>
+<style id="probe-freeze"></style>
+<style id="page-css"></style>
+</head>
+<body>
+<div id="root">
+
+  <!-- ============ 首页 ============ -->
+  <main class="hub hub--home" data-page="home">
+    <section class="hub-main">
+      <header class="hub-top">
+        <div><h1>今天，也关心一下自己的状态</h1><p>选择一项服务开始体验</p></div>
+        <span class="hub-status"><i></i>设备服务正常</span>
+      </header>
+      <div class="home-grid">
+        <article class="primary-card card-green">
+          <div class="primary-copy">
+            <span class="tag">核心服务</span>
+            <h2>心理状态辅助测评</h2>
+            <p>通过约 60 秒非接触采集，辅助了解近期心理状态。</p>
+            <ul><li>全程约 4 分钟</li><li>无需佩戴设备</li><li>手机查看 PDF 报告</li></ul>
+          </div>
+          <button>开始测评</button>
+          <div class="hero-art"><span></span><img alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" /></div>
+        </article>
+        <article class="report-card card-blue">
+          <span class="tag">个人报告</span>
+          <h2>查看我的报告</h2>
+          <p>使用手机身份或报告编号，查看结果并下载 PDF。</p>
+          <div class="report-preview"><i></i><i></i><i></i><span><b></b><b></b><b></b></span></div>
+          <button>查看报告 <b>→</b></button>
+        </article>
+        <section class="tools">
+          <header><h2>日常心理工具</h2><span>按需要选择</span></header>
+          <div class="tool-row">
+            <button class="tool-card peach"><i>◌</i><span><b>情绪放松</b><small>呼吸 · 自然声音</small></span><em>→</em></button>
+            <button class="tool-card violet"><i>✓</i><span><b>心理自测</b><small>PHQ-4 · GAD-7 · PHQ-9 等标准量表</small></span><em>→</em></button>
+            <button class="tool-card yellow"><i>◇</i><span><b>官方科普</b><small>科普文章 · 国家平台课程</small></span><em>→</em></button>
+          </div>
+        </section>
+        <button class="help-strip"><span><b>社区心理服务与求助</b><small>查看咨询预约、12356 心理援助和紧急求助指引</small></span><em>查看支持方式 →</em></button>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 情绪放松（当前线上的入口页） ============ -->
+  <main class="hub hub--feature hub--relax" data-page="relax">
+    <section class="hub-main">
+      <header class="hub-top">
+        <button class="feature-back">← 返回服务首页</button>
+        <div><h1>情绪放松</h1><p>上午好，今天也照顾一下自己</p></div>
+        <span class="hub-status"><i></i>设备服务正常</span>
+      </header>
+      <div class="relax-page">
+        <div class="relax-cards">
+          <button class="relax-hero">
+            <span class="relax-hero__tag">今日推荐</span>
+            <span class="relax-hero__ring"><i></i><i></i><i></i><b></b></span>
+            <b class="relax-hero__title">平稳呼吸</b>
+            <small class="relax-hero__desc">跟着节奏，吸气 4 秒 · 呼气 6 秒</small>
+            <em class="relax-hero__cta">开始练习 · 1 分钟</em>
+          </button>
+          <div class="relax-side">
+            <button class="relax-side-card relax-side-card--sound">
+              <span class="relax-side-card__icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none"><path d="M8 15v6" stroke="#47809F" stroke-width="2.5" stroke-linecap="round" /></svg></span>
+              <span class="relax-side-card__copy"><b>自然风声</b><small>听一会儿轻柔风声，让注意力休息 · 3 分钟</small></span>
+              <span class="relax-side-card__play"><svg viewBox="0 0 20 20" width="20" height="20"><path d="M7 4.5l9 5.5-9 5.5z" fill="#47809F" /></svg></span>
+            </button>
+            <button class="relax-side-card relax-side-card--stretch">
+              <span class="relax-side-card__icon"><svg viewBox="0 0 36 36" width="36" height="36" fill="none"><path d="M18 7v22" stroke="#C08F3E" stroke-width="2.5" stroke-linecap="round" /></svg></span>
+              <span class="relax-side-card__copy"><b>肩颈舒展</b><small>用几个轻缓动作松开久坐后的紧绷 · 2 分钟</small></span>
+              <span class="relax-side-card__play"><svg viewBox="0 0 20 20" width="20" height="20"><path d="M7 4.5l9 5.5-9 5.5z" fill="#C08F3E" /></svg></span>
+            </button>
+          </div>
+        </div>
+        <div class="relax-record">
+          <b>本周已练习 3 次 · 累计 12 分钟</b>
+          <span class="relax-record__dots"><i class="done"></i><i class="done"></i><i class="done"></i><i></i><i></i><i></i><i></i></span>
+          <small>练习不录像、不影响测评结果</small>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 心理自测 ============ -->
+  <main class="hub hub--feature hub--self" data-page="self">
+    <section class="hub-main">
+      <header class="hub-top">
+        <button class="feature-back">← 返回服务首页</button>
+        <div><h1>心理自测</h1><p>使用公开的标准筛查量表了解近期状态，结果不等于诊断。</p></div>
+        <span class="hub-status"><i></i>设备服务正常</span>
+      </header>
+      <div class="self-page">
+        <article class="self-recommend-bar">
+          <div><span>推荐</span><h2>PHQ-4 情绪快速筛查</h2></div>
+          <p>同时了解焦虑与抑郁方向</p>
+          <div class="recommend-pills"><b>4题</b><b>约1分钟</b></div>
+          <button>开始　→</button>
+        </article>
+        <section class="self-library">
+          <header>
+            <div><h3>你想了解哪一方面？</h3><p>选择方向后，再选择快速筛查或完整筛查</p></div>
+            <button class="all-scales-link">查看全部 9 份量表</button>
+          </header>
+          <nav class="self-filters">
+            <button class="active">综合状态</button><button>焦虑</button><button>抑郁</button>
+            <button>躯体感受</button><button>生活习惯</button><button>老年关怀</button>
+          </nav>
+          <div class="self-category-title"><span>综合状态</span><p>适合第一次了解整体状态</p></div>
+          <div class="self-cards">
+            <article class="self-card self-card--teal">
+              <div class="scale-copy"><h3>PHQ-4 情绪筛查</h3><p>快速了解焦虑与抑郁两个方向</p><small>4 题 · 约 1 分钟</small></div>
+              <button>开始测评　→</button>
+            </article>
+            <article class="self-card self-card--teal">
+              <div class="scale-copy"><h3>K6 心理困扰筛查</h3><p>了解整体心理困扰程度</p><small>6 题 · 约 1 分钟</small></div>
+              <button>开始测评　→</button>
+            </article>
+          </div>
+        </section>
+      </div>
+      <div class="scale-catalog">
+        <section>
+          <header><div><span>量表目录</span><h2>全部 9 份心理自测</h2></div><button>×</button></header>
+          <div>
+            <button class="catalog-card catalog-card--teal"><div><b>PHQ-4 情绪筛查</b><p>快速了解焦虑与抑郁两个方向</p><small>综合状态 · 4 题</small></div><em>开始测评　→</em></button>
+            <button class="catalog-card catalog-card--blue"><div><b>GAD-2 焦虑快筛</b><p>两题快速了解焦虑方向</p><small>焦虑 · 2 题</small></div><em>开始测评　→</em></button>
+          </div>
+          <footer>所有结果仅作为状态筛查线索，不构成医学诊断。</footer>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 官方科普 ============ -->
+  <main class="hub hub--feature hub--knowledge" data-page="knowledge">
+    <section class="hub-main">
+      <header class="hub-top">
+        <button class="feature-back">← 返回服务首页</button>
+        <div><h1>官方科普与课程</h1><p>内容来自政府部门和国家公共教育平台，手机扫码查看官方原文。</p></div>
+        <span class="hub-status"><i></i>设备服务正常</span>
+      </header>
+      <div class="knowledge-page">
+        <section class="article-shelf article-shelf--simple">
+          <article class="article-lead" style="--article-image:url(data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7)">
+            <div class="article-photo"></div>
+            <div class="article-copy">
+              <span>心理健康基础知识</span><h2>心理健康素养十条</h2>
+              <p>了解身心健康、运动、睡眠、主动求助和科学缓解压力等核心知识。</p>
+              <small>国家卫生健康委发布 · 政府网站转载</small>
+              <button>阅读内容　→</button>
+            </div>
+          </article>
+          <div class="article-note"><b>沉浸式科普阅读</b><p>内容已整理到终端，可直接阅读核心知识与行动建议，无需等待视频或在线页面加载。</p></div>
+        </section>
+        <aside class="topic-list">
+          <h3>官方内容</h3>
+          <div class="kind-switch">
+            <button class="active"><span>健康科普</span><em>卫健系统</em></button>
+            <button><span>在线课程</span><em>国家智慧教育平台</em></button>
+            <button><span>求助指南</span><em>12356 等官方服务</em></button>
+          </div>
+          <div class="resource-list">
+            <button class="active"><b>心理健康素养十条</b><small>心理健康基础知识</small></button>
+            <button><b>健康中国行动：心理健康促进行动</b><small>国家行动指南</small></button>
+          </div>
+          <div class="source-note"><b>来源说明</b><p>内容依据政府部门和国家公共教育平台资料整理，可直接在终端阅读，原文入口作为补充。</p></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 沉浸式阅读 ============ -->
+  <main class="hub hub--feature hub--knowledge" data-page="reader">
+    <section class="immersive-reader">
+      <header>
+        <button>← 返回科普列表</button>
+        <div><span>心理健康基础知识</span><h1>心理健康素养十条</h1></div>
+        <small>国家卫生健康委发布 · 政府网站转载</small>
+      </header>
+      <div class="reader-layout">
+        <aside>
+          <b>本篇目录</b>
+          <a href="#overview">内容简介</a><a href="#points">先看重点</a>
+          <a href="#detail-0">心理健康不只是“没有心理疾病”</a>
+          <a href="#action">行动建议</a>
+          <button>查看官方原文</button>
+        </aside>
+        <article>
+          <section id="overview" class="reader-hero" style="--reader-image:url(data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7)">
+            <div><span>官方健康科普</span><h2>心理健康素养十条</h2><p>了解身心健康、运动、睡眠、主动求助和科学缓解压力等核心知识。</p></div>
+          </section>
+          <section id="points" class="reader-section">
+            <span>阅读提示</span><h2>先看重点，再了解具体方法</h2>
+            <div class="reader-points"><p><i>1</i>心理健康是整体健康的重要组成部分。</p><p><i>2</i>适量运动有助于情绪健康。</p></div>
+          </section>
+          <section id="detail-0" class="reader-section reader-prose">
+            <span>01 · 专题内容</span><h2>心理健康不只是“没有心理疾病”</h2>
+            <p>心理健康是人在认知、情绪、行为和社会适应方面保持相对良好状态的能力。</p>
+            <ul><li>尽量保持相对固定的入睡和起床时间。</li><li>选择能够长期坚持的运动。</li></ul>
+          </section>
+          <section id="action" class="reader-section">
+            <span>行动清单</span><h2>今天可以怎么做</h2>
+            <div class="reader-action">今天可以从规律作息、适量活动开始。</div>
+          </section>
+          <footer>本文依据公开的官方健康资料整理，用于健康教育，不替代专业诊疗。</footer>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 寻求帮助 ============ -->
+  <main class="hub hub--feature hub--help" data-page="help">
+    <section class="hub-main">
+      <header class="hub-top">
+        <button class="feature-back">← 返回服务首页</button>
+        <div><h1>寻求帮助</h1><p>选择社区咨询预约，或查看全国统一心理援助热线。</p></div>
+        <span class="hub-status"><i></i>设备服务正常</span>
+      </header>
+      <div class="help-page">
+        <section class="support-simple">
+          <div class="support-actions">
+            <button class="support-action support-action--appointment"><i>约</i><span><b>社区咨询预约</b><small>登记服务意向和方便时间</small></span><em>进入预约 →</em></button>
+            <button class="support-action support-action--hotline"><i>电</i><span><b>心理援助热线</b><small>全国统一心理援助服务</small></span><strong>12356</strong><em>查看热线 →</em></button>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+</div>
+
+<script>
+window.__setCss = function (css) {
+  document.getElementById('page-css').textContent = css;
+};
+window.__freeze = function (on) {
+  document.getElementById('probe-freeze').textContent = on
+    ? '*,*::before,*::after{animation:none!important;transition:none!important}'
+    : '';
+};
+
+function label(el) {
+  const cls = (el.className && typeof el.className === 'string')
+    ? '.' + el.className.trim().split(/\s+/).join('.')
+    : '';
+  const parent = el.parentElement;
+  let idx = 0;
+  if (parent) {
+    for (const c of parent.children) { if (c === el) break; idx++; }
+  }
+  const page = el.closest('[data-page]');
+  return `${page ? '@' + page.dataset.page + ' ' : ''}${el.tagName.toLowerCase()}${cls}#${idx}`;
+}
+
+function snap(withRect) {
+  const res = [];
+  for (const el of document.querySelectorAll('*')) {
+    const cs = getComputedStyle(el);
+    const parts = [];
+    for (let i = 0; i < cs.length; i++) {
+      const p = cs[i];
+      parts.push(p + '=' + cs.getPropertyValue(p));
+    }
+    const rec = { sel: label(el), props: parts.sort().join(';') };
+    let noisy = cs.animationName && cs.animationName !== 'none';
+    for (const pe of ['::before', '::after']) {
+      const s = getComputedStyle(el, pe);
+      if (s.animationName && s.animationName !== 'none') noisy = true;
+      rec[pe] = [
+        s.content, s.display, s.position, s.width, s.height,
+        s.backgroundColor, s.backgroundImage.slice(0, 60),
+        s.borderRadius, s.borderTopWidth, s.transform, s.opacity, s.zIndex, s.animationName
+      ].join('|');
+    }
+    rec.noisy = noisy;
+    if (withRect) {
+      const r = el.getBoundingClientRect();
+      rec.rect = [r.x, r.y, r.width, r.height].map(v => Math.round(v * 100) / 100).join(',');
+    }
+    res.push(rec);
+  }
+  return res;
+}
+window.__snapProps = () => JSON.stringify(snap(false));
+window.__snapRect = () => JSON.stringify(snap(true));
+</script>
+</body>
+</html>

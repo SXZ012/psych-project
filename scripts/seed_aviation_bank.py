@@ -38,30 +38,37 @@ async def main() -> None:
     content = json.loads((STATIC_ROOT / "content.json").read_text(encoding="utf-8"))
     sources = json.loads((STATIC_ROOT / "sources.json").read_text(encoding="utf-8"))
     provenance = {item["file"]: item for item in sources["assets"]}
-    image_files = [filename for item in content["question_types"] for filename in item["images"]]
-    if len(image_files) != 20 or len(set(image_files)) != 20:
-        raise ValueError("航空题库必须包含 20 张不重复图片")
-
-    oss = OSSClient()
-    uploaded: dict[str, tuple[str, str]] = {}
-    for filename in image_files:
-        path = STATIC_ROOT / filename
-        if not path.is_file():
-            raise FileNotFoundError(path)
-        key = f"{AVIATION_PREFIX}/{filename}"
-        url = oss.upload_file(path, key, "image/jpeg")
-        # 写入成功后再读取元信息，确认对象可被 OSS 正常识别。
-        oss._ensure().get_object_meta(key)
-        uploaded[filename] = (key, url)
-
     await ensure_schema()
     installed = 0
     obsolete_oss_keys: list[str] = []
     async with AsyncSessionLocal() as db:
         existing = (await db.execute(select(Image))).scalars().all()
         by_key = {image.oss_key: image for image in existing}
+        image_files = [filename for item in content["question_types"] for filename in item["images"]]
+        # 一张情境图可配多道不同观察题；题目本身必须独立，图片无需机械地一题一图。
+        if len(content["question_types"]) < 40:
+            raise ValueError("航空题库至少需要 40 道题（当前 %d）" % len(content["question_types"]))
+
+        oss = OSSClient()
+        uploaded: dict[str, tuple[str, str]] = {}
+        for filename in dict.fromkeys(image_files):
+            key = f"{AVIATION_PREFIX}/{filename}"
+            path = STATIC_ROOT / filename
+            if path.is_file():
+                url = oss.upload_file(path, key, "image/jpeg")
+                oss._ensure().get_object_meta(key)
+            elif key in by_key:
+                # 已发布的图片无需留一份本地副本；直接复用已验证的 OSS 对象。
+                url = by_key[key].url
+            else:
+                raise FileNotFoundError(path)
+            uploaded[filename] = (key, url)
+
         new_keys = {key for key, _ in uploaded.values()}
         local_keys = {f"local/aviation/{filename}" for filename in image_files}
+
+        # 仅替换航空场景的题目记录，社区题库保持完全隔离。图片可被多题复用。
+        await db.execute(delete(Pair).where(Pair.scene == "aviation"))
 
         for question_type in content["question_types"]:
             for filename in question_type["images"]:
@@ -71,13 +78,13 @@ async def main() -> None:
                     image = Image(oss_key=key, url=url, category=question_type["id"])
                     db.add(image)
                     await db.flush()
+                    by_key[key] = image
                 else:
                     image.oss_key = key
                     image.url = url
                 image.active = True
-                image.category = question_type["id"]
+                image.category = "aviation"
                 source = provenance[filename]
-                await db.execute(delete(Pair).where(Pair.image_id == image.id))
                 db.add(
                     Pair(
                         image_id=image.id,
@@ -98,9 +105,11 @@ async def main() -> None:
         for image in existing:
             if image.oss_key in new_keys or image.oss_key in local_keys:
                 continue
+            # 只清理旧的通用题库(images/ 前缀)；社区等其他场景的题库
+            # (image-bank/community/...)由各自种子脚本管理，这里不得删除。
             if image.oss_key.startswith("images/"):
                 obsolete_oss_keys.append(image.oss_key)
-            await db.delete(image)
+                await db.delete(image)
         await db.commit()
 
     for key in obsolete_oss_keys:

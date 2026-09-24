@@ -10,6 +10,7 @@ import android.graphics.Paint
 import android.graphics.SurfaceTexture
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.AttributeSet
@@ -22,6 +23,7 @@ import android.view.WindowManager
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceError
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -50,6 +52,21 @@ class MainActivity : Activity() {
     private lateinit var faceAnalyzer: NativeFaceAnalyzer
     private lateinit var bridge: AndroidCameraBridge
     private var splashOverlay: android.widget.FrameLayout? = null
+    private var splashMessage: android.widget.TextView? = null
+    private val launchHandler = Handler(Looper.getMainLooper())
+    private var pageReady = false
+    private var launchRetried = false
+    private val launchWatchdog = Runnable {
+        if (pageReady) return@Runnable
+        if (!launchRetried) {
+            launchRetried = true
+            setSplashMessage("加载较慢，正在自动重试…")
+            loadEntry()
+        } else {
+            // 不再无限转圈：保留原生页并给出可操作提示，避免用户误以为系统仍在正常加载。
+            setSplashMessage("页面暂未加载，请检查网络后重新打开终端")
+        }
+    }
 
     private var previewSurface: Surface? = null
 
@@ -79,11 +96,12 @@ class MainActivity : Activity() {
 
     private fun buildUi() {
         root = FrameLayout(this).apply {
-            setBackgroundColor(0xFFE8F0ED.toInt())
+            // 与采集准备页一致的浅雾青底色，避免原生层在首帧或预览切换时露出黑边。
+            setBackgroundColor(0xFF8BADB1.toInt())
         }
 
         webView = WebView(this).apply {
-            setBackgroundColor(0xFFE8F0ED.toInt())
+            setBackgroundColor(0xFF8BADB1.toInt())
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = false
@@ -93,6 +111,13 @@ class MainActivity : Activity() {
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
                     false // 站内跳转一律内部加载
+
+                override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                    super.onReceivedError(view, request, error)
+                    if (request.isForMainFrame && !pageReady) {
+                        setSplashMessage("网络连接异常，正在自动重试…")
+                    }
+                }
 
                 // 不在 onPageCommitVisible/onPageFinished 移除启动层：这两个回调可能
                 // 早于 Vue 的首帧绘制，偶发露出 WebView 的黑色合成帧。由页面挂载后
@@ -106,7 +131,8 @@ class MainActivity : Activity() {
             clipChildren = true
             clipToOutline = true
             background = GradientDrawable().apply {
-                setColor(Color.BLACK)
+                // TextureView 尚未出第一帧时也保持与页面融合，不能使用黑色占位。
+                setColor(0xFF7FA3A8.toInt())
                 cornerRadius = 24f * resources.displayMetrics.density
             }
         }
@@ -164,19 +190,20 @@ class MainActivity : Activity() {
         splashOverlay = android.widget.FrameLayout(this).apply {
             background = getDrawable(R.drawable.launch_background)
             val titleView = android.widget.TextView(this@MainActivity).apply {
-                text = "心理健康测评系统"
+                text = "AI视觉心理评估终端"
                 textSize = 22f
-                setTextColor(0xFF24483B.toInt())
+                setTextColor(0xFFF0FAFF.toInt())
                 typeface = android.graphics.Typeface.create(android.graphics.Typeface.SERIF, android.graphics.Typeface.BOLD)
                 gravity = Gravity.CENTER
             }
             val sub = android.widget.TextView(this@MainActivity).apply {
                 text = "正在加载…"
                 textSize = 14f
-                setTextColor(0xFF6C8B7D.toInt())
+                setTextColor(0xFFB8D2E1.toInt())
                 gravity = Gravity.CENTER
                 setPadding(0, 90, 0, 0)
             }
+            splashMessage = sub
             val col = android.widget.LinearLayout(this@MainActivity).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
@@ -317,7 +344,24 @@ class MainActivity : Activity() {
             return
         }
         // 正式测评入口：模块化 Vue 前端直接挂载在 /login/。
-        webView.loadUrl(v.normalized + "/login/")
+        // 绑定了设备编号时一次性通过 URL 传给页面（页面消费后写入本地并从地址栏清除）；
+        // 未绑定的存量航空设备不带参数，页面保持航空终端行为。
+        val entry = StringBuilder(v.normalized).append("/login/")
+        val deviceId = AppSettings.getDeviceId(this)
+        if (!deviceId.isNullOrBlank()) {
+            entry.append("?device_id=").append(android.net.Uri.encode(deviceId))
+            val deviceToken = AppSettings.getDeviceToken(this)
+            if (!deviceToken.isNullOrBlank()) {
+                entry.append("&device_token=").append(android.net.Uri.encode(deviceToken))
+            }
+        }
+        webView.loadUrl(entry.toString())
+        launchHandler.removeCallbacks(launchWatchdog)
+        launchHandler.postDelayed(launchWatchdog, if (launchRetried) 10_000L else 8_000L)
+    }
+
+    private fun setSplashMessage(message: String) {
+        runOnUiThread { splashMessage?.text = message }
     }
 
     /**
@@ -330,6 +374,8 @@ class MainActivity : Activity() {
         splash.visibility = View.GONE
         root.removeView(splash)
         splashOverlay = null
+        pageReady = true
+        launchHandler.removeCallbacks(launchWatchdog)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -365,6 +411,7 @@ class MainActivity : Activity() {
     }
 
     override fun onDestroy() {
+        launchHandler.removeCallbacks(launchWatchdog)
         bridge.release()
         faceAnalyzer.close()
         webView.destroy()

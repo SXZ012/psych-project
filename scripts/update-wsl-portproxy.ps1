@@ -1,6 +1,9 @@
 param(
     [int]$Port = 8000,
-    [switch]$InstallStartupTask
+    [switch]$InstallStartupTask,
+    # Also refresh the LAN (0.0.0.0) rule so APK terminals on the local
+    # network can reach the backend. Pass -LoopbackOnly to skip it.
+    [switch]$LoopbackOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,6 +22,9 @@ if (-not $isAdministrator) {
     )
     if ($InstallStartupTask) {
         $arguments += "-InstallStartupTask"
+    }
+    if ($LoopbackOnly) {
+        $arguments += "-LoopbackOnly"
     }
 
     Start-Process powershell.exe -Verb RunAs -ArgumentList $arguments
@@ -44,6 +50,22 @@ if (-not [Net.IPAddress]::TryParse($wslAddress, [ref]$parsedAddress)) {
 
 if ($LASTEXITCODE -ne 0) {
     throw "Failed to create the Windows-to-WSL port forwarding rule."
+}
+
+# LAN forwarding for APK terminals: also refresh the 0.0.0.0 rule, otherwise it
+# keeps pointing at a stale WSL address after every WSL restart and terminals
+# hang on the splash screen while localhost still works.
+if (-not $LoopbackOnly) {
+    & netsh.exe interface portproxy delete v4tov4 `
+        listenaddress=0.0.0.0 listenport=$Port 2>$null | Out-Null
+
+    & netsh.exe interface portproxy add v4tov4 `
+        listenaddress=0.0.0.0 listenport=$Port `
+        connectaddress=$wslAddress connectport=$Port | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to create the LAN port forwarding rule (rerun with -LoopbackOnly to skip)."
+    }
 }
 
 if ($InstallStartupTask) {
