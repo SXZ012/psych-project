@@ -3,12 +3,15 @@
 Demo 级权限（共享口令）；生产应换账号体系 + RBAC + 审计日志（阶段 5 合规）。
 所有写接口均不触碰分数与结果标签——只改身份信息与后台管理字段。
 """
+
 import hashlib
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response, status
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,10 +28,17 @@ from app.core.admin_auth import (
 )
 from app.core.config import settings
 from app.db.base import get_db
-from app.models.assessment import Assessment
+from app.models.assessment import Assessment, AssessmentStatus
 from app.models.community import AssessmentSession, Device, PaymentOrder
 
 router = APIRouter()
+
+
+async def _get_managed_assessment(db: AsyncSession, assessment_id: UUID) -> Assessment:
+    assessment = await db.get(Assessment, assessment_id)
+    if assessment is None or assessment.scene not in {"aviation", "community"}:
+        raise HTTPException(status_code=404, detail="assessment not found")
+    return assessment
 
 
 async def _get_aviation_assessment(db: AsyncSession, assessment_id: UUID) -> Assessment:
@@ -134,7 +144,7 @@ async def update_note(
     _: Annotated[str, Depends(require_admin_session)],
 ) -> dict:
     """记录/更新管理员内部回访备注。"""
-    a = await _get_aviation_assessment(db, assessment_id)
+    a = await _get_managed_assessment(db, assessment_id)
     a.admin_note = body.admin_note
     await db.commit()
     return {"ok": True, "admin_note": a.admin_note}
@@ -153,7 +163,7 @@ async def update_review_status(
     _: Annotated[str, Depends(require_admin_session)],
 ) -> dict:
     """更新处理状态：pending 待查看 / following 跟进中 / closed 已结案。"""
-    a = await _get_aviation_assessment(db, assessment_id)
+    a = await _get_managed_assessment(db, assessment_id)
     a.review_status = body.review_status
     await db.commit()
     return {"ok": True, "review_status": a.review_status}
@@ -216,9 +226,7 @@ async def bind_device(
     if body.location is not None:
         device.location = body.location
     device.token_hash = (
-        hashlib.sha256(body.device_token.encode()).hexdigest()
-        if body.device_token
-        else None
+        hashlib.sha256(body.device_token.encode()).hexdigest() if body.device_token else None
     )
     await db.commit()
     return {"ok": True, "device_id": device.device_id, "scene": device.scene}
@@ -234,13 +242,17 @@ async def list_community_sessions(
     limit: int = 50,
 ) -> dict:
     rows = (
-        await db.execute(
-            select(AssessmentSession)
-            .where(AssessmentSession.scene == "community")
-            .order_by(AssessmentSession.created_at.desc())
-            .limit(min(limit, 200))
+        (
+            await db.execute(
+                select(AssessmentSession)
+                .where(AssessmentSession.scene == "community")
+                .order_by(AssessmentSession.created_at.desc())
+                .limit(min(limit, 200))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return {
         "sessions": [
             {
@@ -288,6 +300,45 @@ async def list_community_orders(
 # ============ 社区报告重新生成（失败重试的最小闭环） ============
 
 
+@router.get("/assessments/{assessment_id}/pdf")
+async def get_community_pdf(
+    assessment_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[str, Depends(require_admin_session)],
+    download: bool = False,
+) -> Response:
+    assessment = await _get_managed_assessment(db, assessment_id)
+    if assessment.scene != "community":
+        raise HTTPException(400, "仅社区测评提供 PDF")
+    if (
+        assessment.status != AssessmentStatus.completed
+        or assessment.result_valid is False
+        or not assessment.has_pdf
+    ):
+        raise HTTPException(409, "PDF 尚未准备完成")
+    path = Path(assessment.report_pdf_key)
+    filename = f"report-{assessment.id.hex[:8].upper()}.pdf"
+    headers = {"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"}
+    if path.is_absolute():
+        if not path.is_file():
+            raise HTTPException(404, "PDF 文件暂不可用，请重新生成")
+        return FileResponse(
+            path,
+            media_type="application/pdf",
+            filename=filename,
+            content_disposition_type="attachment" if download else "inline",
+            headers=headers,
+        )
+    from app.services.oss.client import OSSClient
+
+    return RedirectResponse(
+        OSSClient().presigned_url(
+            assessment.report_pdf_key, expires=300, filename=filename, download=download
+        ),
+        headers=headers,
+    )
+
+
 @router.post("/assessments/{assessment_id}/regenerate-pdf")
 async def regenerate_community_pdf(
     assessment_id: UUID,
@@ -300,6 +351,8 @@ async def regenerate_community_pdf(
         raise HTTPException(status_code=404, detail="assessment not found")
     if assessment.scene != "community":
         raise HTTPException(status_code=400, detail="仅社区测评支持用户版 PDF 重新生成")
+    if assessment.status != AssessmentStatus.completed or assessment.result_valid is False:
+        raise HTTPException(status_code=409, detail="分析尚未完成或结果无效，不能生成 PDF")
     try:
         from app.services.pdf.report import generate_pdf
 
@@ -328,6 +381,7 @@ async def regenerate_community_pdf(
 
 
 # ============ 后台处理任务：查看与安全重试（administrator） ============
+
 
 @router.get("/tasks")
 async def list_processing_tasks(
@@ -398,6 +452,7 @@ async def retry_processing_task(
 
 
 # ============ 报告查询凭证：撤销 / 重置（administrator） ============
+
 
 @router.post("/assessments/{assessment_id}/revoke-credential")
 async def revoke_report_credential(

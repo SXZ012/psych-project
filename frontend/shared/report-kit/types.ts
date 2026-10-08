@@ -42,6 +42,7 @@ export interface ReportResultSource {
 }
 
 export interface ReportSource {
+  scene?: 'aviation' | 'community'
   /** 仅供管理端 URL 构造使用；共享映射层不读取 */
   id?: string
   created_at?: string | null

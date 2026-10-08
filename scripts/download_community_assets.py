@@ -4,6 +4,7 @@
 - 每条记录：文件、用途桶、来源页、作者（已知种子图实名，其余"见来源页"）、下载日期
 - 下载后用 PIL 校验可解码、尺寸达标，不合格即报错
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -27,9 +28,9 @@ ASSETS: dict[str, list[tuple[str, str, str]]] = {
         ("29065905", "serene-misty-landscape-during-sunrise-in-tell", "见来源页"),
         ("38239121", "misty-lake-at-sunrise-with-reflective-water", "Plato Terentev"),
         ("37443455", "serene-misty-lake-at-sunrise-with-forest-reflection", "见来源页"),
-        ("5392095", "", "见来源页"),            # state-mood 静湖晨雾
+        ("5392095", "", "见来源页"),  # state-mood 静湖晨雾
         ("33500208", "starry-night-sky-over-a-forest-landscape", "见来源页"),  # state-sleep
-        ("35394159", "serene-forest-path-with-morning-sun-rays", "见来源页"),   # state-energy
+        ("35394159", "serene-forest-path-with-morning-sun-rays", "见来源页"),  # state-energy
     ],
     "ux/games": [
         ("38268366", "serene-park-pathway-with-bench-under-trees", "见来源页"),
@@ -61,7 +62,11 @@ ASSETS: dict[str, list[tuple[str, str, str]]] = {
         # 社交联结（同行）
         ("36763394", "happy-friends-in-autumn-park-smiling-together", "见来源页"),
         ("6146941", "happy-diverse-friends-walking-in-fall-park", "Keira Burton"),
-        ("19156757", "two-young-women-and-a-boy-standing-in-a-park-in-autumn-and-smiling", "见来源页"),
+        (
+            "19156757",
+            "two-young-women-and-a-boy-standing-in-a-park-in-autumn-and-smiling",
+            "见来源页",
+        ),
         ("36763393", "group-of-friends-enjoying-autumn-outdoors", "见来源页"),
         ("5838871", "diverse-friends-walking-in-park", "见来源页"),
         # 自我关怀（窗边茶书）
@@ -84,7 +89,9 @@ BANK_ORDER = ["mood", "stress", "sleep", "social", "selfcare", "hope"]
 
 
 def cdn_urls(pid: str, slug: str) -> list[str]:
-    urls = [f"https://images.pexels.com/photos/{pid}/pexels-photo-{pid}.jpeg?auto=compress&cs=tinysrgb&w={W}"]
+    urls = [
+        f"https://images.pexels.com/photos/{pid}/pexels-photo-{pid}.jpeg?auto=compress&cs=tinysrgb&w={W}"
+    ]
     if slug:
         urls.append(
             f"https://images.pexels.com/photos/{pid}/pexels-photo-{pid}/{slug}.jpeg?auto=compress&cs=tinysrgb&w={W}"
@@ -123,34 +130,46 @@ async def main() -> None:
                             continue
                         path = target / f"{pid}.jpg"
                         path.write_bytes(resp.content)
-                        manifest.append({
-                            "file": str(path.relative_to(ASSET_ROOT)).replace("\\", "/"),
-                            "pexels_id": pid,
-                            "page": page_url(pid, slug),
-                            "author": author,
-                            "license": "Pexels License (free to use, no attribution required)",
-                            "width": img.width, "height": img.height,
-                            "bytes": len(resp.content),
-                            "downloaded": date.today().isoformat(),
-                        })
-                        print(f"✓ {pid} {img.width}x{img.height} {len(resp.content)//1024}KB → {path.relative_to(ASSET_ROOT)}")
+                        manifest.append(
+                            {
+                                "file": str(path.relative_to(ASSET_ROOT)).replace("\\", "/"),
+                                "pexels_id": pid,
+                                "page": page_url(pid, slug),
+                                "author": author,
+                                "license": "Pexels License (free to use, no attribution required)",
+                                "width": img.width,
+                                "height": img.height,
+                                "bytes": len(resp.content),
+                                "downloaded": date.today().isoformat(),
+                            }
+                        )
+                        print(
+                            f"✓ {pid} {img.width}x{img.height} {len(resp.content) // 1024}KB"
+                            f" → {path.relative_to(ASSET_ROOT)}"
+                        )
                         ok = True
                         break
                     except Exception as exc:  # noqa: BLE001
                         print(f"  retry {pid}: {exc}")
                 if not ok:
                     failures.append(pid)
-    (ASSET_ROOT / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), "utf-8")
+    (ASSET_ROOT / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), "utf-8"
+    )
     lines = [
-        "# 社区场景素材来源与授权清单", "",
+        "# 社区场景素材来源与授权清单",
+        "",
         f"共 {len(manifest)} 张，全部来自 Pexels（Pexels License：免费商用、无需署名、允许修改）。",
         "“见来源页”表示作者名请点击来源链接查看（该网络环境无法逐页抓取作者字段；许可本身不要求署名）。",
-        "下载日期：" + date.today().isoformat(), "",
+        "下载日期：" + date.today().isoformat(),
+        "",
         "| 文件 | Pexels ID | 作者 | 许可 | 来源页 |",
         "| --- | --- | --- | --- | --- |",
     ]
     for m in manifest:
-        lines.append(f"| `{m['file']}` | {m['pexels_id']} | {m['author']} | Pexels License | {m['page']} |")
+        lines.append(
+            f"| `{m['file']}` | {m['pexels_id']} | {m['author']} | Pexels License | {m['page']} |"
+        )
     (ASSET_ROOT / "ASSETS.md").write_text("\n".join(lines) + "\n", "utf-8")
     print(f"\n完成 {len(manifest)} 张；失败: {failures or '无'}")
 

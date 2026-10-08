@@ -12,7 +12,7 @@ defineProps<{
   /** 正式采集异常时原位适度展开（恢复后平稳收起） */
   expanded?: boolean
 }>()
-const videoEl = useCameraSink()
+useCameraSink('videoEl')
 const STATE_ICON: Record<string, string> = { ok: '✓', warning: '!', error: '✕' }
 </script>
 <template>
@@ -37,18 +37,16 @@ const STATE_ICON: Record<string, string> = { ok: '✓', warning: '!', error: '�
 .camera-monitor.warning p b{background:#f5be5033;color:#f5be50}
 .camera-monitor.error p b{background:#f8717133;color:#fca5a5}
 @media(max-height:700px){.camera-monitor{width:240px}.camera-monitor__view{max-height:160px}}
-</style>
 
-<style scoped>
+
 /* 预览在右上，状态说明移至左侧，不再挤占题卡的垂直空间。 */
 .camera-monitor{left:50%;right:auto;top:26px;width:360px;transform:translateX(-50%)}.camera-monitor.expanded{width:400px}
 .camera-monitor__view{max-height:none;box-shadow:0 8px 22px rgba(28,58,63,.2)}
 .camera-monitor p{position:absolute;top:50%;left:calc(100% + 18px);width:236px;margin:0;padding:12px 14px;border:1px solid rgba(255,255,255,.42);border-radius:14px;color:#254b58;background:rgba(246,251,250,.72);box-shadow:0 8px 20px rgba(33,66,70,.09);backdrop-filter:blur(10px);font-size:15px;font-weight:650;transform:translateY(-50%)}
 @media(max-width:1200px){.camera-monitor{width:310px}.camera-monitor.expanded{width:330px}.camera-monitor p{left:calc(100% + 12px);width:204px;font-size:14px}}
 @media(max-height:700px){.camera-monitor{top:16px;width:280px}.camera-monitor.expanded{width:300px}.camera-monitor__view{max-height:none}.camera-monitor p{width:184px;padding:8px 10px;font-size:12px}}
-</style>
 
-<style scoped>
+
 /* 社区主流程：与航空同款「正上方居中的大取景框」，只整体下移让开顶部阶段进度条。
    原生预览层按此锚点落位，因此社区与航空的取景框大小位置完全一致。 */
 .camera-monitor.stage-top{top:46px;width:360px}

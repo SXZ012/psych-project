@@ -22,9 +22,8 @@ defineProps<{ simMode?: boolean }>()
 .captured-notice h1{margin:0 0 12px;font-family:serif;font-size:27px;color:#fff}
 .captured-notice p{margin:0;color:rgba(255,255,255,.6);font-size:14px}
 .captured-notice__sim{margin-top:14px;color:#f5be50!important;font-size:12px!important}
-</style>
 
-<style scoped>
+
 /* 结束页不再用浅字叠在浅背景上，统一为清晰的信息卡。 */
 .captured-notice{background:#edf5f4}.captured-notice section{width:min(620px,calc(100vw - 48px));padding:42px 48px;border:1px solid #d2e2df;border-radius:28px;background:#fff;box-shadow:0 16px 38px rgba(35,68,73,.14)}
 .captured-notice__icon{color:#fff;background:#328b76;border:3px solid #dff3ea;box-shadow:0 8px 18px rgba(39,111,91,.22)}.captured-notice h1{color:#203e4d;font-weight:650}.captured-notice p{color:#42616d;font-size:16px;font-weight:500}.captured-notice .eyebrow{color:#2f7166;font-weight:750}.captured-notice__sim{color:#8c611c!important}

@@ -45,4 +45,9 @@ defineProps<{
   .cc-content h1{font-size:23px}
   .cc-content p{font-size:14px}
 }
+
+
+/* Calm community assessment surface; capture geometry and timing stay unchanged. */
+.cc-stage{background:#e9f0e9}.cc-rings{display:none}.cc-content h1{color:#294735;font-family:inherit;font-weight:650}.cc-content p,.cc-content .cc-hint{color:#4d6556!important}.cc-number{background:#dcebdd;color:#34724e;border:0;box-shadow:none;animation:none;font-family:inherit;font-weight:750}
 </style>
+<style scoped src="../../styles/community-capture.css"></style>

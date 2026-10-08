@@ -8,6 +8,7 @@
 
 不涉及的：V3 分析(run_assessment 共用)、PDF 生成(services/pdf)、微信消息推送(services/wechat)。
 """
+
 from __future__ import annotations
 
 import logging
@@ -40,6 +41,7 @@ class SessionBindingError(Exception):
         super().__init__(detail)
         self.status_code = status_code
         self.detail = detail
+
 
 # JWT 配置
 JWT_ALGORITHM = "HS256"
@@ -96,9 +98,7 @@ async def create_session(
 
 async def get_session(db: AsyncSession, session_id: UUID) -> AssessmentSession | None:
     return (
-        await db.execute(
-            select(AssessmentSession).where(AssessmentSession.id == session_id)
-        )
+        await db.execute(select(AssessmentSession).where(AssessmentSession.id == session_id))
     ).scalar_one_or_none()
 
 
@@ -159,7 +159,10 @@ async def create_order(
     await db.refresh(order)
     logger.info(
         "创建支付订单 | order=%s customer=%s session=%s amount=%dfen",
-        order.id, customer_id, assessment_session_id, amount_fen,
+        order.id,
+        customer_id,
+        assessment_session_id,
+        amount_fen,
     )
     return order
 
@@ -190,11 +193,15 @@ async def mark_order_paid(
         session = await get_session(db, order.assessment_session_id)
         if session and session.status in ("created", "awaiting_payment"):
             session.status = "authorized"
+            # Payment QR expires quickly; an already paid entitlement does not.
+            session.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
 
     await db.commit()
     logger.info(
         "订单支付成功 | order=%s txn=%s session=%s",
-        order_id, wechat_txn_id, order.assessment_session_id,
+        order_id,
+        wechat_txn_id,
+        order.assessment_session_id,
     )
     return order
 
@@ -280,7 +287,9 @@ async def sync_community_order_status(db: AsyncSession, assessment) -> None:  # 
         order.status = target
         logger.info(
             "订单状态回写 | order=%s assessment=%s -> %s",
-            assessment.order_id, assessment.id, target,
+            assessment.order_id,
+            assessment.id,
+            target,
         )
 
 
@@ -344,9 +353,7 @@ async def authorize_community_submission(
     """
     session = (
         await db.execute(
-            select(AssessmentSession)
-            .where(AssessmentSession.id == session_id)
-            .with_for_update()
+            select(AssessmentSession).where(AssessmentSession.id == session_id).with_for_update()
         )
     ).scalar_one_or_none()
     if session is None:
@@ -397,9 +404,7 @@ async def authorize_community_submission(
 # ================== 报告查询 ==================
 
 
-async def get_customer_reports(
-    db: AsyncSession, customer_id: UUID
-) -> list[dict]:
+async def get_customer_reports(db: AsyncSession, customer_id: UUID) -> list[dict]:
     """查询社区用户的测评报告列表。"""
     from app.models.assessment import Assessment
 
@@ -425,12 +430,14 @@ async def get_customer_reports(
         # AssessmentStatus 是枚举，str(成员) 会得到 "AssessmentStatus.completed"
         raw_status = getattr(a.status, "value", a.status)
         status, label = status_map.get(raw_status, ("analyzing", "分析中"))
-        reports.append({
-            "id": str(a.id),
-            "created_at": a.created_at.isoformat() if a.created_at else None,
-            "status": status,
-            "status_label": label,
-            "summary": None,  # V3 + Qwen 摘要(PDF 生成后填)
-            "has_pdf": bool(a.report_pdf_key),
-        })
+        reports.append(
+            {
+                "id": str(a.id),
+                "created_at": a.created_at.isoformat() if a.created_at else None,
+                "status": status,
+                "status_label": label,
+                "summary": None,  # V3 + Qwen 摘要(PDF 生成后填)
+                "has_pdf": bool(a.report_pdf_key),
+            }
+        )
     return reports

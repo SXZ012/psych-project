@@ -1,1 +1,38 @@
-{"compilerOptions":{"tsBuildInfoFile":"./node_modules/.tmp/tsconfig.app.tsbuildinfo","target":"ES2020","useDefineForClassFields":true,"module":"ESNext","lib":["ES2020","DOM","DOM.Iterable"],"skipLibCheck":true,"moduleResolution":"bundler","allowImportingTsExtensions":true,"verbatimModuleSyntax":true,"moduleDetection":"force","noEmit":true,"strict":true,"jsx":"preserve"},"include":["src/**/*.ts","src/**/*.vue"]}
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "jsx": "preserve",
+    "paths": {
+      "@report-kit/*": [
+        "../shared/report-kit/*"
+      ],
+      "@/*": [
+        "../terminal-web/src/*"
+      ]
+    },
+    "types": [
+      "vite/client"
+    ],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue"
+  ]
+}

@@ -1,4 +1,5 @@
 """发布航空图题库到 OSS，并替换旧的通用图片题库。"""
+
 from __future__ import annotations
 
 import asyncio
@@ -12,10 +13,11 @@ ROOT = Path(__file__).resolve().parents[1]
 STATIC_ROOT = ROOT / "backend" / "app" / "static" / "assets" / "aviation"
 sys.path.insert(0, str(ROOT / "backend"))
 
-import app.models  # noqa: F401
-from app.db.base import AsyncSessionLocal, Base, engine
-from app.models.image_bank import Image, Pair
-from app.services.oss.client import OSSClient
+# This standalone script resolves the backend package relative to the project root.
+import app.models  # noqa: E402, F401
+from app.db.base import AsyncSessionLocal, Base, engine  # noqa: E402
+from app.models.image_bank import Image, Pair  # noqa: E402
+from app.services.oss.client import OSSClient  # noqa: E402
 
 AVIATION_PREFIX = "image-bank/aviation/v1"
 
@@ -23,11 +25,16 @@ AVIATION_PREFIX = "image-bank/aviation/v1"
 async def ensure_schema() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        existing = await conn.run_sync(lambda c: {x["name"] for x in inspect(c).get_columns("pairs")})
+        existing = await conn.run_sync(
+            lambda c: {x["name"] for x in inspect(c).get_columns("pairs")}
+        )
         columns = {
-            "dimension":"VARCHAR(64)", "scenario":"VARCHAR(64)", "audio_url":"VARCHAR(512)",
-            "content_version":"VARCHAR(32)", "source_note":"VARCHAR(256)",
-            "scoring_mode":"VARCHAR(32) NOT NULL DEFAULT 'observation_only'",
+            "dimension": "VARCHAR(64)",
+            "scenario": "VARCHAR(64)",
+            "audio_url": "VARCHAR(512)",
+            "content_version": "VARCHAR(32)",
+            "source_note": "VARCHAR(256)",
+            "scoring_mode": "VARCHAR(32) NOT NULL DEFAULT 'observation_only'",
         }
         for name, ddl in columns.items():
             if name not in existing:
@@ -44,10 +51,12 @@ async def main() -> None:
     async with AsyncSessionLocal() as db:
         existing = (await db.execute(select(Image))).scalars().all()
         by_key = {image.oss_key: image for image in existing}
-        image_files = [filename for item in content["question_types"] for filename in item["images"]]
+        image_files = [
+            filename for item in content["question_types"] for filename in item["images"]
+        ]
         # 一张情境图可配多道不同观察题；题目本身必须独立，图片无需机械地一题一图。
         if len(content["question_types"]) < 40:
-            raise ValueError("航空题库至少需要 40 道题（当前 %d）" % len(content["question_types"]))
+            raise ValueError(f"航空题库至少需要 40 道题（当前 {len(content['question_types'])}）")
 
         oss = OSSClient()
         uploaded: dict[str, tuple[str, str]] = {}
@@ -95,7 +104,7 @@ async def main() -> None:
                         scenario=question_type["scenario"],
                         audio_url=question_type["audio_url"],
                         content_version=content["content_version"],
-                        source_note=f'{source["license"]} / {source["author"]}',
+                        source_note=f"{source['license']} / {source['author']}",
                         scoring_mode=content["scoring_mode"],
                         active=True,
                     )

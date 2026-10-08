@@ -26,6 +26,13 @@ from app.db.base import Base, get_db
 TEST_DB_NAME = "psych_test"
 
 
+@pytest.fixture(autouse=True)
+def isolate_file_storage(monkeypatch):
+    """Tests never upload fabricated reports or videos to the configured live OSS."""
+    monkeypatch.setattr(settings, "REPORT_STORAGE_MODE", "local")
+    monkeypatch.setattr(settings, "OSS_BACKUP_ENABLED", False)
+
+
 def _test_database_url() -> str:
     if settings.DATABASE_URL:
         # postgresql+asyncpg://user:pass@host/db → 指向 psych_test
@@ -120,6 +127,9 @@ async def db(db_engine) -> AsyncGenerator[AsyncSession]:
 @pytest.fixture
 async def client(db_engine, monkeypatch, tmp_path) -> AsyncGenerator[httpx.AsyncClient]:
     from app.main import app
+    from app.services.report_access import _buckets
+
+    _buckets.clear()
 
     maker = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
 

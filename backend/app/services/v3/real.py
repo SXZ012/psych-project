@@ -3,6 +3,7 @@
 实现《V3 算法服务对接指南》的完整链路：
 文件登记 -> 对象存储直传 -> 创建任务 -> 轮询 -> 解析结果。
 """
+
 from __future__ import annotations
 
 import asyncio

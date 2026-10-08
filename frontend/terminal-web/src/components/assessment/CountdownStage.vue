@@ -27,35 +27,30 @@ defineProps<{ countdown: number }>()
 .countdown-stage h1{margin:20px 0 0;font-family:serif;font-size:30px;font-weight:500;letter-spacing:.07em}
 .countdown-stage p{margin:10px 0 0;color:#c5cee3;font-size:17px}
 .countdown-stage__hint{color:#8f9dbb!important;font-size:13px!important}
-</style>
 
-<style scoped>
+
 /* 倒计时比服务页略深，用于建立采集开始的专注感，但不使用黑底。 */
 .countdown-stage{background:linear-gradient(145deg,#557586 0%,#385766 100%)}
 .countdown-rings i{border-color:rgba(220,237,238,.26)}.countdown-stage__eyebrow{color:#cce0df}.countdown-stage__number{color:#fff;border-color:rgba(229,241,242,.65);background:rgba(255,255,255,.1);box-shadow:0 8px 22px rgba(18,45,57,.2),inset 0 0 20px rgba(255,255,255,.08)}
 .countdown-stage h1{color:#fff}.countdown-stage p{color:#e4edef}.countdown-stage__hint{color:#c8d8dc!important}
-</style>
 
-<style scoped>
+
 /* 倒计时只保留清晰的仪式感，移除黑底、霓虹和扫描式光圈。 */
 .countdown-stage{background:linear-gradient(145deg,#edf4f5 0%,#f8faf9 100%)}
 .countdown-rings i{border-color:rgba(79,141,130,.2)}.countdown-stage__eyebrow{color:#567781}.countdown-stage__number{color:#2f5d7c;border-color:#aac4ce;background:#fff;box-shadow:0 8px 22px rgba(47,93,124,.1),inset 0 0 20px rgba(163,197,208,.12)}
 .countdown-stage h1{color:#294354}.countdown-stage p{color:#5d737d}.countdown-stage__hint{color:#7b8c93!important}
-</style>
 
-<style scoped>
+
 /* 最终阶段色彩覆盖：置于早先浅色倒计时样式之后。 */
 .countdown-stage{background:linear-gradient(145deg,#557586 0%,#385766 100%)}
 .countdown-rings i{border-color:rgba(220,237,238,.26)}.countdown-stage__eyebrow{color:#cce0df}.countdown-stage__number{color:#fff;border-color:rgba(229,241,242,.65);background:rgba(255,255,255,.1);box-shadow:0 8px 22px rgba(18,45,57,.2),inset 0 0 20px rgba(255,255,255,.08)}
 .countdown-stage h1{color:#fff}.countdown-stage p{color:#e4edef}.countdown-stage__hint{color:#c8d8dc!important}
-</style>
 
-<style scoped>
+
 /* 连续测评阶段统一舞台色。 */
 .countdown-stage{background:#8badb1}.countdown-stage:before,.countdown-stage:after{display:none}
-</style>
 
-<style scoped>
+
 /* 倒计时在浅色舞台保持明确的深色信息层级。 */
 .countdown-rings i{border-color:rgba(39,81,88,.28)}.countdown-stage__eyebrow{color:#365f6a;font-size:13px}.countdown-stage__number{color:#244f65;border-color:#547f86;background:#fff;box-shadow:0 8px 22px rgba(35,68,73,.14)}
 .countdown-stage h1{color:#203e4d;font-weight:650}.countdown-stage p{color:#365864;font-weight:550}.countdown-stage__hint{color:#45646f!important;font-size:14px!important}

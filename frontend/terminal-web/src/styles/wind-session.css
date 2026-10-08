@@ -1,0 +1,94 @@
+/* One continuous landscape and one player; no separate header/footer surfaces. */
+.session--1 {
+  grid-template-rows: 88px minmax(0, 1fr);
+  color: #243e33;
+  background: #c9dfbd var(--wind-background) center bottom / cover no-repeat;
+}
+.session--1::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, #f3f9ee66 0%, #ffffff08 27%, #ecf5df08 65%, #e5efda26 100%);
+}
+.session--1 > * { position: relative; }
+.session--1 .session-head {
+  grid-template-columns: 1fr 1fr;
+  padding: 0 24px;
+}
+.session--1 .session-head button {
+  min-height: 52px;
+  background: #f8fbf2c7;
+  color: #243e33;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.wind-stage {
+  min-height: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 24px clamp(24px, 6vw, 90px) 20px;
+  overflow-y: auto;
+}
+.wind-player {
+  width: min(680px, 78%);
+  flex-shrink: 0;
+  padding: 14px 20px;
+  border: 1px solid #ffffff38;
+  border-radius: 20px;
+  color: #343e3d;
+  background: #f8f4ec5c;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  box-shadow: none;
+}
+.wind-player-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.wind-intro { min-width: 0; }
+.wind-kicker { margin: 0 0 8px; color: #414c4a; font-size: 14px; font-weight: 600; letter-spacing: .06em; }
+.wind-intro h1 { margin: 0; font-size: 26px; line-height: 1.25; font-weight: 700; }
+.wind-description { margin: 8px 0 0; font-size: 17px; line-height: 1.6; }
+.wind-duration { min-width: 258px; text-align: right; }
+.wind-duration-options { display: flex; justify-content: flex-end; gap: 6px; }
+.session--1 .wind-duration-options button { min-height: 48px; min-width: 80px; padding: 0 12px; border-radius: 24px; background: #fffaf173; color: #34423e; font-size: 16px; }
+.session--1 .wind-duration-options button[aria-pressed=true] { background: #3c6852; color: #fff; }
+.wind-clock { display: block; height: 48px; font-size: 30px; line-height: 48px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.wind-progress-meta { display: flex; justify-content: space-between; gap: 16px; margin: 10px 0 6px; font-size: 14px; color: #343e3d; font-variant-numeric: tabular-nums; }
+.wind-track { height: 5px; overflow: hidden; border-radius: 6px; background: #355a3829; }
+.wind-track i { display: block; height: 100%; background: #3c6852; border-radius: inherit; }
+.wind-player-controls { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 8px; }
+.wind-volume { display: flex; align-items: center; gap: 12px; min-width: 0; font-size: 15px; white-space: nowrap; }
+.wind-volume input { width: clamp(90px, 12vw, 150px); min-width: 60px; height: 48px; margin: 0; accent-color: #3c6852; cursor: pointer; touch-action: pan-y; }
+.wind-volume output { min-width: 36px; font-variant-numeric: tabular-nums; }
+.wind-actions, .wind-complete-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.session--1 .wind-actions button, .session--1 .wind-complete-actions button { min-height: 52px; padding: 0 18px; font-size: 17px; background: #fffaf173; color: #34423e; }
+.session--1 button.session-primary { min-width: 144px; background: #3c6852; color: #fff; }
+.session--1 .wind-actions .wind-end { background: transparent; }
+.wind-error { margin: 14px 0 0; padding: 12px 16px; border-radius: 12px; background: #fff3e9; color: #863b22; font-size: 15px; line-height: 1.5; }
+.wind-player--finished { padding-top: 22px; padding-bottom: 18px; }
+.wind-player--finished h1 { font-size: clamp(26px, 2.8vw, 34px); }
+.wind-complete-actions { margin-top: 20px; }
+.session--1 button, .wind-volume input { -webkit-tap-highlight-color: transparent; }
+.session--1 button:focus-visible, .wind-volume input:focus-visible { outline: 3px solid #244f39; outline-offset: 4px; }
+.session--1 button:focus:not(:focus-visible), .wind-volume input:focus:not(:focus-visible) { outline: none; }
+@media (max-height: 640px) and (min-width: 761px) {
+  .session--1 { grid-template-rows: 72px minmax(0, 1fr); }
+  .wind-stage { padding-top: 12px; padding-bottom: 18px; }
+  .wind-player { padding: 12px 18px; }
+}
+@media (max-width: 760px) {
+  .session--1 { grid-template-rows: 76px minmax(0, 1fr); }
+  .session--1 .session-head { padding: 0 16px; }
+  .wind-stage { padding: 14px 16px 24px; }
+  .wind-player { width: 100%; padding: 20px; border-radius: 22px; margin-top: auto; }
+  .wind-player-heading { flex-wrap: wrap; gap: 20px; }
+  .wind-duration { min-width: 0; width: 100%; text-align: left; }
+  .wind-duration-options { justify-content: flex-start; }
+  .wind-player-controls { flex-wrap: wrap; gap: 12px; }
+  .wind-volume { width: 100%; }
+  .wind-volume input { flex: 1; width: auto; }
+  .wind-actions, .wind-complete-actions { width: 100%; }
+  .wind-actions .session-primary { flex: 1; }
+  .session--1 .wind-complete-actions button { padding: 0 14px; min-width: 0; flex: 1; font-size: 15px; }
+  .wind-stage { align-items: safe flex-end; }
+}

@@ -2,6 +2,7 @@
 
 选项(option_a/option_b)仅存展示文本，**不涉及任何分值**（按方案）。
 """
+
 import uuid
 from datetime import datetime
 
@@ -23,9 +24,7 @@ class Image(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    pairs: Mapped[list["Pair"]] = relationship(
-        back_populates="image", cascade="all, delete-orphan"
-    )
+    pairs: Mapped[list["Pair"]] = relationship(back_populates="image", cascade="all, delete-orphan")
 
 
 class Pair(Base):

@@ -675,13 +675,6 @@
       "content_type": "audio/mpeg"
     },
     {
-      "source": "community-assets/audio/cm-psychology-intro.mp3",
-      "key": "static-assets/community/audio/cm-psychology-intro.mp3",
-      "size": 288900,
-      "sha256": "758af02187c8ac6d26ebffbcf78724000c824ca3e91ce605a195bb67edc62c89",
-      "content_type": "audio/mpeg"
-    },
-    {
       "source": "community-assets/images/bank/11648021.jpg",
       "key": "static-assets/community/images/bank/11648021.jpg",
       "size": 241777,
@@ -878,167 +871,6 @@
       "content_type": "image/jpeg"
     },
     {
-      "source": "community-assets/intro-production/output/community-mental-health-original-60s.mp4",
-      "key": "static-assets/community/intro-production/output/community-mental-health-original-60s.mp4",
-      "size": 68894799,
-      "sha256": "3920615a68b6a4ddf40e8fdd8b794c9e22035804acbc3cfc87263380800f0a80",
-      "content_type": "video/mp4"
-    },
-    {
-      "source": "community-assets/intro-production/public/audio/01-morning.mp3",
-      "key": "static-assets/community/intro-production/public/audio/01-morning.mp3",
-      "size": 68218,
-      "sha256": "bf30f9c5b27194a0bafceef364bb38a9ab44ac01b9aa31a0209020cb3f9bafc5",
-      "content_type": "audio/mpeg"
-    },
-    {
-      "source": "community-assets/intro-production/public/audio/02-pause.mp3",
-      "key": "static-assets/community/intro-production/public/audio/02-pause.mp3",
-      "size": 64038,
-      "sha256": "bbabcaeb73ff81add1081118f07523af4d0552d8e4f7186e3f5afabee71fd3ef",
-      "content_type": "audio/mpeg"
-    },
-    {
-      "source": "community-assets/intro-production/public/audio/03-weather.mp3",
-      "key": "static-assets/community/intro-production/public/audio/03-weather.mp3",
-      "size": 144286,
-      "sha256": "9d5c48d2cad1e60881014f219f12dd717e3cf207fbd72f76c87d53b1c524af55",
-      "content_type": "audio/mpeg"
-    },
-    {
-      "source": "community-assets/intro-production/public/audio/04-care.mp3",
-      "key": "static-assets/community/intro-production/public/audio/04-care.mp3",
-      "size": 142197,
-      "sha256": "d27259c0b2da294e2b5b922d9efbc6352b67af9bcfd55bffae5c208016d71e4a",
-      "content_type": "audio/mpeg"
-    },
-    {
-      "source": "community-assets/intro-production/public/audio/05-support.mp3",
-      "key": "static-assets/community/intro-production/public/audio/05-support.mp3",
-      "size": 135927,
-      "sha256": "ef9e2b7c9c871b5fa54d7030d290b4694e03444d2fd342e63a7edc57de0078e2",
-      "content_type": "audio/mpeg"
-    },
-    {
-      "source": "community-assets/intro-production/public/audio/06-assessment.mp3",
-      "key": "static-assets/community/intro-production/public/audio/06-assessment.mp3",
-      "size": 140943,
-      "sha256": "5166ad1a68bd5042625f8663bfb113401282deba4858b1b83f8389fcc97fa2e5",
-      "content_type": "audio/mpeg"
-    },
-    {
-      "source": "community-assets/intro-production/public/audio/07-ready.mp3",
-      "key": "static-assets/community/intro-production/public/audio/07-ready.mp3",
-      "size": 141361,
-      "sha256": "d632eaaf89df7cd0456c37439f86d50762e73f633406d11f8ebc3c2ca9d1bc32",
-      "content_type": "audio/mpeg"
-    },
-    {
-      "source": "community-assets/intro-production/public/audio/ambience.mp3",
-      "key": "static-assets/community/intro-production/public/audio/ambience.mp3",
-      "size": 56515,
-      "sha256": "2f187487b2b0dc8406ececaf3ac72f65dd6ac3ff2ebcc1a20634467c6ad2ca3a",
-      "content_type": "audio/mpeg"
-    },
-    {
-      "source": "community-assets/intro-production/public/scenes/01-morning.png",
-      "key": "static-assets/community/intro-production/public/scenes/01-morning.png",
-      "size": 2170723,
-      "sha256": "5b7d50d1ba6fbc34e6701d43f9fdf221819d9505865b6c877375227b9f23b7b9",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/scenes/02-weather.png",
-      "key": "static-assets/community/intro-production/public/scenes/02-weather.png",
-      "size": 2276967,
-      "sha256": "227fd80832006a0e697c843a7d00c33c0bba7482bbfa0246371acf7548cdf69a",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/scenes/03-connection.png",
-      "key": "static-assets/community/intro-production/public/scenes/03-connection.png",
-      "size": 2586186,
-      "sha256": "4ebc5c25c4a2d2996b66dc7403820546040063bc3b6fbc8463d983bef8197f08",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/scenes/04-assessment.png",
-      "key": "static-assets/community/intro-production/public/scenes/04-assessment.png",
-      "size": 1865327,
-      "sha256": "2b977f5774ac352ad9ca60aa9d9eccc7e89a7626b6a2f69cd9e37dabe2ebfbfd",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/apartment-background.png",
-      "key": "static-assets/community/intro-production/public/story-v2/apartment-background.png",
-      "size": 2075812,
-      "sha256": "867ee2d3d2fc563aa291742d57a86ded1ea54ad01bdd45a65bd990d341a7dd5b",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/breath-cycle-alpha.png",
-      "key": "static-assets/community/intro-production/public/story-v2/breath-cycle-alpha.png",
-      "size": 1173782,
-      "sha256": "f8ebc8eeb9ce24d2de97c54822cbe09c2574975643f51750b4e03c9e06022d73",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/breath-cycle.png",
-      "key": "static-assets/community/intro-production/public/story-v2/breath-cycle.png",
-      "size": 1517408,
-      "sha256": "cc9a43b6b113af7cb070a60c7f1d1cad4619b0c16f2227b746463d68af2e8b21",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/walk-cycle-alpha.png",
-      "key": "static-assets/community/intro-production/public/story-v2/walk-cycle-alpha.png",
-      "size": 1157184,
-      "sha256": "af161aa5a395e69a4312c49730787423cb69ba4621474c818c8850654787b1ea",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/walk-cycle.png",
-      "key": "static-assets/community/intro-production/public/story-v2/walk-cycle.png",
-      "size": 1495622,
-      "sha256": "1f9c3034321263fb02c77e499771fed5b784d4334c59328ce4762960099cb98d",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/walk-stop-v2-alpha.png",
-      "key": "static-assets/community/intro-production/public/story-v2/walk-stop-v2-alpha.png",
-      "size": 2236396,
-      "sha256": "ee6ee152cdf9a9505b80b2d1d2dfa471fef4232773a826028daa764feef22ca7",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/walk-stop-v2-clean.png",
-      "key": "static-assets/community/intro-production/public/story-v2/walk-stop-v2-clean.png",
-      "size": 2166727,
-      "sha256": "e8eaf071557197edb7dab6368f72c0301de56b1abef61eb9c1f81d4db682f3a4",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/walk-stop-v2-green.png",
-      "key": "static-assets/community/intro-production/public/story-v2/walk-stop-v2-green.png",
-      "size": 1534108,
-      "sha256": "b3c29e70015a0aa9d90c531af0987b25186ab84173f7c90587b794b88d7fd730",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/public/story-v2/walk-stop-v2.png",
-      "key": "static-assets/community/intro-production/public/story-v2/walk-stop-v2.png",
-      "size": 2318038,
-      "sha256": "8702d7556d1b75aef2b1fe77d4a6e3a6b4a4f0cf576a05189e0a0fcd1dfeed42",
-      "content_type": "image/png"
-    },
-    {
-      "source": "community-assets/intro-production/story-v2/storyboard-first15s.png",
-      "key": "static-assets/community/intro-production/story-v2/storyboard-first15s.png",
-      "size": 2027495,
-      "sha256": "2e73f2a8220736c25c8399539582394bd832da9baaebba03c62ae013551ec690",
-      "content_type": "image/png"
-    },
-    {
       "source": "community-assets/ux/28945280.jpg",
       "key": "static-assets/community/ux/28945280.jpg",
       "size": 60899,
@@ -1100,6 +932,286 @@
       "size": 520790,
       "sha256": "9c4ec2f8e85ed322d11de608b88d8c9d75945a9741babdd22c029dfb63352b4c",
       "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-c6a24f971ae5ea4b.wav",
+      "key": "static-assets/community/audio/questions/cq-c6a24f971ae5ea4b.wav",
+      "size": 172402,
+      "sha256": "fd8ba92a54399d7ae3da6dec2151f4a677a4ae3571f7f6bf0482d2817ebe0c6f",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-f134bff465c1ff97.wav",
+      "key": "static-assets/community/audio/questions/cq-f134bff465c1ff97.wav",
+      "size": 144606,
+      "sha256": "34a89c79840195f6ffe22bd2ab921967ac632eb2e754ede4a8dad993e0bacae9",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-2b59d1fd7f34963f.wav",
+      "key": "static-assets/community/audio/questions/cq-2b59d1fd7f34963f.wav",
+      "size": 129782,
+      "sha256": "ed6307c919161dd5311e7b27a9003a8ad5eabfc9e6e42d52b0a0e94842eb0f51",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-e54e9bfabe660c75.wav",
+      "key": "static-assets/community/audio/questions/cq-e54e9bfabe660c75.wav",
+      "size": 179812,
+      "sha256": "c8dddf02d85f526d3408ac7fe2bbf74007ea7ce9dd5ecc59ead5ac29e7b73b78",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-80b939b6cc12c76f.wav",
+      "key": "static-assets/community/audio/questions/cq-80b939b6cc12c76f.wav",
+      "size": 113108,
+      "sha256": "6c15381088116985ca65dfb04a1cc1f393badea8da623835d5cd5823651d8734",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-a12f9d0677ec6402.wav",
+      "key": "static-assets/community/audio/questions/cq-a12f9d0677ec6402.wav",
+      "size": 127930,
+      "sha256": "2a83f024f4232428257811ca0a9c11b2de0735fa338ad22975d06accb2009776",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-307df8e1e146a099.wav",
+      "key": "static-assets/community/audio/questions/cq-307df8e1e146a099.wav",
+      "size": 146460,
+      "sha256": "f2135804e7f713f05609072ae312b8655b5739181e9c533f624846e29dffa9d4",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-4a408761de7db4df.wav",
+      "key": "static-assets/community/audio/questions/cq-4a408761de7db4df.wav",
+      "size": 139048,
+      "sha256": "4562fbf97bb1c7e61df0d219302ddaa3501a103bf11d513748f992c0e6375b2c",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-9b92d7fe172b49b5.wav",
+      "key": "static-assets/community/audio/questions/cq-9b92d7fe172b49b5.wav",
+      "size": 109402,
+      "sha256": "7e69b9a29d95ade47ce9b9d17d26c2b67c2e3a510bd4691eb72b55ad5264860a",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-b4805992188f28ca.wav",
+      "key": "static-assets/community/audio/questions/cq-b4805992188f28ca.wav",
+      "size": 124224,
+      "sha256": "198d9b116ac8f6fe0e2e4053f3c34670890833782e6dd9bdd33b3e9e9159882d",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-ae8eeed374551691.wav",
+      "key": "static-assets/community/audio/questions/cq-ae8eeed374551691.wav",
+      "size": 118666,
+      "sha256": "726f14eb27e86a15c1de2902094ec489d3f7063886d98dda8eb393bebe117adc",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-2797711c7f53d8f7.wav",
+      "key": "static-assets/community/audio/questions/cq-2797711c7f53d8f7.wav",
+      "size": 126076,
+      "sha256": "991dc5e7d2a3df06cfa190492e16b94d58176e95c552f3671e5a96078c6da9da",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-8a0463f6a892b8aa.wav",
+      "key": "static-assets/community/audio/questions/cq-8a0463f6a892b8aa.wav",
+      "size": 101988,
+      "sha256": "7ed6c179afad3eeb088741bfd08527dbfd9d5b57d31d5f3504d3f0c3e970e901",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-9f383d029c8cbb53.wav",
+      "key": "static-assets/community/audio/questions/cq-9f383d029c8cbb53.wav",
+      "size": 94578,
+      "sha256": "6bb662d99624843add011c7d8860b715c73891b86d4cd0ef9ed282a94dd95869",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-b7ebded0615d255e.wav",
+      "key": "static-assets/community/audio/questions/cq-b7ebded0615d255e.wav",
+      "size": 100136,
+      "sha256": "28470ab80b10b09b5b72118feb84a2dc2b9015314b8c53f2571e247feb686243",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-91a94f77892f6fc6.wav",
+      "key": "static-assets/community/audio/questions/cq-91a94f77892f6fc6.wav",
+      "size": 157576,
+      "sha256": "101d80bf337d6abf0fa8e0c6449132bf2075ea5b21fdbfddd2e3c9c7751891fa",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-36478d91495e4336.wav",
+      "key": "static-assets/community/audio/questions/cq-36478d91495e4336.wav",
+      "size": 139048,
+      "sha256": "ef9dc94001cb372c0115f1ce744db1b0c8986e2db44c8e685bab9c7eb5984288",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-2437bfa34838d651.wav",
+      "key": "static-assets/community/audio/questions/cq-2437bfa34838d651.wav",
+      "size": 120518,
+      "sha256": "9f4b5ccc759c975e9a2075ac9723f4dc04474d80195066ed1363ac21f0f562d4",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-10a0d092748657db.wav",
+      "key": "static-assets/community/audio/questions/cq-10a0d092748657db.wav",
+      "size": 131636,
+      "sha256": "a69e0d3c10b142bf969ecb9098d3670eca7061579b948a188efe8eae9a6983e1",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-91bf63213a7aaad5.wav",
+      "key": "static-assets/community/audio/questions/cq-91bf63213a7aaad5.wav",
+      "size": 113108,
+      "sha256": "cdcec623db53e21e18ee5af4616a0632c27e185a1efddd148748b52514b6d846",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-d43885581d61ec98.wav",
+      "key": "static-assets/community/audio/questions/cq-d43885581d61ec98.wav",
+      "size": 137196,
+      "sha256": "397ec409db096d189eef9af22278d560eeda49da2f3e4ccffb1d86153cbab0a1",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-b053ef05cff0db04.wav",
+      "key": "static-assets/community/audio/questions/cq-b053ef05cff0db04.wav",
+      "size": 157576,
+      "sha256": "4fb3a53508fb4b71ccccc14fee87bdf89940d7ad594fde76cf865ac57cc844ab",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-c2b70012957ca287.wav",
+      "key": "static-assets/community/audio/questions/cq-c2b70012957ca287.wav",
+      "size": 144606,
+      "sha256": "afcad2f246e3763d3c0a64c8b89f1a692bc20c5828898643f6fa30e936a749f4",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-8b4df3261b5bae91.wav",
+      "key": "static-assets/community/audio/questions/cq-8b4df3261b5bae91.wav",
+      "size": 159430,
+      "sha256": "47beeb168f07e6a951f33a43ff2c4d2ec266aa9bdf6bda454f4bb2ee243d64e2",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-d2614e6a08f54181.wav",
+      "key": "static-assets/community/audio/questions/cq-d2614e6a08f54181.wav",
+      "size": 150166,
+      "sha256": "3441918d1a17cfd65ebd51873cea6ae3d995200df49b183ca6ac7841b446de5e",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-65641f547c8415c9.wav",
+      "key": "static-assets/community/audio/questions/cq-65641f547c8415c9.wav",
+      "size": 133490,
+      "sha256": "e28bdd80c7828a0b424c2ef37b0390e8f23687b962e2cc1e57712012dc07f5f9",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-655dcd9a4e81ddef.wav",
+      "key": "static-assets/community/audio/questions/cq-655dcd9a4e81ddef.wav",
+      "size": 122372,
+      "sha256": "f2ed22e60a8e4c4e4a978c1d64556dd331b39989fe0bdfc21ce9a9bd871ea5fa",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-b709b141d4854497.wav",
+      "key": "static-assets/community/audio/questions/cq-b709b141d4854497.wav",
+      "size": 113108,
+      "sha256": "a13f0820968d524c46eea4f010d22282a71a2fe26f1aa44151a0e10371aff805",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-5cbd9e10902271cd.wav",
+      "key": "static-assets/community/audio/questions/cq-5cbd9e10902271cd.wav",
+      "size": 111254,
+      "sha256": "200376bc4aefedfceac2c5456c09eb3d0e6fe3427faae7d3e36b323b545468ce",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-f47724ded592007f.wav",
+      "key": "static-assets/community/audio/questions/cq-f47724ded592007f.wav",
+      "size": 124224,
+      "sha256": "b7cfd73f822eb4d9650052387da3fdca13cda6e65c0a1208ec51b7f43895219a",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-36e62ea019934248.wav",
+      "key": "static-assets/community/audio/questions/cq-36e62ea019934248.wav",
+      "size": 137196,
+      "sha256": "6646418280675e544dcbc91287e00847f26697185ca64bc12d3d7aff7f361115",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-37bc0da3b0625883.wav",
+      "key": "static-assets/community/audio/questions/cq-37bc0da3b0625883.wav",
+      "size": 129782,
+      "sha256": "031dbf363c929b259649fd176d93475afda83e60332be23c3f70a284835469f1",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/questions/cq-b939c34a0142cc60.wav",
+      "key": "static-assets/community/audio/questions/cq-b939c34a0142cc60.wav",
+      "size": 146460,
+      "sha256": "5b3bacaa0b6764df10ada2dc43928803a421c2d692fc4a4215087d5e58e5d6ca",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/cues/start-tone.wav",
+      "key": "static-assets/community/audio/cues/start-tone.wav",
+      "size": 14156,
+      "sha256": "b14c06711ab6783e8c85d6b00e99d79e47baeaaa8ad18d37edb952d727e3b4cd",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/cues/start-tone.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/start-tone.wav",
+      "size": 14156,
+      "sha256": "b14c06711ab6783e8c85d6b00e99d79e47baeaaa8ad18d37edb952d727e3b4cd",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/cues/finishing-v2.wav",
+      "key": "static-assets/community/audio/cues/finishing-v2.wav",
+      "size": 148312,
+      "sha256": "4d3966f0165c43e888e681c7fee18052ef1c68bcf89017a7458c364c83305aa9",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/audio/cues/finishing-v2.wav",
+      "key": "static-assets/assets/aviation/audio/paired-v1/finishing-v2.wav",
+      "size": 148312,
+      "sha256": "4d3966f0165c43e888e681c7fee18052ef1c68bcf89017a7458c364c83305aa9",
+      "content_type": "audio/wav"
+    },
+    {
+      "source": "community-assets/relax/wind-meadow-carolina.jpg",
+      "key": "static-assets/community/relax/wind-meadow-carolina.jpg",
+      "size": 983625,
+      "sha256": "1659a5a3a2fec9107382e0e631b395bdde737b50a44d3638635ee68649da72eb",
+      "content_type": "image/jpeg"
+    },
+    {
+      "source": "community-assets/relax/body-lake.webp",
+      "key": "static-assets/community/relax/body-lake.webp",
+      "size": 110508,
+      "sha256": "a5ad29ce10e04855888a6d691490c6ce82b7ca4b1c4ae4cdd77f1d527cd197a0",
+      "content_type": "image/webp"
+    },
+    {
+      "source": "community-assets/relax/body-relax-120.mp3",
+      "key": "static-assets/community/relax/body-relax-120.mp3",
+      "size": 960723,
+      "sha256": "6cf7be82d54e9f6be29a13acf04b1f91fd6a8efb0226f5ab5b5a4e7f6da4d5f1",
+      "content_type": "audio/mpeg"
     }
   ]
 }

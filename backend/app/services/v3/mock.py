@@ -3,6 +3,7 @@
 不依赖任何外部接口。返回的 result 结构与线上 V3 接口逐字段一致，
 默认取自 fixtures/sample_result_v32.json（由 ziliao/v3.2_report_sample.html 抽取）。
 """
+
 from __future__ import annotations
 
 import asyncio

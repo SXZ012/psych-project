@@ -1,4 +1,5 @@
 """测评 API 的 Pydantic 请求/响应模型。"""
+
 from datetime import datetime
 from uuid import UUID
 
@@ -78,6 +79,8 @@ class AssessmentSubmitOut(AssessmentOut):
 
 
 class AssessmentDetail(AssessmentOut):
+    report_status: str = "none"
+    has_pdf: bool = False
     result: AssessmentResultOut | None = None
     video_qa_json: dict | None = None  # 上传前 ffprobe 质检 + ffmpeg 修复报告（审计用）
     basic_info: dict | None = None  # 终端登录页采集的性别/年龄（selections_data.basic_info）

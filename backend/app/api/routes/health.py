@@ -1,4 +1,5 @@
 """健康检查接口。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends

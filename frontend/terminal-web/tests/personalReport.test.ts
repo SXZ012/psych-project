@@ -112,3 +112,14 @@ test('倒计时数字语音已移除，开始提示音保留', () => {
     try { coordinator.playCue('countdown-3' as never) } catch { throw cueUrlProbe() }
   }, /unknown audio cue|没有列出的/)
 })
+
+test('未采集视觉注意不能由残留分类归入稳定或重点关注', () => {
+  const source = toReportSource(payload({ summary_subset: {
+    core_indicators: { attention_focus: { grade_source_score: 20, classification_label: '偏低', level: { severity: 2 } } },
+    modules: { eye_tracking: { status: 'not_collected' } },
+  } }))
+  const overview = resultOverview(source)
+  assert.equal(overview.metrics.find(m => m.key === 'attention_focus')?.level, '未采集')
+  assert.equal(overview.attention.some(m => m.key === 'attention_focus'), false)
+  assert.equal(overview.stable.some(m => m.key === 'attention_focus'), false)
+})

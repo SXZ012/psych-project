@@ -16,7 +16,7 @@ const props = defineProps<{
 }>()
 defineEmits<{ start: [] }>()
 
-const videoEl = useCameraSink()
+useCameraSink('videoEl')
 
 const checklist = computed(() => [
   { label: MESSAGES.face.checklist.camera, pass: props.readiness.cameraOn },
@@ -76,22 +76,19 @@ const longError = computed(() => props.notice.level === 'error')
 .loading-dots i:nth-child(3){animation-delay:.4s}
 @keyframes pulse{to{transform:translateY(-7px);opacity:.4}}
 @media(max-height:820px){.face-preview{width:460px;height:320px}.face-check h1{font-size:24px}}@media(max-height:680px){.face-check{padding-top:12px;padding-bottom:16px}.face-preview{width:420px;height:280px;margin-bottom:9px}.face-check h1{font-size:22px}.readiness-list{margin-top:7px}.face-check__note{margin-top:6px!important}.face-check .primary--wide{margin-top:10px;min-height:52px}.face-check>small{margin-top:10px}}
-</style>
 
-<style scoped>
+
 /* 正式采集前使用中性蓝灰舞台，和明亮服务页形成清楚的阶段切换。 */
 .face-check{color:#f5fafb;background:linear-gradient(145deg,#587788 0%,#3d5d6c 100%)}
 .face-check:before,.face-check:after{opacity:.1}.face-check h1{color:#fff}.face-check p,.face-check__message{color:#e5eef0!important}.face-check__eyebrow{color:#c7dfd7}.face-check__note{color:#d5e1e4!important}.face-check>small{color:#d5e1e4}
 .readiness-list span{color:#dce8ea;background:rgba(20,43,53,.25);border-color:rgba(226,238,240,.26)}.readiness-list .pass{color:#edfaf4;border-color:rgba(170,220,201,.55)}.readiness-list .pass i{background:#a7d8c3;color:#23483e;box-shadow:none}
 .face-preview{box-shadow:0 12px 30px rgba(19,42,52,.28)}
-</style>
 
-<style scoped>
+
 /* 连续测评阶段统一舞台色。 */
 .face-check{background:#8badb1}.face-check:before,.face-check:after{display:none}
-</style>
 
-<style scoped>
+
 /* 原生预览接管前会短暂露出此容器：用浅雾青取代旧深蓝黑底，避免形成黑色边框。 */
 .face-preview{
   background:#7fa3a8;
@@ -106,9 +103,8 @@ const longError = computed(() => props.notice.level === 'error')
   border-color:#b7dfca;
   box-shadow:0 0 0 3px rgba(183,223,202,.22),0 0 0 999px rgba(39,78,84,.10);
 }
-</style>
 
-<style scoped>
+
 /* 就位页同样采用浅背景上的深色文字，避免与舞台色混在一起。 */
 .face-check{color:#203e4d}.face-check h1{color:#203e4d;font-weight:650}.face-check p,.face-check__message{color:#365864!important;font-weight:550}.face-check__eyebrow{color:#365f6a;font-weight:700}.face-check__note{color:#45646f!important;font-weight:500}.face-check>small{color:#4b6872}
 .readiness-list span{color:#294e5a;background:rgba(255,255,255,.6);border-color:rgba(55,91,96,.32);font-weight:600}.readiness-list .pass{color:#25584e;border-color:rgba(64,126,113,.55)}

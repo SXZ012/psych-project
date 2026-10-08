@@ -13,6 +13,7 @@
 
 原始文件始终保留，修复产物写到 ``<name>.repaired.{webm|mp4}``，便于审计。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -184,8 +185,13 @@ async def validate_and_repair(src: Path) -> tuple[Path | None, dict]:
     )
     pr = await probe(remux) if ok else None
     report["steps"].append(
-        {"step": "remux", "to": remux.name, "elapsed_ms": ms,
-         "probe": pr, "ok": bool(pr and pr["duration"] is not None)}
+        {
+            "step": "remux",
+            "to": remux.name,
+            "elapsed_ms": ms,
+            "probe": pr,
+            "ok": bool(pr and pr["duration"] is not None),
+        }
     )
     if pr and pr["duration"] is not None:
         if _too_short(pr["duration"]):
@@ -200,14 +206,35 @@ async def validate_and_repair(src: Path) -> tuple[Path | None, dict]:
     # 3) 仍无时长：转标准 H.264 MP4（-t 70 兜底；本项目不采集音频 → -an）。
     mp4 = src.with_name(f"{src.stem}.repaired.mp4")
     ok, ms = await _ffmpeg(
-        ["-i", str(src), "-t", str(MAX_DURATION), "-c:v", "libx264", "-preset", "veryfast",
-         "-crf", "23", "-pix_fmt", "yuv420p", "-an", "-movflags", "+faststart", str(mp4)],
+        [
+            "-i",
+            str(src),
+            "-t",
+            str(MAX_DURATION),
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            "-an",
+            "-movflags",
+            "+faststart",
+            str(mp4),
+        ],
         "transcode",
     )
     pp = await probe(mp4) if ok else None
     report["steps"].append(
-        {"step": "transcode", "to": mp4.name, "elapsed_ms": ms,
-         "probe": pp, "ok": bool(pp and pp["duration"] is not None)}
+        {
+            "step": "transcode",
+            "to": mp4.name,
+            "elapsed_ms": ms,
+            "probe": pp,
+            "ok": bool(pp and pp["duration"] is not None),
+        }
     )
     if pp and pp["duration"] is not None and not _too_short(pp["duration"]):
         report["final_path"] = str(mp4)

@@ -5,6 +5,7 @@
 同一任务由数据库行锁（FOR UPDATE SKIP LOCKED）保证只有一个 worker 执行；
 worker 崩溃后租约到期，任务被其他实例重新领取。
 """
+
 import asyncio
 import logging
 

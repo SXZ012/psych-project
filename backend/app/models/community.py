@@ -3,6 +3,7 @@
 与航空场景的关系：共用 assessments/assessment_results/pairs 主干表，
 通过 scene 字段区分，社区专用数据放这四张表。
 """
+
 import uuid
 from datetime import datetime
 

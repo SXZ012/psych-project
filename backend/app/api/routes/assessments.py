@@ -1,4 +1,6 @@
 """测评接口：提交（含视频）、列表、查询状态与结果。"""
+
+import asyncio
 import json
 import logging
 import secrets
@@ -16,8 +18,8 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import FileResponse
-from sqlalchemy import select
+from fastapi.responses import FileResponse, RedirectResponse
+from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -25,6 +27,7 @@ from app.core.admin_auth import require_admin_session
 from app.core.config import _REPO_ROOT, settings
 from app.db.base import get_db
 from app.models.assessment import Assessment, AssessmentStatus
+from app.models.storage import StoredAsset
 from app.schemas.assessment import AssessmentDetail, AssessmentOut, AssessmentSubmitOut
 from app.services.community import (
     SessionBindingError,
@@ -180,7 +183,7 @@ async def submit_assessment(
         if existing is not None:
             if existing.scene != "aviation":
                 raise HTTPException(status_code=409, detail="client_token 已绑定其他场景的测评")
-            response.status_code = status.HTTP_200_OK   # 幂等重试：更新而非创建
+            response.status_code = status.HTTP_200_OK  # 幂等重试：更新而非创建
             updated = await _retry_existing_assessment(
                 existing,
                 db=db,
@@ -210,9 +213,7 @@ async def submit_assessment(
             await db.commit()
             await db.refresh(updated)
             payload = AssessmentOut.model_validate(updated).model_dump(mode="json")
-            return AssessmentSubmitOut.model_validate(
-                {**payload, "access_code": replacement_code}
-            )
+            return AssessmentSubmitOut.model_validate({**payload, "access_code": replacement_code})
 
     # 社区提交允许匿名（报告面向微信用户，不采集姓名/身份证）
     if community is not None:
@@ -440,9 +441,7 @@ async def _retry_existing_assessment(
     """幂等更新已有测评并重试后台任务（终端 token 重试与管理端 resubmit 共用）。"""
     # 更新数据（幂等：同一测评不重复创建）。仅轮询超时时续查原task_id；
     # 其他失败以及上传了新视频时，应重新创建合作方任务。
-    resume_timed_out_task = assessment.error_code == "TimeoutError" and bool(
-        assessment.v3_task_id
-    )
+    resume_timed_out_task = assessment.error_code == "TimeoutError" and bool(assessment.v3_task_id)
     if video and video.filename:
         video_storage_key, video_filename = await _save_video(video)
         video_storage_key, video_qa_json = await _validate_uploaded_video(video_storage_key)
@@ -467,10 +466,12 @@ async def _retry_existing_assessment(
         pass
     merged = dict(assessment.selections_data or {})
     quality = dict(merged.get("capture_quality") or {})
-    quality.update({
-        "effective_duration_seconds": max(0, min(effective_duration_seconds, 600)),
-        "paused_count": max(0, min(paused_count, 99)),
-    })
+    quality.update(
+        {
+            "effective_duration_seconds": max(0, min(effective_duration_seconds, 600)),
+            "paused_count": max(0, min(paused_count, 99)),
+        }
+    )
     if protocol_version.strip():
         quality["protocol_version"] = protocol_version.strip()[:32]
     if timeline_version.strip():
@@ -532,6 +533,7 @@ async def _retry_existing_assessment(
 
 @router.get("", response_model=list[AssessmentOut])
 async def list_assessments(
+    response: Response,
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[str, Depends(require_admin_session)],
     limit: int = 50,
@@ -539,19 +541,34 @@ async def list_assessments(
     name: str | None = None,
     id_card: str | None = None,
     scene: str = "aviation",
+    q: str | None = None,
 ) -> list[Assessment]:
-    # 现有管理后台是航空管理端；社区记录由社区用户报告链路处理，避免混入航空复核列表。
-    if scene not in {"aviation", "community"}:
+    if scene not in {"all", "aviation", "community"}:
         raise HTTPException(status_code=422, detail="非法场景")
-    stmt = select(Assessment).where(Assessment.scene == scene)
+    stmt = select(Assessment).where(Assessment.scene.in_(("aviation", "community")))
+    if scene != "all":
+        stmt = stmt.where(Assessment.scene == scene)
+    if q and q.strip():
+        keyword = q.strip()[:128]
+        stmt = stmt.where(
+            or_(
+                Assessment.name.icontains(keyword, autoescape=True),
+                Assessment.subject_id.icontains(keyword, autoescape=True),
+                Assessment.id_card.icontains(keyword, autoescape=True),
+                cast(Assessment.id, String).istartswith(keyword, autoescape=True),
+            )
+        )
     if name:
         stmt = stmt.where(Assessment.name.ilike(f"%{name.strip()}%"))
     if id_card:
         stmt = stmt.where(Assessment.id_card == id_card.strip())
+    # Count the same filtered dataset before applying the page size.
+    total = await db.scalar(select(func.count()).select_from(stmt.subquery()))
+    response.headers["X-Total-Count"] = str(total or 0)
     stmt = (
-        stmt.order_by(Assessment.created_at.desc())
+        stmt.order_by(Assessment.created_at.desc(), Assessment.id.desc())
         .offset(max(0, offset))
-        .limit(min(limit, 100))
+        .limit(max(1, min(limit, 100)))
     )
     return list((await db.execute(stmt)).scalars().all())
 
@@ -565,7 +582,7 @@ async def get_assessment(
     stmt = (
         select(Assessment)
         .options(selectinload(Assessment.result))
-        .where(Assessment.id == assessment_id, Assessment.scene == "aviation")
+        .where(Assessment.id == assessment_id, Assessment.scene.in_(("aviation", "community")))
     )
     assessment = (await db.execute(stmt)).scalar_one_or_none()
     if assessment is None:
@@ -573,27 +590,36 @@ async def get_assessment(
     return assessment
 
 
-@router.get("/{assessment_id}/au-image", response_class=FileResponse)
+@router.get("/{assessment_id}/au-image", response_class=Response)
 async def get_assessment_au_image(
     assessment_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[str, Depends(require_admin_session)],
-) -> FileResponse:
+) -> Response:
     """返回持久化 AU 标注图；旧报告首次访问时按 file_id 刷新并缓存。"""
+    assessment = await get_assessment(assessment_id, db, _)
+    if assessment.result is None:
+        raise HTTPException(status_code=404, detail="AU image not found")
+    remote = await db.scalar(
+        select(StoredAsset.object_key)
+        .where(StoredAsset.assessment_id == assessment_id, StoredAsset.category == "au_image")
+        .order_by(StoredAsset.verified_at.desc())
+        .limit(1)
+    )
+    if remote:
+        from app.services.oss.client import OSSClient
+
+        return RedirectResponse(
+            await asyncio.to_thread(OSSClient().presigned_url, remote, expires=300),
+            headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
+        )
     cached = find_cached_au_image(assessment_id)
     if cached is None:
-        stmt = (
-            select(Assessment)
-            .options(selectinload(Assessment.result))
-            .where(Assessment.id == assessment_id, Assessment.scene == "aviation")
-        )
-        assessment = (await db.execute(stmt)).scalar_one_or_none()
-        if assessment is None or assessment.result is None:
-            raise HTTPException(status_code=404, detail="AU image not found")
         try:
             cached = await cache_au_image(
-                assessment.result.summary_json or {}, assessment_id, get_v3_provider()
+                assessment.result.summary_json or {}, assessment_id, get_v3_provider(), db
             )
+            await db.commit()
         except Exception as exc:  # noqa: BLE001
             logger.warning("恢复 assessment %s AU图片失败: %s", assessment_id, exc)
             raise HTTPException(status_code=404, detail="AU image expired or unavailable") from exc

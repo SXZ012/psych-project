@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import NavigationButton from '../common/NavigationButton.vue'
+
 /**
  * 社区提交失败页：显示会话短码（求助/对账凭据）+ 重新提交 + 结束。
  * 语气安抚、说明恢复路径；结束回欢迎页（不重复确认/支付）。
@@ -19,7 +21,7 @@ const emit = defineEmits<{ retry: []; end: [] }>()
         <button class="crs-primary" :disabled="retrying" @click="emit('retry')">
           {{ retrying ? '正在重新提交…' : '重新提交' }}
         </button>
-        <button class="crs-secondary" @click="emit('end')">返回首页</button>
+        <NavigationButton class="crs-secondary" @click="emit('end')">返回首页</NavigationButton>
       </div>
       <small>结束不会影响你的体验记录；需要帮助请联系现场工作人员</small>
     </section>

@@ -1,4 +1,5 @@
 """航空自助报告凭证：隐私隔离、正常轮询与失败限频。"""
+
 from datetime import datetime, timezone
 
 from app.models.assessment import Assessment, AssessmentStatus
@@ -30,13 +31,15 @@ async def test_valid_processing_lookup_can_poll_without_consuming_failure_limit(
 
 async def test_invalid_credentials_are_uniform_and_rate_limited(db, client):
     code = generate_access_code()
-    db.add(Assessment(
-        name="隐私用户",
-        subject_id="RATE-001",
-        scene="aviation",
-        status=AssessmentStatus.processing,
-        report_access_token_hash=hash_access_code(code),
-    ))
+    db.add(
+        Assessment(
+            name="隐私用户",
+            subject_id="RATE-001",
+            scene="aviation",
+            status=AssessmentStatus.processing,
+            report_access_token_hash=hash_access_code(code),
+        )
+    )
     await db.commit()
 
     bodies = []
@@ -54,6 +57,7 @@ async def test_invalid_credentials_are_uniform_and_rate_limited(db, client):
         json={"subject_id": "RATE-001", "access_code": "WRONG-CODE"},
     )
     assert blocked.status_code == 429
+
 
 async def test_fixed_report_id_returns_the_matching_report_status(db, client):
     assessment = Assessment(

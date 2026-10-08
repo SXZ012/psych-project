@@ -1,4 +1,5 @@
 """测评相关 ORM 模型。"""
+
 import enum
 import uuid
 from datetime import datetime
@@ -11,15 +12,15 @@ from app.db.base import Base
 
 
 class AssessmentStatus(str, enum.Enum):
-    pending = "pending"              # 数据已提交，待处理
+    pending = "pending"  # 数据已提交，待处理
     video_processing = "video_processing"  # 视频转码中
-    uploading = "uploading"          # 上传合作方 OSS
-    queued = "queued"                # V3 任务已创建排队
-    processing = "processing"        # V3 模型分析中
+    uploading = "uploading"  # 上传合作方 OSS
+    queued = "queued"  # V3 任务已创建排队
+    processing = "processing"  # V3 模型分析中
     report_generating = "report_generating"  # 生成报告中
-    completed = "completed"          # 报告已生成
+    completed = "completed"  # 报告已生成
     invalid_result = "invalid_result"  # 合作方未正确识别视频时长/分析结果无效，不作正式报告
-    failed = "failed"                # 处理失败
+    failed = "failed"  # 处理失败
 
 
 class Assessment(Base):
@@ -126,6 +127,10 @@ class Assessment(Base):
     )
 
     @property
+    def has_pdf(self) -> bool:
+        return bool(self.report_pdf_key) and self.report_status == "ready"
+
+    @property
     def basic_info(self) -> dict | None:
         """终端登录页四项基础信息中的性别/年龄（存于 selections_data.basic_info）。
 
@@ -141,6 +146,7 @@ class Assessment(Base):
         data = self.selections_data
         quality = data.get("capture_quality") if isinstance(data, dict) else None
         return quality if isinstance(quality, dict) else None
+
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
     )

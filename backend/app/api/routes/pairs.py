@@ -1,4 +1,5 @@
 """图题配对包调度接口（支持双场景筛选）。"""
+
 import json
 from pathlib import Path
 from typing import Annotated
@@ -38,6 +39,41 @@ _STATIC_MEDIA_TYPES = {
     ".gif": "image/gif",
 }
 _CDN_IMAGE_SUFFIXES = {".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif"}
+_PRACTICE_FILES = ("38239121.jpg", "5392095.jpg", "37443455.jpg")
+
+
+async def _temporary_oss_image(path: str) -> Response:
+    """Read cloud media without creating a server or browser disk cache."""
+    base = settings.static_asset_base_url
+    if not base or not path.startswith("/static/assets/community/"):
+        raise HTTPException(503, "社区云端题库尚未配置，请联系工作人员")
+    key = "static-assets/community/" + path.removeprefix("/static/assets/community/")
+    try:
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as client:
+            async with client.stream("GET", f"{base}/{key}") as upstream:
+                upstream.raise_for_status()
+                content_type = upstream.headers.get("content-type", "").split(";", 1)[0]
+                if not content_type.startswith("image/"):
+                    raise HTTPException(502, "云端题库图片格式异常")
+                data = bytearray()
+                async for chunk in upstream.aiter_bytes():
+                    if len(data) + len(chunk) > MAX_IMAGE_BYTES:
+                        raise HTTPException(502, "云端题库图片过大")
+                    data.extend(chunk)
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, "云端题库图片暂时不可用，请重新准备") from exc
+    return Response(
+        bytes(data),
+        media_type=content_type,
+        headers={"Cache-Control": "no-store", "X-Asset-Source": "oss"},
+    )
+
+
+@router.get("/practice-images/{index}")
+async def practice_image(index: int) -> Response:
+    if not 0 <= index < len(_PRACTICE_FILES):
+        raise HTTPException(404, "预训练图片不存在")
+    return await _temporary_oss_image("/static/assets/community/ux/" + _PRACTICE_FILES[index])
 
 
 def _validate_scene(scene: str) -> str:
@@ -70,6 +106,7 @@ def _serve_local_static(image_url: str) -> FileResponse | None:
 async def terminal_image(
     image_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
+    temporary: bool = Query(default=False),
 ) -> Response:
     """将已登记的题库图片转发给终端，避免设备直接依赖公网 OSS。"""
     image = (
@@ -77,6 +114,9 @@ async def terminal_image(
     ).scalar_one_or_none()
     if image is None:
         raise HTTPException(status_code=404, detail="题库图片不存在或已停用")
+
+    if temporary:
+        return await _temporary_oss_image(image.url)
 
     cdn_base = settings.static_asset_base_url
     asset_url, _, asset_query = image.url.partition("?")
@@ -90,9 +130,7 @@ async def terminal_image(
                 "/static/assets/community/"
             )
         else:
-            object_path = "static-assets/assets/" + asset_url.removeprefix(
-                "/static/assets/"
-            )
+            object_path = "static-assets/assets/" + asset_url.removeprefix("/static/assets/")
         target = f"{cdn_base}/{object_path}"
         if asset_query:
             target = f"{target}?{asset_query}"
@@ -126,9 +164,7 @@ async def terminal_image(
 @router.get("/next")
 async def next_pair(
     db: Annotated[AsyncSession, Depends(get_db)],
-    used: str | None = Query(
-        default=None, description="已用过的 pair_id，逗号分隔，用于去重"
-    ),
+    used: str | None = Query(default=None, description="已用过的 pair_id，逗号分隔，用于去重"),
     scene: str = Query(
         default=DEFAULT_SCENE, description="场景筛选(aviation/community)，默认 aviation"
     ),
@@ -152,9 +188,7 @@ async def next_pair(
 @router.get("/session")
 async def session_pairs(
     db: Annotated[AsyncSession, Depends(get_db)],
-    count: int = Query(
-        default=settings.SESSION_PAIR_COUNT, ge=1, le=40, description="轮播图片数"
-    ),
+    count: int = Query(default=settings.SESSION_PAIR_COUNT, ge=1, le=40, description="轮播图片数"),
     scene: str = Query(
         default=DEFAULT_SCENE, description="场景筛选(aviation/community)，默认 aviation"
     ),
@@ -162,6 +196,9 @@ async def session_pairs(
     exclude_images: str | None = Query(
         default=None, description="逗号分隔的图片 URL 标记（如文件名），命中的图片不进入题组"
     ),
+    exclude_questions: Annotated[
+        list[str] | None, Query(description="预训练题干；正式题按内容去重排除")
+    ] = None,
 ) -> dict:
     """一次返回 count 张互不重复图的配对包，供前端自定节奏出题。按 scene 筛选题库。"""
     scene = _validate_scene(scene)
@@ -179,18 +216,32 @@ async def session_pairs(
                 fixed_ids = [UUID(value) for value in json.loads(session.selected_pair_ids)]
             except (ValueError, TypeError, json.JSONDecodeError):
                 fixed_ids = []
-            pairs = await get_pairs_by_ids(db, fixed_ids, scene=scene)
+            pairs = await get_pairs_by_ids(
+                db,
+                fixed_ids,
+                scene=scene,
+                exclude_image_tags=exclude_tags,
+                exclude_questions=exclude_questions,
+            )
         else:
             pairs = await get_session_pairs(
-                db, count=count, scene=scene, exclude_image_tags=exclude_tags
+                db,
+                count=count,
+                scene=scene,
+                exclude_image_tags=exclude_tags,
+                exclude_questions=exclude_questions,
             )
-            if len(pairs) == count:
+            if pairs:
                 session.selected_pair_ids = json.dumps([pair["pair_id"] for pair in pairs])
                 await db.commit()
     else:
         # 航空维持原接口；社区无 session_id 仅供后台预览/测试，终端始终传支付会话。
         pairs = await get_session_pairs(
-            db, count=count, scene=scene, exclude_image_tags=exclude_tags
+            db,
+            count=count,
+            scene=scene,
+            exclude_image_tags=exclude_tags,
+            exclude_questions=exclude_questions,
         )
     return {"count": len(pairs), "pairs": pairs}
 
@@ -198,9 +249,7 @@ async def session_pairs(
 @router.get("/aviation/pool")
 async def aviation_pool(
     db: Annotated[AsyncSession, Depends(get_db)],
-    count: int = Query(
-        default=24, ge=1, le=40, description="题池上限（自定节奏，按 pair 去重）"
-    ),
+    count: int = Query(default=24, ge=1, le=40, description="题池上限（自定节奏，按 pair 去重）"),
 ) -> dict:
     """航空自定节奏题池：60 秒固定时长、不固定题数。
 

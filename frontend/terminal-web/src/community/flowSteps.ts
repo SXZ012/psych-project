@@ -14,7 +14,6 @@ export const PHASE_STEP: Record<CommunityPhase, number | null> = {
   payment_mock: 1,
   consent: 1,
   assets_loading: 2,
-  opening: 2,
   face_ready: 2,
   practice: 2,
   countdown: 3,

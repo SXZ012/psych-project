@@ -3,6 +3,7 @@
 密钥从 settings.DASHSCOPE_API_KEY 读取（.env 注入），**绝不硬编码**。
 端点：{QWEN_BASE_URL}/chat/completions，鉴权 Authorization: Bearer <key>。
 """
+
 from __future__ import annotations
 
 import logging

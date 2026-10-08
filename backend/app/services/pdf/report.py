@@ -7,19 +7,24 @@
 自评、心情图卡和模拟测试等体验层数据一律不进入 PDF。
 若合作方结果为空或关键内容全部缺失，拒绝生成空 PDF。
 """
+
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.assessment import Assessment, AssessmentResult
+from app.services.report_view import build_report_view
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +116,14 @@ def _extract_core_metrics(summary: dict) -> list[dict]:
         item = core.get(key)
         if not isinstance(item, dict):
             continue
-        score = _num(item.get("grade_source_score") or item.get("raw_score") or item.get("score"))
+        score = next(
+            (
+                _num(item[k])
+                for k in ("grade_source_score", "raw_score", "score")
+                if item.get(k) is not None
+            ),
+            None,
+        )
         raw_label = item.get("classification_label")
         if not raw_label and isinstance(item.get("level"), dict):
             raw_label = item["level"].get("label")
@@ -119,11 +131,13 @@ def _extract_core_metrics(summary: dict) -> list[dict]:
         severity = level_obj.get("severity")
         if score is None and not raw_label:
             continue
-        metrics.append({
-            "label": label,
-            "score": int(score) if score is not None else None,
-            "level": _friendly_label(key, raw_label, severity),
-        })
+        metrics.append(
+            {
+                "label": label,
+                "score": round(score, 2) if score is not None else None,
+                "level": _friendly_label(key, raw_label, severity),
+            }
+        )
     return metrics
 
 
@@ -137,11 +151,13 @@ def _extract_screening(summary: dict) -> list[dict]:
         score = _num(item.get("score"))
         if classification is None and score is None:
             continue
-        items.append({
-            "label": label,
-            "classification": classification or "—",
-            "score": int(score) if score is not None else None,
-        })
+        items.append(
+            {
+                "label": label,
+                "classification": classification or "—",
+                "score": round(score, 2) if score is not None else None,
+            }
+        )
     return items
 
 
@@ -169,6 +185,37 @@ def _extract_text_summary(summary: dict, qwen_report: str | None) -> str | None:
     return None
 
 
+def _render_four_modules(html_content: str):
+    """Validate actual pagination before publishing, without clipping or dropping content."""
+    from weasyprint import CSS, HTML
+
+    # A4 content density can vary with real classifications and quality notes.
+    # Keep a readable lower bound, and fail explicitly if even that cannot fit.
+    for font_size, spacing in ((12, 1.55), (11.5, 1.5), (11, 1.45)):
+        document = HTML(string=html_content).render(
+            stylesheets=[
+                CSS(
+                    string=f"""
+            body {{ font-size: {font_size}px; line-height: {spacing}; }}
+            .card, .detail-card, .evidence {{ font-size: {font_size}px; }}
+        """
+                )
+            ]
+        )
+        modules = []
+        for page in document.pages:
+            modules.append(
+                {
+                    box.element.get("data-module")
+                    for box in page._page_box.descendants()
+                    if box.element is not None and box.element.get("data-module")
+                }
+            )
+        if len(document.pages) == 4 and modules == [{str(i)} for i in range(1, 5)]:
+            return document
+    raise ValueError("报告排版超出四页限制，暂不发布；请检查模块内容和模板")
+
+
 def generate_pdf_sync(
     db_result: AssessmentResult, assessment: Assessment
 ) -> tuple[Path | None, str | None]:
@@ -187,25 +234,48 @@ def generate_pdf_sync(
         logger.warning("PDF 拒绝生成 | assessment=%s 原因=%s", assessment.id, reason)
         return None, reason
 
+    # Run the same bundled TypeScript mapping used by the admin and terminal.
+    # Do not maintain a second Python interpretation/scoring implementation.
+    personal = build_report_view(assessment, db_result)
+    source = {
+        "status": "completed",
+        "result_valid": assessment.result_valid,
+        "submitted_at": personal["submitted_at"],
+        "scene": assessment.scene,
+        "result": {**personal["result_subset"], "summary_json": personal["summary_subset"]},
+    }
+    mapped = subprocess.run(
+        ["node", str(Path(__file__).with_name("report-kit.mjs"))],
+        input=json.dumps(source, ensure_ascii=False),
+        text=True,
+        encoding="utf-8",
+        capture_output=True,
+        check=True,
+        timeout=20,
+    )
+    model = json.loads(mapped.stdout)
     template = _env.get_template("report.html")
     html_content = template.render(
-        nickname=assessment.name or "社区用户",
-        created_at=(assessment.created_at or datetime.now()).strftime("%Y-%m-%d %H:%M"),
-        report_id=f"CM-{assessment.id.hex[:12].upper()}",
-        overall=overall,
-        core_metrics=core_metrics,
-        screening=screening,
-        text_summary=text_summary,
-        algorithm_version=db_result.algorithm_version,
-        generated_at=datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        created_at=(assessment.submitted_at or assessment.created_at or datetime.now(timezone.utc))
+        .astimezone(ZoneInfo("Asia/Shanghai"))
+        .strftime("%Y-%m-%d %H:%M"),
+        report_id=assessment.id.hex[:8].upper(),
+        generated_at=datetime.now(ZoneInfo("Asia/Shanghai")).strftime("%Y-%m-%d %H:%M 北京时间"),
+        demo=str(db_result.algorithm_version or "").startswith("demo"),
+        model=model,
     )
 
     _OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     pdf_path = _OUTPUT_DIR / f"{assessment.id.hex}.pdf"
 
-    from weasyprint import HTML
-
-    HTML(string=html_content).write_pdf(str(pdf_path))
+    document = _render_four_modules(html_content)
+    # An interrupted render cannot leave a partially overwritten downloadable PDF.
+    temporary = pdf_path.with_suffix(".pdf.tmp")
+    try:
+        document.write_pdf(str(temporary))
+        temporary.replace(pdf_path)
+    finally:
+        temporary.unlink(missing_ok=True)
     return pdf_path, None
 
 
@@ -226,7 +296,7 @@ async def generate_pdf(db: AsyncSession, assessment_id: UUID) -> tuple[Path | No
         return None, "V3 结果不存在"
 
     try:
-        pdf_path, error = generate_pdf_sync(result, assessment)
+        pdf_path, error = await asyncio.to_thread(generate_pdf_sync, result, assessment)
     except Exception as e:
         logger.exception("PDF 生成失败 | assessment=%s", assessment_id)
         return None, f"PDF 生成失败: {e}"
@@ -243,7 +313,9 @@ async def generate_pdf(db: AsyncSession, assessment_id: UUID) -> tuple[Path | No
         from app.services.storage import get_storage
 
         storage = get_storage()
-        oss_key = await storage.publish(pdf_path, f"report-pdfs/{assessment.id.hex}.pdf")
+        oss_key = await storage.publish(
+            pdf_path, f"report-pdfs/{assessment.id.hex}.pdf", db=db, assessment_id=assessment.id
+        )
         if oss_key:
             logger.info("PDF 已发布到 %s | key=%s", storage.name, oss_key)
     except Exception as e:

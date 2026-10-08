@@ -82,6 +82,7 @@ outputs/
 .claude/
 .codex/
 .slidep/
+.codex-ppt-build/
 /tools/
 .tools/
 .android/
@@ -99,7 +100,3 @@ tmp-terminal-v2*.png
 artifacts/
 /wind-*.png
 /relax-audit-*.png
-
-# Remotion 介绍视频渲染产物（源码在库，母带用 npm run render 再生）
-community-assets/intro-production/output/
-community-assets/intro-production/node_modules/

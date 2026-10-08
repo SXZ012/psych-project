@@ -1,4 +1,5 @@
 """FastAPI 应用入口。"""
+
 import asyncio
 import logging
 import time
@@ -15,8 +16,11 @@ from sqlalchemy import text
 import app.models  # noqa: F401
 from app.api.routes import (
     admin,
+    appointments,
     assessments,
     community,
+    community_reports,
+    content,
     health,
     pairs,
     reports,
@@ -25,7 +29,7 @@ from app.api.routes import (
 )
 from app.core.config import settings
 from app.core.log import setup_logging
-from app.db.base import Base, engine
+from app.db.base import AsyncSessionLocal, Base, engine
 
 # 结构化日志：控制台 + 滚动文件 logs/app.log
 setup_logging()
@@ -35,8 +39,18 @@ _STATIC_DIR = Path(__file__).resolve().parent / "static"
 # 社区素材与前后端代码分离，放在项目根目录的独立文件夹中。
 _COMMUNITY_ASSETS_DIR = Path(__file__).resolve().parents[2] / "community-assets"
 _CDN_MEDIA_SUFFIXES = {
-    ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif",
-    ".wav", ".mp3", ".mp4", ".webm", ".ogg", ".m4a",
+    ".svg",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".wav",
+    ".mp3",
+    ".mp4",
+    ".webm",
+    ".ogg",
+    ".m4a",
 }
 
 
@@ -71,10 +85,7 @@ async def lifespan(app: FastAPI):
             # run the equivalent migration before deployment.
             for value in ("video_processing", "queued", "report_generating", "invalid_result"):
                 await conn.execute(
-                    text(
-                        "ALTER TYPE assessment_status ADD VALUE IF NOT EXISTS "
-                        f"'{value}'"
-                    )
+                    text(f"ALTER TYPE assessment_status ADD VALUE IF NOT EXISTS '{value}'")
                 )
             for column, sql_type in (
                 ("video_storage_key", "VARCHAR(256)"),
@@ -94,10 +105,7 @@ async def lifespan(app: FastAPI):
                 ("result_valid", "BOOLEAN"),
             ):
                 await conn.execute(
-                    text(
-                        f"ALTER TABLE assessments ADD COLUMN IF NOT EXISTS "
-                        f"{column} {sql_type}"
-                    )
+                    text(f"ALTER TABLE assessments ADD COLUMN IF NOT EXISTS {column} {sql_type}")
                 )
             # 航空情境题扩展字段；均为向后兼容字段，旧题库无需重灌即可继续使用。
             for column, sql_type in (
@@ -112,10 +120,7 @@ async def lifespan(app: FastAPI):
                 ("media_url", "VARCHAR(512)"),
             ):
                 await conn.execute(
-                    text(
-                        f"ALTER TABLE pairs ADD COLUMN IF NOT EXISTS "
-                        f"{column} {sql_type}"
-                    )
+                    text(f"ALTER TABLE pairs ADD COLUMN IF NOT EXISTS {column} {sql_type}")
                 )
             # 双场景：assessments 表扩展字段
             for column, sql_type in (
@@ -131,10 +136,7 @@ async def lifespan(app: FastAPI):
                 ("client_token", "VARCHAR(64)"),
             ):
                 await conn.execute(
-                    text(
-                        f"ALTER TABLE assessments ADD COLUMN IF NOT EXISTS "
-                        f"{column} {sql_type}"
-                    )
+                    text(f"ALTER TABLE assessments ADD COLUMN IF NOT EXISTS {column} {sql_type}")
                 )
             await conn.execute(
                 text(
@@ -156,10 +158,7 @@ async def lifespan(app: FastAPI):
                 ("processing_attempts", "INTEGER NOT NULL DEFAULT 0"),
             ):
                 await conn.execute(
-                    text(
-                        f"ALTER TABLE assessments ADD COLUMN IF NOT EXISTS "
-                        f"{column} {sql_type}"
-                    )
+                    text(f"ALTER TABLE assessments ADD COLUMN IF NOT EXISTS {column} {sql_type}")
                 )
             await conn.execute(
                 text(
@@ -189,9 +188,11 @@ async def lifespan(app: FastAPI):
                                        'queued','processing','report_generating')
                       AND NOT EXISTS (SELECT 1 FROM processing_tasks t WHERE t.assessment_id = a.id)
                     """
-                )
-                , {"max_attempts": settings.TASK_MAX_ATTEMPTS,
-                   "lease_seconds": settings.TASK_LEASE_SECONDS}
+                ),
+                {
+                    "max_attempts": settings.TASK_MAX_ATTEMPTS,
+                    "lease_seconds": settings.TASK_LEASE_SECONDS,
+                },
             )
             # 外键约束(IF NOT EXISTS 兼容: PG 不支持 ADD CONSTRAINT IF NOT EXISTS, 用 DO 块)
             await conn.execute(
@@ -221,17 +222,34 @@ async def lifespan(app: FastAPI):
                     """
                 )
             )
+    from app.services.content import BUNDLE, publish_bundled_content
+
+    if BUNDLE.is_file():
+        async with AsyncSessionLocal() as db:
+            await publish_bundled_content(db)
+            await db.commit()
     logger.info("应用启动 | env=%s provider=%s", settings.ENV, settings.PROVIDER_MODE)
     # 持久化任务 worker：开发内嵌于 API 进程；生产改 INPROCESS_WORKER=false
     # 并以 `python -m app.worker` 独立部署（同一任务行锁保证不重复执行）。
     inprocess_worker = None
     worker_task = None
+    storage_task = None
+    if settings.REPORT_STORAGE_MODE == "oss":
+        from app.services.storage_maintenance import storage_sync_loop
+
+        storage_task = asyncio.create_task(storage_sync_loop())
     if settings.INPROCESS_WORKER:
         from app.services.processing import ProcessingWorker
 
         inprocess_worker = ProcessingWorker(worker_id="inprocess")
         worker_task = asyncio.create_task(inprocess_worker.run_forever())
     yield
+    if storage_task is not None:
+        storage_task.cancel()
+        try:
+            await storage_task
+        except asyncio.CancelledError:
+            pass
     if inprocess_worker is not None and worker_task is not None:
         inprocess_worker.stop()
         try:
@@ -255,6 +273,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Total-Count"],
 )
 
 # 社区素材优先单独映射，URL 保持不变，终端和题库数据库无需改写。
@@ -279,9 +298,7 @@ async def redirect_static_assets_to_cdn(request: Request, call_next):
                 "/static/assets/community/"
             )
         elif path.startswith("/static/assets/"):
-            object_path = "static-assets/assets/" + path.removeprefix(
-                "/static/assets/"
-            )
+            object_path = "static-assets/assets/" + path.removeprefix("/static/assets/")
         else:
             object_path = ""
         if object_path and Path(path).suffix.lower() in _CDN_MEDIA_SUFFIXES:
@@ -294,6 +311,15 @@ async def redirect_static_assets_to_cdn(request: Request, call_next):
                 headers={"Cache-Control": "public, max-age=300"},
             )
     return await call_next(request)
+
+
+@app.middleware("http")
+async def protect_private_responses(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(("/api/v1/reports", "/api/v1/community", "/community/")):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 @app.middleware("http")
@@ -322,6 +348,9 @@ async def log_requests(request: Request, call_next):
 app.include_router(health.router, tags=["health"])
 app.include_router(session_config.router)
 app.include_router(community.router)
+app.include_router(community_reports.router)
+app.include_router(appointments.router)
+app.include_router(content.router)
 app.include_router(
     assessments.router,
     prefix=f"{settings.API_V1_PREFIX}/assessments",

@@ -1,4 +1,5 @@
 """图片上传到 OSS（诱发图片库用；运维/管理端工具接口，需管理会话）。"""
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile

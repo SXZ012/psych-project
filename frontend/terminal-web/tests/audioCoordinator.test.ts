@@ -150,9 +150,9 @@ test('失效说明为 critical：stopAll 不打断，dispose 才终止', async (
 
 test('播放失败与取消分别落地：失败回调 onPlaybackError，取消无回调', async () => {
   const { coordinator, errors } = makeCoordinator(() => true)
-  await coordinator.preload([GUIDE + 'start.wav'])
+  await coordinator.preload([GUIDE + 'start-tone.wav'])
   coordinator.playCue('start')
-  const start = FakePlayer.byUrl.get(GUIDE + 'start.wav')!
+  const start = FakePlayer.byUrl.get(GUIDE + 'start-tone.wav')!
   start.fail()
   await Promise.resolve()
   assert.deepEqual(errors, ['start'])
@@ -182,12 +182,34 @@ test('缓存缺失的 cue 按播放失败处理，不悬挂', async () => {
 
 test('start 提示可打断题目语音；complete 清除恢复目标', async () => {
   const { coordinator } = makeCoordinator(() => true)
-  await coordinator.preload(['/audio/q1.wav', GUIDE + 'start.wav', GUIDE + 'complete.wav'])
+  await coordinator.preload(['/audio/q1.wav', GUIDE + 'start-tone.wav', GUIDE + 'complete.wav'])
   coordinator.playQuestion(instance(1, '/audio/q1.wav'))
   const q1 = FakePlayer.byUrl.get('/audio/q1.wav')!
   coordinator.playCue('start')
   assert.equal(q1.stopped, true)
-  FakePlayer.byUrl.get(GUIDE + 'start.wav')!.end()
+  FakePlayer.byUrl.get(GUIDE + 'start-tone.wav')!.end()
   await Promise.resolve()
   assert.equal(q1.plays, 1, 'start 结束后不自动恢复题目（倒计时阶段无题）')
+})
+
+test('航空短开始提示结束后接续正式首题，不要求用户等待或重播', async () => {
+  const { coordinator } = makeCoordinator(() => true)
+  await coordinator.preload([GUIDE + 'start-tone.wav', '/q1.wav'])
+  coordinator.playCue('start')
+  coordinator.playQuestion(instance(1, '/q1.wav'))
+  assert.equal(FakePlayer.byUrl.get('/q1.wav')!.plays, 0)
+  FakePlayer.byUrl.get(GUIDE + 'start-tone.wav')!.end()
+  await Promise.resolve()
+  assert.equal(FakePlayer.byUrl.get('/q1.wav')!.plays, 1)
+})
+
+test('航空收尾音频不能抢占偏离提示，回正后可再次请求收尾提示', async () => {
+  const { coordinator } = makeCoordinator(() => true)
+  await coordinator.preload([GUIDE + 'deviation.wav', GUIDE + 'finishing-v2.wav'])
+  coordinator.playPositionReminder('deviation')
+  assert.equal(coordinator.playCue('finishing'), false)
+  assert.equal(FakePlayer.byUrl.get(GUIDE + 'deviation.wav')!.stopped, false)
+  FakePlayer.byUrl.get(GUIDE + 'deviation.wav')!.end()
+  await Promise.resolve()
+  assert.equal(coordinator.playCue('finishing'), true)
 })

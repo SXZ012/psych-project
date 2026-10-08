@@ -69,22 +69,19 @@ const isFinalReminder = computed(() => props.remainingSec > 0 && props.remaining
 .closing h1{font-weight:500;font-size:var(--fs-title,28px)}
 .closing p{margin:6px;color:var(--tx-soft,#d3e0ea)}
 @media(max-height:700px){.paired-stage{padding-top:220px}.paired-stage header{top:40px}.closing{height:260px}}
-</style>
 
-<style scoped>
+
 /* 正式答题保持白色内容卡，背景收深一档以集中注意力。 */
 .paired-stage{background:linear-gradient(145deg,#557585 0%,#385665 100%);color:#f7fbfb}
 .paired-stage header p,.time p{color:#c7dcde}.paired-stage h2{color:#fff}.paired-stage header small,.time>span{color:#dbe7e8}.time>b{color:#f1e3c2}
 .progress{background:rgba(255,255,255,.22)}.progress i{background:#9bc6b7}.finish-notice{background:rgba(83,63,27,.94);box-shadow:0 8px 20px rgba(23,37,42,.22)}
 .closing{background:#fff;border-color:#d7e2df;color:#294354}.closing p{color:#647780}
-</style>
 
-<style scoped>
+
 /* 连续测评阶段统一舞台色。 */
 .paired-stage{background:#8badb1}
-</style>
 
-<style scoped>
+
 /* 正式测评的舞台文字加深，题卡本身由 ImageQuestion 统一为高对比白底。 */
 .paired-stage{color:#203e4d}.paired-stage header p,.time p{color:#365f6a;font-size:15px;font-weight:700}.paired-stage h2{color:#203e4d;font-weight:650}.paired-stage header small,.time>span{color:#486570;font-size:14px;font-weight:600}.time>b{color:#244f65;font-weight:700}
 .progress{background:rgba(34,69,77,.24)}.progress i{background:#3f8579}

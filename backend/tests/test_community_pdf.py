@@ -1,4 +1,5 @@
 """社区 PDF：有效结果生成 / 空结果拒绝 / 内容仅含合作方数据。"""
+
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -78,7 +79,7 @@ async def test_pdf_generated_with_real_summary(db, tmp_path):
     labels = [m["label"] for m in core]
     assert "压力负荷" in labels and "疲劳/恢复" in labels and "视觉注意力" in labels
     stress = next(m for m in core if m["label"] == "压力负荷")
-    assert stress["score"] == 48
+    assert stress["score"] == 48.2
     assert stress["level"] == "正常"  # 参考范围→正常，与航空管理端对齐
 
     screening = _extract_screening(REAL_SUMMARY)
@@ -110,9 +111,20 @@ async def test_pdf_full_generation_and_content_check(db, tmp_path, monkeypatch):
     import app.services.pdf.report as pdf_report
 
     monkeypatch.setattr(pdf_report, "_OUTPUT_DIR", tmp_path)
+    rendered_pages = []
+    render = pdf_report._render_four_modules
+
+    def checked_render(html):
+        document = render(html)
+        rendered_pages.extend(document.pages)
+        return document
+
+    monkeypatch.setattr(pdf_report, "_render_four_modules", checked_render)
 
     assessment = Assessment(
-        name="PDF测试用户", scene="community", report_type="customer_pdf",
+        name="PDF测试用户",
+        scene="community",
+        report_type="customer_pdf",
         status=AssessmentStatus.completed,
         submitted_at=datetime.now(timezone.utc),
     )
@@ -130,6 +142,30 @@ async def test_pdf_full_generation_and_content_check(db, tmp_path, monkeypatch):
     assert pdf_path.stat().st_size > 1000  # 至少 1KB（不是空壳）
     content = pdf_path.read_bytes()
     assert content[:5] == b"%PDF-"
+    assert len(rendered_pages) == 4
+    for number, page in enumerate(rendered_pages, 1):
+        modules = {
+            box.element.get("data-module")
+            for box in page._page_box.descendants()
+            if box.element is not None and box.element.get("data-module")
+        }
+        assert modules == {str(number)}, "a module must neither spill nor share a page"
+        assert sum(len(getattr(box, "text", "")) for box in page._page_box.descendants()) > 200
+
+
+def test_pdf_refuses_overflow_instead_of_publishing_nearly_empty_extra_pages():
+    import pytest
+
+    from app.services.pdf.report import _render_four_modules
+
+    chapters = "".join(
+        f'<section data-module="{i}" style="break-before:page">'
+        + "<p>这是一段用于验证分页保护的完整文字。</p>" * (70 if i == 1 else 5)
+        + "</section>"
+        for i in range(1, 5)
+    )
+    with pytest.raises(ValueError, match="四页限制"):
+        _render_four_modules(chapters)
 
 
 async def test_pdf_full_rejection_on_empty(db, tmp_path, monkeypatch):
@@ -139,7 +175,9 @@ async def test_pdf_full_rejection_on_empty(db, tmp_path, monkeypatch):
     monkeypatch.setattr(pdf_report, "_OUTPUT_DIR", tmp_path)
 
     assessment = Assessment(
-        name="空结果用户", scene="community", report_type="customer_pdf",
+        name="空结果用户",
+        scene="community",
+        report_type="customer_pdf",
         status=AssessmentStatus.completed,
         submitted_at=datetime.now(timezone.utc),
     )

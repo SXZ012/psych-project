@@ -144,7 +144,7 @@ function thresholdText(thresholds: number[], direction: 'higher_load' | 'higher_
   return `<${a} ${labels[0]}；${a}–<${b} ${labels[1]}；${b}–<${c} ${labels[2]}；${c}–<${d} ${labels[3]}；≥${d} ${labels[4]}`
 }
 
-function detailedMetric(key: string, item: Json, definition: MetricDefinition): DetailedMetricView {
+function detailedMetric(key: string, item: Json, definition: MetricDefinition, scene?: string): DetailedMetricView {
   const thresholds = Array.isArray(item.grade_thresholds) ? item.grade_thresholds.map(Number).filter(Number.isFinite) : []
   const score = item.grade_source_score ?? item.raw_score ?? item.score
   const reference = item.reference_range || item.audit?.reference_range || {}
@@ -158,7 +158,7 @@ function detailedMetric(key: string, item: Json, definition: MetricDefinition): 
     riskBand: item.risk_band != null ? String(item.risk_band) : null,
     grade: item.grade_display || (item.grade_1_5 ? `${item.grade_1_5}档` : '未提供'),
     thresholds, referenceText: thresholdText(thresholds, definition.direction), definition: item.interpretation || definition.plainMeaning,
-    plainMeaning: definition.plainMeaning, aviationMeaning: definition.aviationMeaning, limitation: definition.limitation,
+    plainMeaning: definition.plainMeaning, aviationMeaning: scene === 'community' ? definition.plainMeaning : definition.aviationMeaning, limitation: definition.limitation,
     recommendation: definition.recommendation, confidence: item.classification_confidence_label || item.confidence?.level?.label || '未提供',
     direction: definition.direction, source: item.source || reference.source || '分析结果', weakReference,
   }
@@ -167,7 +167,7 @@ function detailedMetric(key: string, item: Json, definition: MetricDefinition): 
 export function coreMetricViews(report: ReportSource): DetailedMetricView[] {
   const core = getAt(summaryOf(report), 'core_indicators', {}) || {}
   return Object.entries(CORE_METRIC_DICTIONARY).map(([key, definition]) => {
-    const view = detailedMetric(key, core[key] || {}, definition)
+    const view = detailedMetric(key, core[key] || {}, definition, report.scene)
     if (key === 'physiological_arousal') view.name = definition.name
     if (key === 'attention_focus' && !eyeAvailable(report)) {
       view.score = null; view.level = '未采集'; view.grade = '不建议解释'; view.referenceText = '本次未采集可用于正式解释的眼动数据'
@@ -180,7 +180,7 @@ export function screeningMetricViews(report: ReportSource): DetailedMetricView[]
   const screening = getAt(summaryOf(report), 'clinical_screening', {}) || {}
   return Object.entries(SCREENING_DICTIONARY).map(([key, definition]) => {
     const item = screening[key] || {}
-    const view = detailedMetric(key, item, definition)
+    const view = detailedMetric(key, item, definition, report.scene)
     view.name = item.name || definition.name
     view.technicalName = `clinical_screening.${key}`
     // 合作方 V3.2 §6.3 明确给出筛查“加权决策分”的三分类阈值：
@@ -228,6 +228,7 @@ export function resultOverview(report: ReportSource) {
  * 两者都缺失时才回退到档位文字匹配，避免合作方调整措辞后分组静默失效。
  */
 export function isAttentionMetric(item: DetailedMetricView): boolean {
+  if (/未采集|未提供|不建议解释/.test(item.level)) return false
   // 生理唤醒“正常（低负荷）”是安静放松的常态表现，沿既有口径不计入重点关注
   if (item.key === 'physiological_arousal') return false
   if (item.severity != null) return item.severity >= 1
@@ -237,6 +238,7 @@ export function isAttentionMetric(item: DetailedMetricView): boolean {
 
 /** “本次稳定表现”判定：severity/risk_band 优先，文字兜底。 */
 export function isStableMetric(item: DetailedMetricView): boolean {
+  if (/未采集|未提供|不建议解释/.test(item.level)) return false
   if (item.severity != null) return item.severity === 0
   if (item.riskBand) return item.riskBand === 'low' || item.riskBand === 'uncertain'
   return /正常|参考范围|负荷较?低|负荷很低|未见明显风险/.test(item.originalLevel || item.level)
@@ -361,7 +363,7 @@ export function managementActions(report: ReportSource) {
   const hasAttention = resultOverview(report).attention.length > 0
   const actions = [
     hasAttention
-      ? '优先安排人工复核，结合量表、访谈与近期情境确认风险。'
+      ? report.scene === 'community' ? '可以联系心理健康专业人员，结合标准量表、访谈和近期生活状况进一步了解本次结果。' : '优先安排人工复核，结合量表、访谈与近期情境确认风险。'
       : '当前未见需立即升级的筛查结论，建议结合日常状态持续观察。',
   ]
   actions.push(

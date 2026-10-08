@@ -7,6 +7,7 @@
 返回结局（供任务层区分"数据终态"与"处理故障"）：
 completed / invalid_result / qa_failed / failed
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,9 +21,11 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.db.base import AsyncSessionLocal
 from app.models.assessment import Assessment, AssessmentResult, AssessmentStatus
+from app.models.storage import StoredAsset
 from app.services.community import sync_community_order_status
 from app.services.oss.client import OSSClient
 from app.services.qwen.report import generate_report
+from app.services.storage import record_asset
 from app.services.v3.assets import cache_au_image
 from app.services.v3.provider import get_v3_provider
 from app.services.v3.validation import validate_v3_result
@@ -48,6 +51,15 @@ async def run_assessment(assessment_id: UUID) -> str:
             if not assessment.video_storage_key:
                 raise ValueError("测评视频缺失，无法开始分析")
             video_path = Path(__file__).resolve().parents[3] / "data" / assessment.video_storage_key
+            if not video_path.is_file() and assessment.backup_storage_key:
+                backup = await db.get(StoredAsset, assessment.backup_storage_key)
+                if backup is not None and backup.visibility == "private":
+                    await asyncio.to_thread(
+                        OSSClient().download_private_file,
+                        assessment.backup_storage_key,
+                        video_path,
+                        backup.sha256,
+                    )
             if not video_path.is_file():
                 raise FileNotFoundError(f"测评视频不存在: {assessment.video_storage_key}")
 
@@ -56,9 +68,7 @@ async def run_assessment(assessment_id: UUID) -> str:
             # 提交时已落库的首轮质检报告基于原始上传文件（含裁剪/修复步骤），
             # 是上传前门禁的审计依据；此处仅复核门禁，不覆盖已有合格报告。
             existing_qa = (
-                assessment.video_qa_json
-                if isinstance(assessment.video_qa_json, dict)
-                else None
+                assessment.video_qa_json if isinstance(assessment.video_qa_json, dict) else None
             )
             if not (existing_qa and existing_qa.get("ok")):
                 assessment.video_qa_json = qa_report
@@ -103,8 +113,19 @@ async def run_assessment(assessment_id: UUID) -> str:
                 )
                 # 备份与合作方V3主流程相互独立：失败只标记状态，不阻断后续上传/分析。
                 try:
-                    await asyncio.to_thread(
-                        OSSClient().upload_file, final_video_path, backup_key, backup_ct
+                    backup_info = await asyncio.to_thread(
+                        OSSClient().upload_private_file, final_video_path, backup_key, backup_ct
+                    )
+                    await record_asset(
+                        db,
+                        object_key=backup_key,
+                        bucket=backup_info["bucket"],
+                        category="video",
+                        visibility="private",
+                        content_type=backup_ct,
+                        size_bytes=backup_info["size"],
+                        sha256=backup_info["sha256"],
+                        assessment_id=assessment.id,
                     )
                     assessment.backup_storage_key = backup_key
                     assessment.backup_status = "completed"
@@ -159,7 +180,7 @@ async def run_assessment(assessment_id: UUID) -> str:
             # V3.2 将上传模式的眼动采集状态放在 timeline.display_payload。
             # 归一到 summary，供后台展示和 Qwen 报告安全地判断“未采集”。
             if isinstance(timeline, dict):
-                eye_tracking = ((timeline.get("display_payload") or {}).get("eye_tracking"))
+                eye_tracking = (timeline.get("display_payload") or {}).get("eye_tracking")
                 if isinstance(eye_tracking, dict):
                     summary.setdefault("modules", {}).setdefault("eye_tracking", eye_tracking)
             cs = summary.get("clinical_screening") or {}
@@ -180,7 +201,7 @@ async def run_assessment(assessment_id: UUID) -> str:
             # 合作方 AU 图片是短期签名地址，任务完成后立即持久化。
             # 图片失败不应阻断结构化报告生成，后台接口仍可按 file_id 懒恢复。
             try:
-                await cache_au_image(summary, assessment.id, provider)
+                await cache_au_image(summary, assessment.id, provider, db)
             except Exception:  # noqa: BLE001
                 logger.exception("assessment %s AU图片持久化失败，稍后按需恢复", assessment_id)
 
@@ -188,15 +209,11 @@ async def run_assessment(assessment_id: UUID) -> str:
             # 唯一约束 assessment_id 不允许二次 INSERT——改为更新已有行。
             ar = (
                 await db.execute(
-                    select(AssessmentResult).where(
-                        AssessmentResult.assessment_id == assessment.id
-                    )
+                    select(AssessmentResult).where(AssessmentResult.assessment_id == assessment.id)
                 )
             ).scalar_one_or_none()
             if ar is not None:
-                logger.info(
-                    "assessment %s 结果行已存在，重试路径改为更新", assessment_id
-                )
+                logger.info("assessment %s 结果行已存在，重试路径改为更新", assessment_id)
             ar = ar or AssessmentResult(assessment_id=assessment.id)
             ar.algorithm_version = result.get("algorithm_version")
             ar.summary_json = summary
@@ -234,15 +251,18 @@ async def run_assessment(assessment_id: UUID) -> str:
                 if assessment.scene == "community":
                     try:
                         from app.services.pdf.report import generate_pdf
+
                         pdf_path, oss_key = await generate_pdf(db, assessment.id)
                         if pdf_path:
                             assessment.report_pdf_key = oss_key or str(pdf_path)
                             assessment.report_status = "ready"
                             from app.services.report_view import REPORT_TEMPLATE_VERSION
+
                             ar.report_template_version = REPORT_TEMPLATE_VERSION
                             logger.info(
                                 "assessment %s 社区PDF已生成 | key=%s",
-                                assessment_id, assessment.report_pdf_key,
+                                assessment_id,
+                                assessment.report_pdf_key,
                             )
                         else:
                             # 空结果保护：合作方数据不完整时不标记已完成，允许后续重试
@@ -267,9 +287,11 @@ async def run_assessment(assessment_id: UUID) -> str:
                     try:
                         if assessment.customer_id:
                             from app.models.community import Customer
+
                             customer = await db.get(Customer, assessment.customer_id)
                             if customer and customer.openid:
                                 from app.services.wechat.message import send_report_ready
+
                                 await send_report_ready(
                                     openid=customer.openid,
                                     # 社区用户 H5 独立于航空管理后台；公众号消息直达该用户的报告页。
@@ -278,7 +300,8 @@ async def run_assessment(assessment_id: UUID) -> str:
                                 assessment.report_sent_at = datetime.now(timezone.utc)
                                 logger.info(
                                     "assessment %s 模板消息已推送 | openid=%s...",
-                                    assessment_id, customer.openid[:12],
+                                    assessment_id,
+                                    customer.openid[:12],
                                 )
                     except Exception:  # noqa: BLE001
                         logger.exception(
@@ -312,9 +335,7 @@ async def run_assessment(assessment_id: UUID) -> str:
             # 分析到终态(completed/invalid_result)后回写社区订单状态；航空零副作用
             if assessment.status == AssessmentStatus.completed:
                 # 终态时间戳在报告生成之后落：completed_at 不再早于报告产物
-                assessment.completed_at = (
-                    assessment.completed_at or datetime.now(timezone.utc)
-                )
+                assessment.completed_at = assessment.completed_at or datetime.now(timezone.utc)
                 assessment.report_generated_at = datetime.now(timezone.utc)
                 if assessment.report_status == "generating":
                     # 航空无 PDF 环节，Qwen 结构化报告即成品；社区已由 PDF 分支置 ready/failed

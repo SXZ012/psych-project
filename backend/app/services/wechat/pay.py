@@ -3,6 +3,7 @@
 统一下单 → 返回 JSBridge 支付参数 → 微信回调 → 验签解密 → 更新订单。
 开发阶段(Mock): 未配置商户号时返回假参数，跳过验签。
 """
+
 from __future__ import annotations
 
 import json
@@ -23,7 +24,7 @@ WECHAT_PAY_BASE = "https://api.mch.weixin.qq.com"
 
 def _is_mock() -> bool:
     """是否为 Mock 模式(未配置商户号)。"""
-    return not settings.WECHAT_MCH_ID
+    return settings.ENV != "prod" and not settings.WECHAT_MCH_ID
 
 
 def build_mock_pay_params(order_id: UUID) -> dict:
@@ -57,7 +58,9 @@ async def create_jsapi_order(
     if _is_mock():
         logger.info(
             "[Mock支付] 下单 | order=%s openid=%s amount=%dfen",
-            order_id, openid, amount_fen,
+            order_id,
+            openid,
+            amount_fen,
         )
         return build_mock_pay_params(order_id)
 

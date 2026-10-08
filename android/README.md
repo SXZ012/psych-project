@@ -23,7 +23,7 @@ WebView（模块化 terminal-web 构建产物）
 
 1. 安装 Android Studio（含 JDK17 + SDK），首次向导装好 SDK。
 2. 用 Android Studio 打开本目录（`psych-project/android/`），等待 Gradle Sync。
-3. `Build → Build APK(s)` 或命令行 `./gradlew assembleDebug`。
+3. `Build → Build APK(s)`，或安装 Gradle 8.2 后运行 `gradle -p android assembleDebug`（项目未包含 Gradle Wrapper）。
 4. 安装到设备（adb 已在仓库 `tools/platform-tools/`）：
    ```
    tools/platform-tools/adb.exe install -r app/build/outputs/apk/debug/app-debug.apk
@@ -44,12 +44,15 @@ WebView（模块化 terminal-web 构建产物）
 codec 名称与是否硬编、码率、起止时间、时长、文件大小/路径、最近错误、已上传 assessment_id。
 Logcat 过滤 `h264-drain` / `cam-bg` 线程与 `CameraEngine`/`H264Recorder` 标签。
 
-## 音频说明（本轮未实现，仅预留）
+## 音频说明
 
-`AndroidCamera.playIntroAudio()/playOutroAudio()/stopPromptAudio()` 已预留且返回
-`not_configured`；时序位置在 terminal-web 的 `useAssessmentFlow.ts`（录像启动成功后→未来播开头音；收尾→未来播收尾音）。
-**音频播放将在混合 APK 硬编码验证完成后单独实施**（不使用 speechSynthesis，不申请 RECORD_AUDIO，
-MP4 始终无音频轨）；届时只替换音频实现，不动摄像头与录像核心时序。
+当前题干、开始音、偏离提醒与完成提示由网页层播放预生成音频，在测评准备阶段加载。
+航空由 `useAviationFlow.ts` 与 `AudioCoordinator` 调度，社区由 `useCommunityFlow.ts` 与 `CommunityVoice` 调度。
+切题和退出会停止旧语音；倒计时数字不朗读。音频播放不申请录音权限，MP4 始终无音频轨。
+
+原生 `speakPrompt()` 是设备支持系统 TTS 时的回退；未安装 TTS 引擎的设备不能依赖该方法。
+`playIntroAudio()/playOutroAudio()` 是旧接口保留项，返回 `not_configured`；
+`stopPromptAudio()` 用于停止原生 TTS，不负责网页播放器。
 
 ## 已知边界
 

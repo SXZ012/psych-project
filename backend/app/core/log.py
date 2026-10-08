@@ -3,6 +3,7 @@
 Demo 阶段用可读格式（时间 | 级别 | logger | 消息）；
 生产(阶段7)可切换 JSON 输出，便于日志汇聚与检索。
 """
+
 import logging
 import logging.config
 from pathlib import Path

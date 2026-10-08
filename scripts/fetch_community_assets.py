@@ -4,6 +4,7 @@
 - 下载为统一宽度 ≤1600 的 JPEG 缩略图，存 backend/app/static/assets/community/
 - 用法: python scripts/fetch_community_assets.py [--video]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -23,18 +24,50 @@ ALLOWED_LICENSES = ("cc0", "pdm", "cc by", "cc by-sa")
 
 # 桶 → (目录, 数量, 搜索词列表[轮询取满为止])
 BUCKETS: dict[str, tuple[str, int, list[str]]] = {
-    "intro":   ("ux", 2, ["sunrise mist lake landscape", "soft morning light forest"]),
-    "state-mood":    ("ux", 1, ["quiet lake calm water morning"]),
-    "state-sleep":   ("ux", 1, ["starry night sky silhouette"]),
-    "state-energy":  ("ux", 1, ["sunlight through trees path"]),
-    "bank-mood":     ("images/bank", 5, ["calm lake sunrise", "misty lake morning", "still water reflection dawn"]),
-    "bank-stress":   ("images/bank", 5, ["city street crowd motion", "busy crosswalk urban", "crowded street blur"]),
-    "bank-sleep":    ("images/bank", 5, ["night sky stars landscape", "moon night window", "milky way night"]),
-    "bank-social":   ("images/bank", 5, ["people walking together park", "friends tea table", "group walking outdoors"]),
-    "bank-selfcare": ("images/bank", 5, ["tea cup book window", "cozy reading corner", "hot drink table warm"]),
-    "bank-hope":     ("images/bank", 5, ["mountain sunrise horizon", "open road horizon sky", "sunrise mountains landscape"]),
-    "game-scene":    ("ux/games", 3, ["city park pathway trees", "old street europe daytime", "bookshelf study room"]),
-    "scenario":      ("ux/games", 3, ["rain window drops glass", "two coffee cups table", "desk papers notebook work"]),
+    "intro": ("ux", 2, ["sunrise mist lake landscape", "soft morning light forest"]),
+    "state-mood": ("ux", 1, ["quiet lake calm water morning"]),
+    "state-sleep": ("ux", 1, ["starry night sky silhouette"]),
+    "state-energy": ("ux", 1, ["sunlight through trees path"]),
+    "bank-mood": (
+        "images/bank",
+        5,
+        ["calm lake sunrise", "misty lake morning", "still water reflection dawn"],
+    ),
+    "bank-stress": (
+        "images/bank",
+        5,
+        ["city street crowd motion", "busy crosswalk urban", "crowded street blur"],
+    ),
+    "bank-sleep": (
+        "images/bank",
+        5,
+        ["night sky stars landscape", "moon night window", "milky way night"],
+    ),
+    "bank-social": (
+        "images/bank",
+        5,
+        ["people walking together park", "friends tea table", "group walking outdoors"],
+    ),
+    "bank-selfcare": (
+        "images/bank",
+        5,
+        ["tea cup book window", "cozy reading corner", "hot drink table warm"],
+    ),
+    "bank-hope": (
+        "images/bank",
+        5,
+        ["mountain sunrise horizon", "open road horizon sky", "sunrise mountains landscape"],
+    ),
+    "game-scene": (
+        "ux/games",
+        3,
+        ["city park pathway trees", "old street europe daytime", "bookshelf study room"],
+    ),
+    "scenario": (
+        "ux/games",
+        3,
+        ["rain window drops glass", "two coffee cups table", "desk papers notebook work"],
+    ),
 }
 
 
@@ -51,13 +84,20 @@ async def search_bucket(client: httpx.AsyncClient, terms: list[str], need: int) 
     for term in terms:
         if len(candidates) >= need + 4:
             break
-        resp = await client.get(API, params={
-            "action": "query", "format": "json", "generator": "search",
-            "gsrsearch": f"filetype:bitmap {term}", "gsrlimit": 20,
-            "gsrnamespace": 6,
-            "prop": "imageinfo", "iiprop": "url|size|mime|extmetadata",
-            "iiurlwidth": 1600,
-        })
+        resp = await client.get(
+            API,
+            params={
+                "action": "query",
+                "format": "json",
+                "generator": "search",
+                "gsrsearch": f"filetype:bitmap {term}",
+                "gsrlimit": 20,
+                "gsrnamespace": 6,
+                "prop": "imageinfo",
+                "iiprop": "url|size|mime|extmetadata",
+                "iiurlwidth": 1600,
+            },
+        )
         pages = (resp.json().get("query") or {}).get("pages") or {}
         for page in pages.values():
             title = page.get("title", "")
@@ -78,15 +118,18 @@ async def search_bucket(client: httpx.AsyncClient, terms: list[str], need: int) 
             if not 0.6 <= aspect <= 2.4:
                 continue
             seen_files.add(title)
-            candidates.append({
-                "title": title,
-                "page": info.get("descriptionurl", ""),
-                "thumb": info.get("thumburl") or info.get("url"),
-                "width": width, "height": height,
-                "artist": clean_html(meta.get("Artist", {}).get("value", "")) or "Unknown",
-                "license": clean_html(meta.get("LicenseShortName", {}).get("value", "")),
-                "credit": clean_html(meta.get("Credit", {}).get("value", ""))[:120],
-            })
+            candidates.append(
+                {
+                    "title": title,
+                    "page": info.get("descriptionurl", ""),
+                    "thumb": info.get("thumburl") or info.get("url"),
+                    "width": width,
+                    "height": height,
+                    "artist": clean_html(meta.get("Artist", {}).get("value", "")) or "Unknown",
+                    "license": clean_html(meta.get("LicenseShortName", {}).get("value", "")),
+                    "credit": clean_html(meta.get("Credit", {}).get("value", ""))[:120],
+                }
+            )
     return candidates
 
 
@@ -97,7 +140,9 @@ async def fetch_all(include_video: bool) -> None:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     known_titles = {entry["title"] for entry in manifest}
 
-    async with httpx.AsyncClient(timeout=60, follow_redirects=True, headers={"User-Agent": UA}) as client:
+    async with httpx.AsyncClient(
+        timeout=60, follow_redirects=True, headers={"User-Agent": UA}
+    ) as client:
         for bucket, (subdir, need, terms) in BUCKETS.items():
             target_dir = ASSET_ROOT / subdir
             target_dir.mkdir(parents=True, exist_ok=True)
@@ -121,7 +166,8 @@ async def fetch_all(include_video: bool) -> None:
                     print(f"  download failed {candidate['title']}: {exc}")
                     continue
                 entry = {
-                    "bucket": bucket, "file": f"{subdir}/{filename}",
+                    "bucket": bucket,
+                    "file": f"{subdir}/{filename}",
                     "bytes": file_path.stat().st_size,
                     "downloaded": date.today().isoformat(),
                     "source": "Wikimedia Commons",
@@ -130,7 +176,10 @@ async def fetch_all(include_video: bool) -> None:
                 manifest.append(entry)
                 known_titles.add(candidate["title"])
                 picked += 1
-                print(f"✓ {bucket}: {filename} ← {candidate['title'][:60]} | {candidate['license']} | {candidate['artist'][:30]}")
+                print(
+                    f"✓ {bucket}: {filename} ← {candidate['title'][:60]}"
+                    f" | {candidate['license']} | {candidate['artist'][:30]}"
+                )
             if picked < need:
                 print(f"⚠ {bucket} 只取到 {picked}/{need}，建议补充搜索词")
 

@@ -3,6 +3,7 @@
 用户在微信内打开 H5 页面时，静默授权获取 OpenID。
 开发阶段(Mock): 未配置 AppID 时用 code 生成假 OpenID。
 """
+
 from __future__ import annotations
 
 import logging
@@ -43,6 +44,8 @@ async def code_to_openid(code: str) -> dict:
         失败时 raise ValueError
     """
     if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:
+        if settings.ENV == "prod":
+            raise ValueError("正式身份验证尚未配置")
         # Mock 模式
         mock_openid = f"mock_{code[:16]}"
         logger.debug("[Mock OAuth] code=%s → openid=%s", code, mock_openid)

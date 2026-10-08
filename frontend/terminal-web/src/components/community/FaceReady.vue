@@ -38,7 +38,7 @@ defineEmits<{ confirm: []; simulateReady: [] }>()
       <div v-else class="fr-dots" aria-hidden="true"><i></i><i></i><i></i></div>
       <button v-if="SCENE_SWITCHER_ENABLED && !ready" class="fr-simulate" @click="$emit('simulateReady')">测试：模拟人脸已就位</button>
     </section>
-    <small class="fr-foot">确认好位置就能开始 · 小测全程约 1 分钟</small>
+    <small class="fr-foot">接下来是 3 道可跳过的练习 · 正式采集 60 秒</small>
   </main>
 </template>
 <style scoped>
@@ -66,9 +66,12 @@ defineEmits<{ confirm: []; simulateReady: [] }>()
 @keyframes frPulse{to{transform:translateY(-6px);opacity:.45}}
 .fr-foot{position:absolute;bottom:24px;color:#b4cdc2}
 @media(max-height:680px){.fr-preview{width:240px;height:234px;margin-bottom:10px}.fr-section h1{font-size:24px}.fr-start{margin-top:12px;min-height:52px}}
-</style>
 
-<style scoped>
+
 /* 就位页用深青绿舞台 + 浅色文字，保证可读性（与社区其他阶段一致）。 */
 .face-ready{color:#f4faf6;background:linear-gradient(145deg,#41605b 0%,#2c4643 100%)}
+
+
+/* Calm community assessment surface; capture geometry and timing stay unchanged. */
+.face-ready{background:#e9f0e9;color:#2c4837;padding-top:72px;padding-bottom:38px}.face-ready::before,.face-ready::after{display:none}.fr-section h1{color:#2c4837;font-family:inherit}.fr-eyebrow,.fr-message,.fr-note,.fr-foot{color:#486451}.fr-checklist span{color:#516657}.fr-simulate{color:#416950;border-color:#94b59d;background:#f6faf5}.fr-foot{bottom:12px}
 </style>

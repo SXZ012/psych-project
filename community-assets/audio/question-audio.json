@@ -1,0 +1,142 @@
+[
+  {
+    "text": "过去一周，你的整体心情更接近哪一种？",
+    "audio_url": "/static/assets/community/audio/questions/cq-c6a24f971ae5ea4b.wav"
+  },
+  {
+    "text": "连续忙碌时，你会不会主动暂停？",
+    "audio_url": "/static/assets/community/audio/questions/cq-c2b70012957ca287.wav"
+  },
+  {
+    "text": "早晨醒来后，你通常感觉？",
+    "audio_url": "/static/assets/community/audio/questions/cq-2797711c7f53d8f7.wav"
+  },
+  {
+    "text": "开始新的一天时，你通常感觉？",
+    "audio_url": "/static/assets/community/audio/questions/cq-f134bff465c1ff97.wav"
+  },
+  {
+    "text": "最近身体的紧张感如何？",
+    "audio_url": "/static/assets/community/audio/questions/cq-9b92d7fe172b49b5.wav"
+  },
+  {
+    "text": "最近让你感到愉快的时刻？",
+    "audio_url": "/static/assets/community/audio/questions/cq-80b939b6cc12c76f.wav"
+  },
+  {
+    "text": "休息时，你的思绪通常？",
+    "audio_url": "/static/assets/community/audio/questions/cq-b4805992188f28ca.wav"
+  },
+  {
+    "text": "独处安静下来时，你的内心更接近？",
+    "audio_url": "/static/assets/community/audio/questions/cq-e54e9bfabe660c75.wav"
+  },
+  {
+    "text": "遇到小变化时，你更常出现？",
+    "audio_url": "/static/assets/community/audio/questions/cq-2b59d1fd7f34963f.wav"
+  },
+  {
+    "text": "面对超出承受范围的要求，你更接近？",
+    "audio_url": "/static/assets/community/audio/questions/cq-8b4df3261b5bae91.wav"
+  },
+  {
+    "text": "面对每天的任务，你更常觉得？",
+    "audio_url": "/static/assets/community/audio/questions/cq-a12f9d0677ec6402.wav"
+  },
+  {
+    "text": "想到接下来一个月，你更接近？",
+    "audio_url": "/static/assets/community/audio/questions/cq-65641f547c8415c9.wav"
+  },
+  {
+    "text": "遇到难题时，你通常相信？",
+    "audio_url": "/static/assets/community/audio/questions/cq-655dcd9a4e81ddef.wav"
+  },
+  {
+    "text": "遇到计划外的事情时，你更接近？",
+    "audio_url": "/static/assets/community/audio/questions/cq-4a408761de7db4df.wav"
+  },
+  {
+    "text": "最近你是否给自己留出休息时间？",
+    "audio_url": "/static/assets/community/audio/questions/cq-d43885581d61ec98.wav"
+  },
+  {
+    "text": "有心事时，你是否愿意向人倾诉？",
+    "audio_url": "/static/assets/community/audio/questions/cq-91a94f77892f6fc6.wav"
+  },
+  {
+    "text": "最近你感到被理解的程度？",
+    "audio_url": "/static/assets/community/audio/questions/cq-91bf63213a7aaad5.wav"
+  },
+  {
+    "text": "与亲友相处时，你通常感觉？",
+    "audio_url": "/static/assets/community/audio/questions/cq-36478d91495e4336.wav"
+  },
+  {
+    "text": "忙碌过后，你通常能否放松下来？",
+    "audio_url": "/static/assets/community/audio/questions/cq-307df8e1e146a099.wav"
+  },
+  {
+    "text": "最近是否仍在做让自己愉快的小事？",
+    "audio_url": "/static/assets/community/audio/questions/cq-d2614e6a08f54181.wav"
+  },
+  {
+    "text": "需要帮助时，你更接近？",
+    "audio_url": "/static/assets/community/audio/questions/cq-2437bfa34838d651.wav"
+  },
+  {
+    "text": "最近入睡的过程更接近？",
+    "audio_url": "/static/assets/community/audio/questions/cq-ae8eeed374551691.wav"
+  },
+  {
+    "text": "最近的作息规律程度？",
+    "audio_url": "/static/assets/community/audio/questions/cq-b7ebded0615d255e.wav"
+  },
+  {
+    "text": "身体出现疲劳信号时，你通常？",
+    "audio_url": "/static/assets/community/audio/questions/cq-b053ef05cff0db04.wav"
+  },
+  {
+    "text": "最近有没有想完成的小目标？",
+    "audio_url": "/static/assets/community/audio/questions/cq-b709b141d4854497.wav"
+  },
+  {
+    "text": "夜间睡眠中断的情况？",
+    "audio_url": "/static/assets/community/audio/questions/cq-8a0463f6a892b8aa.wav"
+  },
+  {
+    "text": "参加社交活动后，你通常？",
+    "audio_url": "/static/assets/community/audio/questions/cq-10a0d092748657db.wav"
+  },
+  {
+    "text": "白天的困倦感如何？",
+    "audio_url": "/static/assets/community/audio/questions/cq-9f383d029c8cbb53.wav"
+  },
+  {
+    "text": "经历不顺后，你通常？",
+    "audio_url": "/static/assets/community/audio/questions/cq-5cbd9e10902271cd.wav"
+  },
+  {
+    "text": "对日常生活的兴趣和动力如何？",
+    "audio_url": "/static/assets/community/audio/questions/cq-f47724ded592007f.wav"
+  },
+  {
+    "text": "看到这片安静的湖面，你更想？",
+    "audio_url": "/static/assets/community/audio/questions/cq-36e62ea019934248.wav"
+  },
+  {
+    "text": "这个清晨给你的感觉更接近？",
+    "audio_url": "/static/assets/community/audio/questions/cq-37bc0da3b0625883.wav"
+  },
+  {
+    "text": "看到晨光映在水面上，你更想？",
+    "audio_url": "/static/assets/community/audio/questions/cq-b939c34a0142cc60.wav"
+  },
+  {
+    "text": "采集即将完成，请完成当前选择",
+    "audio_url": "/static/assets/community/audio/cues/finishing-v2.wav"
+  },
+  {
+    "text": "正式采集开始提示音",
+    "audio_url": "/static/assets/community/audio/cues/start-tone.wav"
+  }
+]

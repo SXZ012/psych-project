@@ -14,6 +14,7 @@
 执行体仍是 services/assessment.run_assessment（分阶段可续跑：已有 v3_task_id
 则续查而非重建）。
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -138,14 +139,16 @@ async def fail_task(task: ProcessingTask, error: str, *, uncertain_remote: bool 
         fresh.locked_by = None
         fresh.locked_at = None
         if uncertain_remote:
-            fresh.status = "failed"   # 不自动重试；管理端确认后重试
+            fresh.status = "failed"  # 不自动重试；管理端确认后重试
             fresh.next_run_at = _now()
         elif fresh.attempts >= fresh.max_attempts:
             fresh.status = "dead"
             fresh.next_run_at = _now()
             logger.error(
                 "任务 %s 超过最大重试(%d)，进入 dead: %s",
-                fresh.assessment_id, fresh.max_attempts, error[:200],
+                fresh.assessment_id,
+                fresh.max_attempts,
+                error[:200],
             )
         else:
             fresh.status = "failed"
@@ -153,7 +156,10 @@ async def fail_task(task: ProcessingTask, error: str, *, uncertain_remote: bool 
             fresh.next_run_at = _now() + backoff
             logger.warning(
                 "任务 %s 第 %d 次失败，%ds 后重试: %s",
-                fresh.assessment_id, fresh.attempts, int(backoff.total_seconds()), error[:200],
+                fresh.assessment_id,
+                fresh.attempts,
+                int(backoff.total_seconds()),
+                error[:200],
             )
         await db.commit()
         # 审计冗余：测评行同步尝试次数与最后错误
@@ -228,7 +234,8 @@ class ProcessingWorker:
     async def run_forever(self) -> None:
         logger.info(
             "processing worker 启动 | id=%s interval=%.1fs",
-            self.worker_id, self.poll_interval,
+            self.worker_id,
+            self.poll_interval,
         )
         try:
             while not self._stop.is_set():

@@ -1,4 +1,5 @@
 """resubmit 管理员鉴权：未登录拒绝，管理员可触发重试且状态复位。"""
+
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -20,9 +21,7 @@ async def _make_failed(db) -> Assessment:
 
 
 async def _login(client) -> None:
-    response = await client.post(
-        "/api/v1/admin/login", json={"password": settings.ADMIN_PASSWORD}
-    )
+    response = await client.post("/api/v1/admin/login", json={"password": settings.ADMIN_PASSWORD})
     assert response.status_code == 200, response.text
 
 

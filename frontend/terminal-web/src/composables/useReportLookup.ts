@@ -9,7 +9,7 @@
  *   的输入——终端四页报告与管理员网页因此使用同一份映射与口径；
  * - 退出（exit()）清空全部状态：编号、查询码与报告内容不留在内存。
  */
-import { onBeforeUnmount, ref } from 'vue'
+import { getCurrentInstance, onBeforeUnmount, ref } from 'vue'
 import { MESSAGES } from '../aviation/messages.ts'
 import type { ReportSource } from '../../../shared/report-kit/types.ts'
 
@@ -66,7 +66,7 @@ export interface LookupResult {
   report?: ReportPayload
 }
 
-export type LookupError = 'invalid' | 'rate_limited' | 'network'
+export type LookupError = 'invalid' | 'rate_limited' | 'network' | 'forbidden'
 
 const VIEW_URL = '/api/v1/reports/view'
 const VIEW_BY_ID_URL = '/api/v1/reports/view-by-id'
@@ -93,150 +93,80 @@ export function toReportSource(payload: ReportPayload): ReportSource {
 }
 
 export function useReportLookup(fetchImpl: typeof fetch = fetch) {
-  const loading = ref(false)
-  const error = ref<LookupError | null>(null)
-  const result = ref<LookupResult | null>(null)
-  const submittedCode = ref<string | null>(null)   // 会话内存留；exit() 清空
-  const submittedSubjectId = ref<string | null>(null)
-  const elapsedMs = ref(0)
-  let pollTimer: number | null = null
-  let pollInterval = POLL_START_MS
-  let startedAt = 0
-
-  function clearPoll() {
-    if (pollTimer !== null) { window.clearTimeout(pollTimer); pollTimer = null }
-  }
-
-  /** 查询（POST body 携带凭证；响应含状态，完成时含报告载荷） */
-  async function lookup(subjectId: string, accessCode: string): Promise<boolean> {
+  const loading = ref(false), error = ref<LookupError | null>(null)
+  const result = ref<LookupResult | null>(null), submittedCode = ref<string | null>(null)
+  const submittedSubjectId = ref<string | null>(null), elapsedMs = ref(0)
+  let pollTimer: ReturnType<typeof setTimeout> | undefined
+  let controller: AbortController | undefined
+  let generation = 0, startedAt = 0, pollInterval = POLL_START_MS
+  let currentBody: Record<string,string> = {}, currentUrl = VIEW_BY_ID_URL
+  function clearPoll() { clearTimeout(pollTimer); pollTimer = undefined }
+  function schedule(run: number) {
+    if (run !== generation) return
     clearPoll()
-    error.value = null
-    loading.value = true
-    try {
-      const response = await fetchImpl(VIEW_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject_id: subjectId, access_code: accessCode }),
-      })
-      if (response.status === 401) { error.value = 'invalid'; return false }
-      if (response.status === 429) { error.value = 'rate_limited'; return false }
-      if (!response.ok) { error.value = 'network'; return false }
-      result.value = await response.json() as LookupResult
-      submittedSubjectId.value = subjectId
-      submittedCode.value = accessCode
-      startedAt = performance.now()
-      pollInterval = POLL_START_MS
-      if (result.value.status === 'processing') schedulePoll()
-      return true
-    } catch {
-      error.value = 'network'
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /** 固定报告编号查询：编号与管理端显示的测评编号完全一致。 */
-  async function lookupByReportId(reportId: string): Promise<boolean> {
-    clearPoll()
-    error.value = null
-    loading.value = true
-    try {
-      const response = await fetchImpl(VIEW_BY_ID_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ report_id: reportId }),
-      })
-      if (response.status === 401) { error.value = 'invalid'; return false }
-      if (response.status === 429) { error.value = 'rate_limited'; return false }
-      if (!response.ok) { error.value = 'network'; return false }
-      result.value = await response.json() as LookupResult
-      submittedSubjectId.value = null
-      submittedCode.value = reportId.toUpperCase()
-      startedAt = performance.now()
-      pollInterval = POLL_START_MS
-      // 固定编号轮询继续调用专用接口，避免混用旧版凭证协议。
-      if (result.value.status === 'processing') scheduleReportIdPoll()
-      return true
-    } catch {
-      error.value = 'network'
-      return false
-    } finally {
-      loading.value = false
-    }
-  }
-
-  function scheduleReportIdPoll() {
-    clearPoll()
-    pollTimer = window.setTimeout(async () => {
-      pollTimer = null
-      if (!submittedCode.value) return
-      elapsedMs.value = performance.now() - startedAt
-      try {
-        const response = await fetchImpl(VIEW_BY_ID_URL, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ report_id: submittedCode.value }),
-        })
-        if (!response.ok) return
-        result.value = await response.json() as LookupResult
-        if (result.value.status === 'processing') scheduleReportIdPoll()
-      } catch { scheduleReportIdPoll() }
-    }, pollInterval)
+    pollTimer = setTimeout(() => void request(run, false), pollInterval)
     pollInterval = Math.min(POLL_MAX_MS, pollInterval * 2)
   }
-
-  function schedulePoll() {
-    clearPoll()
-    pollTimer = window.setTimeout(async () => {
-      pollTimer = null
-      if (!submittedCode.value || !submittedSubjectId.value) return
-      elapsedMs.value = performance.now() - startedAt
-      await lookupKeepResult(submittedSubjectId.value, submittedCode.value)
-    }, pollInterval)
-    pollInterval = Math.min(POLL_MAX_MS, pollInterval * 2)   // 退避：5s→10s→…→30s
-  }
-
-  /** 轮询变体：失败不弹表单错误（保留上一次结果），仅在可恢复时继续 */
-  async function lookupKeepResult(subjectId: string, accessCode: string): Promise<void> {
+  async function request(run: number, initial: boolean): Promise<boolean> {
+    const abort = new AbortController(); controller = abort
+    const timeout = setTimeout(() => abort.abort(), 15000)
+    let retry = false
     try {
-      const response = await fetchImpl(VIEW_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject_id: subjectId, access_code: accessCode }),
+      const response = await fetchImpl(currentUrl, {
+        method:'POST', headers:{'Content-Type':'application/json'}, cache:'no-store',
+        body:JSON.stringify(currentBody), signal:abort.signal,
       })
-      if (response.status === 401 || response.status === 429) return   // 网络外的状态突变：停止轮询
-      if (!response.ok) { schedulePoll(); return }
-      result.value = await response.json() as LookupResult
-      if (result.value.status === 'processing') schedulePoll()
+      if (run !== generation) return false
+      if (!response.ok) {
+        error.value = response.status === 401 ? 'invalid' : response.status === 403 ? 'forbidden' : response.status === 429 ? 'rate_limited' : 'network'
+        retry = error.value === 'network'
+        if (!initial && !retry && result.value) result.value = { ...result.value, status:'needs_attention', report:undefined }
+        return false
+      }
+      const body = await response.json() as LookupResult
+      if (run !== generation) return false
+      error.value = null; result.value = body
+      elapsedMs.value = performance.now() - startedAt
+      retry = body.status === 'processing'
+      return true
     } catch {
-      schedulePoll()   // 网络抖动：退避后重试
+      if (run === generation) { error.value = 'network'; retry = true }
+      return false
+    } finally {
+      clearTimeout(timeout)
+      if (run === generation) {
+        loading.value = false
+        if (retry && (!initial || result.value)) schedule(run)
+      }
     }
   }
-
+  async function start(url: string, body: Record<string,string>) {
+    clearPoll(); controller?.abort(); const run = ++generation
+    result.value = null; error.value = null; loading.value = true
+    currentUrl = url; currentBody = body; startedAt = performance.now(); pollInterval = POLL_START_MS
+    return request(run, true)
+  }
+  function lookup(subjectId: string, accessCode: string) {
+    submittedSubjectId.value = subjectId; submittedCode.value = accessCode
+    return start(VIEW_URL, { subject_id:subjectId, access_code:accessCode })
+  }
+  function lookupByReportId(reportId: string) {
+    submittedSubjectId.value = null; submittedCode.value = reportId.toUpperCase()
+    return start(VIEW_BY_ID_URL, { report_id:reportId })
+  }
+  function retry() { clearPoll(); controller?.abort(); return request(++generation, false) }
   function errorMessage(): string {
-    if (error.value === 'invalid') return MESSAGES.report.invalidCredential
-    if (error.value === 'rate_limited') return MESSAGES.report.rateLimited
-    if (error.value === 'network') return MESSAGES.report.networkError
-    return ''
+    if(error.value==='invalid') return MESSAGES.report.invalidCredential
+    if(error.value==='forbidden') return '当前入口需要工作人员认证，请联系现场工作人员。'
+    if(error.value==='rate_limited') return MESSAGES.report.rateLimited
+    return error.value==='network' ? MESSAGES.report.networkError : ''
   }
-
-  /** 是否已超过预计时间（切"分析时间较长"文案） */
-  function isSlow(): boolean {
-    return result.value?.status === 'processing'
-      && elapsedMs.value >= MESSAGES.report.slowAfterMinutes * 60_000
-  }
-
-  /** 退出/清屏：清空编号、查询码、报告；停止轮询 */
+  function isSlow() { return result.value?.status==='processing' && elapsedMs.value>=MESSAGES.report.slowAfterMinutes*60_000 }
   function exit() {
-    clearPoll()
-    result.value = null
-    submittedCode.value = null
-    submittedSubjectId.value = null
-    error.value = null
-    elapsedMs.value = 0
+    generation++; controller?.abort(); clearPoll(); loading.value=false
+    result.value=null; submittedCode.value=null; submittedSubjectId.value=null; error.value=null; elapsedMs.value=0
+    currentBody={}
   }
-
-  onBeforeUnmount(exit)
-
-  return { loading, error, result, submittedCode, elapsedMs, isSlow, errorMessage, lookup, lookupByReportId, exit }
+  if (getCurrentInstance()) onBeforeUnmount(exit)
+  return { loading, error, result, submittedCode, elapsedMs, isSlow, errorMessage, lookup, lookupByReportId, retry, exit }
 }

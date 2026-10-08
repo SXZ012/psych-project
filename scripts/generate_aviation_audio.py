@@ -3,6 +3,7 @@
 Audio is downloaded into backend static assets. The assessment device never calls
 the cloud TTS service at runtime.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -105,14 +106,21 @@ def main() -> None:
     parser.add_argument("--endpoint", default=DEFAULT_ENDPOINT)
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--only", help="Only generate one question id")
-    parser.add_argument("--guide", choices=sorted(GUIDES), help="Generate one fixed guidance prompt")
-    parser.add_argument("--suffix", default="", help="Append a suffix before the audio extension for voice previews")
+    parser.add_argument(
+        "--guide", choices=sorted(GUIDES), help="Generate one fixed guidance prompt"
+    )
+    parser.add_argument(
+        "--suffix", default="", help="Append a suffix before the audio extension for voice previews"
+    )
     args = parser.parse_args()
     if not settings.DASHSCOPE_API_KEY:
         raise SystemExit("DASHSCOPE_API_KEY is not configured")
 
     content = json.loads((STATIC_ROOT / "content.json").read_text(encoding="utf-8"))
-    headers = {"Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {settings.DASHSCOPE_API_KEY}",
+        "Content-Type": "application/json",
+    }
     items = content["question_types"]
     if args.guide:
         guide = GUIDES[args.guide]

@@ -3,6 +3,7 @@
 报告生成后通知用户。用户关注公众号即可收到推送，无需每次授权(与小程序订阅消息的区别)。
 开发阶段(Mock): 未配置 AppID 时仅打日志，不调微信 API。
 """
+
 from __future__ import annotations
 
 import logging
@@ -25,10 +26,7 @@ async def _get_access_token() -> str | None:
     import time
 
     # 缓存有效
-    if (
-        _access_token_cache["token"]
-        and _access_token_cache["expires_at"] > time.time()
-    ):
+    if _access_token_cache["token"] and _access_token_cache["expires_at"] > time.time():
         return _access_token_cache["token"]
 
     if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:

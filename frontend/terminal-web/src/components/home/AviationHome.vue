@@ -40,7 +40,7 @@ function onStaffZoneTap() {
       <button class="home__help" @click="aboutOpen = true">{{ MESSAGES.home.about }}</button>
     </header>
     <section class="home__hero">
-      <p class="eyebrow">AI VISION WELLBEING</p>
+      <p class="eyebrow">关心状态 · 从容开始</p>
       <h1>{{ MESSAGES.home.title }}</h1>
       <p class="home__sub">{{ MESSAGES.home.infoFlow }}</p>
       <div class="home__entries">
@@ -96,9 +96,8 @@ function onStaffZoneTap() {
 .home__about-card .primary{margin-top:10px}
 @media (max-width:760px),(orientation:portrait){.home{place-items:end center;padding:96px 24px 70px}.home__topbar{left:24px;right:24px}.home__brand small{display:none}.home__entries{grid-template-columns:1fr}.home__entry{min-height:132px}.home__capabilities{grid-template-columns:1fr;gap:10px}.home__capabilities>div{justify-content:flex-start}.home__footer{bottom:24px}.home__about-card{width:calc(100vw - 36px)}}
 @media (max-height:680px) and (orientation:landscape){.home__hero{gap:9px}.home__entries{margin-top:4px}.home__entry{min-height:142px;padding:20px 26px}.home__capabilities{padding-top:10px}.home__footer{bottom:14px}}
-</style>
 
-<style scoped>
+
 /* 产品化色彩覆盖：不改变首页的网格、位置与尺寸。 */
 .home{background:linear-gradient(145deg,#f6f9f9 0%,#eaf1f3 100%)}
 .home:before{background:#a4c3ce55}.home:after{background:#b8d4c655}
@@ -115,23 +114,26 @@ function onStaffZoneTap() {
 /* 视觉中心略高于屏幕中线，给底部提示与终端留出呼吸空间。 */
 .home__hero{transform:translateY(clamp(-82px,-8.5vh,-46px))}
 @media(max-width:760px),(orientation:portrait){.home__hero{transform:translateY(0)}}
-</style>
 
-<style scoped>
+
 /* 首页信息层级加深：远距离终端阅读也能清楚辨识。 */
 .home__brand{color:#1f394a}.home__brand small{color:#4d6570}
 .home__help{color:#294e61}.home__hero h1{color:#1d394a}.home__sub{color:#3f5b69}
 .home__entry{color:#213e4e}.home__entry span{color:#405e6b}.home__entry em{color:#647b85}
 .home__capabilities>div{color:#38525e}.home__capabilities small{color:#607782}.home__footer{color:#5f737d}
-</style>
 
-<style scoped>
+
 /* 终端远距离阅读：入口说明与能力说明不再使用低对比的小号灰字。 */
 .home__entry span{font-size:clamp(16px,1.5vw,19px);font-weight:500;color:#365565}
 .home__entry em{font-size:clamp(13px,1.12vw,15px);color:#506d79}
 .home__entry--primary b,.home__entry--primary span{color:#fff}.home__entry--primary em{color:#edf7f8}
 .home__entry--primary .home__entry-icon{color:#fff;border-color:rgba(255,255,255,.82);background:rgba(255,255,255,.19)}
 .home__capabilities b{font-size:clamp(15px,1.3vw,17px);color:#294755}.home__capabilities small{font-size:clamp(12px,1.05vw,14px);color:#526d78}
+
+
+.home__hero h1{font-family:inherit;font-weight:650}
+.home__entry{border:0;box-shadow:none}
+.home__entry-icon{border:0}
+.home__capabilities{border-top:0}
+.home__help{border:0;background:#fff;color:#34586d}
 </style>
-
-

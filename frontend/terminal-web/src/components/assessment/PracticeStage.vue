@@ -71,23 +71,18 @@ const emit = defineEmits<{
 .practice-complete button{margin-top:16px;min-width:260px}
 .practice-complete small{display:block;margin-top:12px;color:var(--tx-faint,#adc0cd)}
 @media(max-height:700px){.practice-stage{padding-top:220px}.practice-stage header{top:35px}}
-</style>
 
 
-
-<style scoped>
 /* 连续测评阶段统一舞台色。 */
 .practice-stage{background:#8badb1}
-</style>
 
-<style scoped>
+
 /* 浅色舞台上的顶部信息、跳过入口和完成提示统一使用深色文字。 */
 .practice-stage{color:#203e4d}.practice-stage header p{color:#365f6a;font-size:15px;font-weight:700}.practice-stage header h2{color:#203e4d;font-weight:650}.practice-stage header small{color:#486570;font-size:14px;font-weight:500}
 .practice-stage__skip-all{color:#244f65;border-color:#547f86;background:rgba(255,255,255,.7);font-size:16px;font-weight:650}
 .practice-complete h1{color:#203e4d;font-weight:650}.practice-complete p{max-width:540px;color:#385864;font-size:18px;font-weight:500;line-height:1.6}.practice-complete small{color:#385864;font-size:14px;font-weight:600}
-</style>
 
-<style scoped>
+
 /* 正式采集前的完成标识必须一眼可见，并突出稳定注视要求。 */
 .practice-complete>span{width:68px;height:68px;color:#fff;background:#328b76;border:3px solid #dff3ea;box-shadow:0 8px 18px rgba(39,111,91,.28);font-size:38px;font-weight:800}
 .practice-complete>span.practice-complete__skip{background:#b48235;border-color:#fff2d5}

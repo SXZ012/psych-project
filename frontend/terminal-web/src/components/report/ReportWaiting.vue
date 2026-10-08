@@ -12,6 +12,8 @@
  */
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import PersonalReport from './PersonalReport.vue'
+import NavigationButton from '../common/NavigationButton.vue'
+import PrivacyIdleGuard from '../common/PrivacyIdleGuard.vue'
 import type { useReportLookup } from '@/composables/useReportLookup'
 import { MESSAGES } from '@/aviation/messages'
 
@@ -21,7 +23,7 @@ const emit = defineEmits<{ exit: [] }>()
 
 const result = computed(() => props.lookup.result.value)
 const isCompleted = computed(() => result.value?.status === 'completed' && !!result.value?.report)
-const AUTO_EXIT_SEC = computed(() => (isCompleted.value ? 300 : 60))
+const AUTO_EXIT_SEC = computed(() => 300)
 const countdown = ref(AUTO_EXIT_SEC.value)
 let timer: number | null = null
 
@@ -29,7 +31,7 @@ function startTimer() {
   stopTimer()
   timer = window.setInterval(() => {
     countdown.value -= 1
-    if (countdown.value <= 0) leave()
+    countdown.value = Math.max(0, countdown.value)
   }, 1_000)
 }
 function stopTimer() { if (timer !== null) { window.clearInterval(timer); timer = null } }
@@ -55,7 +57,9 @@ onBeforeUnmount(stopTimer)
 </script>
 
 <template>
-  <section v-if="result" class="waiting" @pointerdown="resetCountdown">
+  <PrivacyIdleGuard @expire="leave" />
+  <section v-if="result" class="waiting" @pointerdown="resetCountdown" @keydown="resetCountdown" @scroll.capture="resetCountdown">
+    <p v-if="lookup.error.value" role="alert">{{ lookup.errorMessage() }} <button v-if="lookup.error.value==='network'" @click="lookup.retry">重新连接</button></p>
     <p v-if="!isCompleted && props.lookup.submittedCode.value" class="waiting__report-id">报告编号：<b>{{ props.lookup.submittedCode.value }}</b></p>
     <!-- 分析中（不出现内部技术表述） -->
     <template v-if="result.status === 'processing'">
@@ -91,7 +95,7 @@ onBeforeUnmount(stopTimer)
         <p class="waiting__privacy">{{ MESSAGES.report.privacyNote }}</p>
       </template>
       <p v-else class="waiting__clear-notice">为保护隐私，{{ countdown }} 秒无操作后自动清屏</p>
-      <button class="primary waiting__exit" @click="leave">{{ isCompleted ? '退出报告' : MESSAGES.report.exitButton }}</button>
+      <NavigationButton class="waiting__exit" @click="leave">{{ isCompleted ? '退出报告' : MESSAGES.report.exitButton }}</NavigationButton>
     </footer>
   </section>
 </template>
@@ -118,9 +122,8 @@ onBeforeUnmount(stopTimer)
 .waiting__exit{min-width:280px;min-height:56px;font-size:16px}
 .waiting__clear-notice{white-space:nowrap;color:#637984!important;font-size:12px!important;font-weight:600}
 .waiting__footer--compact .waiting__exit{min-width:112px;min-height:52px;padding:0 18px;border-radius:12px;background:#2f5d7cdd;box-shadow:0 5px 16px rgba(38,55,70,.18);font-size:15px}
-</style>
 
-<style scoped>
+
 .waiting h2{color:#294354}.waiting__stage{color:#54717c}.waiting__meta,.waiting__hint{color:#72848b}
 .waiting__orb i{border-color:#a9c2ca;border-top-color:#5f8b9f}.waiting__done{color:#397b6e;background:#e7f3ed;border-color:#8cb9aa}.waiting__warn{color:#9c6a27;background:#fbf2e1;border-color:#ddbf87}
 .waiting__footer{border-top-color:#d7e2df}.waiting__footer p{color:#72848b}.waiting__privacy{color:#829199!important}

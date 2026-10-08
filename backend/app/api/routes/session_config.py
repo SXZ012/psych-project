@@ -3,6 +3,7 @@
 设备在管理后台注册时绑定场景(aviation/community)，之后每次启动
 自动从此接口获取配置，无需人工干预。设备需携带令牌鉴权。
 """
+
 import hashlib
 import logging
 

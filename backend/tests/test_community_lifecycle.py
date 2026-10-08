@@ -1,4 +1,5 @@
 """社区订单全生命周期 + 设备管理接口 + 报告重新生成。"""
+
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
@@ -34,8 +35,14 @@ async def test_order_full_lifecycle(db, client):
     # 提交：分析中 + 会话已提交
     submit = await client.post(
         "/api/v1/assessments/submit",
-        data={"session_id": session_id, "name": "", "id_card": "", "selections": "[]",
-              "duration_seconds": "60", "self_report": "{}"},
+        data={
+            "session_id": session_id,
+            "name": "",
+            "id_card": "",
+            "selections": "[]",
+            "duration_seconds": "60",
+            "self_report": "{}",
+        },
         files={"video": fake_video()},
     )
     assert submit.status_code == 201, submit.text
@@ -101,8 +108,12 @@ async def test_admin_device_bind_and_token_auth(db, client):
 
     bind = await client.post(
         "/api/v1/admin/devices",
-        json={"device_id": "bind-test-01", "scene": "community", "name": "绑定测试机",
-              "device_token": "secret-token-1"},
+        json={
+            "device_id": "bind-test-01",
+            "scene": "community",
+            "name": "绑定测试机",
+            "device_token": "secret-token-1",
+        },
     )
     assert bind.status_code == 200, bind.text
 
@@ -115,11 +126,17 @@ async def test_admin_device_bind_and_token_auth(db, client):
     # 配置接口走密钥校验：无头 401 / 错头 401 / 对头 200
     no_header = await client.get("/api/v1/session/config", params={"device_id": "bind-test-01"})
     assert no_header.status_code == 401
-    wrong = await client.get("/api/v1/session/config", params={"device_id": "bind-test-01"},
-                             headers={"X-Device-Token": "wrong"})
+    wrong = await client.get(
+        "/api/v1/session/config",
+        params={"device_id": "bind-test-01"},
+        headers={"X-Device-Token": "wrong"},
+    )
     assert wrong.status_code == 401
-    ok = await client.get("/api/v1/session/config", params={"device_id": "bind-test-01"},
-                          headers={"X-Device-Token": "secret-token-1"})
+    ok = await client.get(
+        "/api/v1/session/config",
+        params={"device_id": "bind-test-01"},
+        headers={"X-Device-Token": "secret-token-1"},
+    )
     assert ok.status_code == 200 and ok.json()["scene"] == "community"
 
     # 管理接口需要管理员会话（清掉登录 cookie 再访问）
@@ -135,9 +152,11 @@ async def test_admin_community_queries(db, client):
     sessions = (await client.get("/api/v1/admin/community/sessions")).json()["sessions"]
     assert any(s["id"] == paid["session_id"] for s in sessions)
 
-    orders = (await client.get(
-        "/api/v1/admin/community/orders", params={"session_id": paid["session_id"]}
-    )).json()["orders"]
+    orders = (
+        await client.get(
+            "/api/v1/admin/community/orders", params={"session_id": paid["session_id"]}
+        )
+    ).json()["orders"]
     assert len(orders) == 1
     assert orders[0]["id"] == str(paid["order_id"])
     assert orders[0]["status"] == "paid"
@@ -150,7 +169,8 @@ async def test_regenerate_pdf_admin_only_and_community_only(db, client, monkeypa
 
     # 无管理员会话 → 拒绝
     aviation = Assessment(
-        name="航空样本", status=AssessmentStatus.completed,
+        name="航空样本",
+        status=AssessmentStatus.completed,
         submitted_at=datetime.now(timezone.utc),
     )
     db.add(aviation)
@@ -165,21 +185,26 @@ async def test_regenerate_pdf_admin_only_and_community_only(db, client, monkeypa
 
     # 社区测评 + 有效结果 → 生成 PDF 并写 report_pdf_key
     community = Assessment(
-        name="社区样本", scene="community", report_type="customer_pdf",
-        customer_id=None, status=AssessmentStatus.completed,
+        name="社区样本",
+        scene="community",
+        report_type="customer_pdf",
+        customer_id=None,
+        status=AssessmentStatus.completed,
         submitted_at=datetime.now(timezone.utc),
     )
     db.add(community)
     await db.flush()
-    db.add(AssessmentResult(
-        assessment_id=community.id,
-        algorithm_version="v3-test",
-        summary_json={
-            "clinical_screening": {},
-            "overall": {},
-            "final_summary": "本次分析已完成，结果仅供日常状态参考。",
-        },
-    ))
+    db.add(
+        AssessmentResult(
+            assessment_id=community.id,
+            algorithm_version="v3-test",
+            summary_json={
+                "clinical_screening": {},
+                "overall": {},
+                "final_summary": "本次分析已完成，结果仅供日常状态参考。",
+            },
+        )
+    )
     await db.commit()
 
     ok = await client.post(f"/api/v1/admin/assessments/{community.id}/regenerate-pdf")

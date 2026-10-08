@@ -1,4 +1,5 @@
 """应用配置：基于 pydantic-settings，统一从仓库根目录的 .env 读取。"""
+
 from functools import lru_cache
 from pathlib import Path
 
@@ -20,6 +21,7 @@ class Settings(BaseSettings):
     # ---- 应用 ----
     APP_NAME: str = "高责任岗位心理测评系统"
     ENV: str = "dev"  # dev | prod
+    COMMUNITY_APPOINTMENTS_ENABLED: bool = False  # 开通接待团队后才开启正式预约
     DEBUG: bool = True
     SQL_ECHO: bool = False  # 打印 SQL（调试用；默认关，保持日志清爽）
     SECRET_KEY: str = "change-me"
@@ -33,7 +35,7 @@ class Settings(BaseSettings):
     # ---- 自助报告查询 ----
     # 查询码哈希 pepper：泄漏数据库无法直接比对出明文码；生产必改。
     REPORT_TOKEN_PEPPER: str = "change-me-report-pepper"
-    # 查询失败限频：window 秒内最多 max_attempts 次（按 subject_id + 客户端 IP）
+    # 查询失败限频：window 秒内最多 max_attempts 次（同一来源跨编号累计）
     REPORT_LOOKUP_WINDOW_SECONDS: int = 300
     REPORT_LOOKUP_MAX_ATTEMPTS: int = 5
     # ---- 持久化后台任务 ----
@@ -72,15 +74,15 @@ class Settings(BaseSettings):
     QWEN_MODEL: str = "qwen-plus"
 
     # ---- 微信公众号(社区场景: OAuth + 支付 + 模板消息) ----
-    WECHAT_APP_ID: str = ""           # 公众号 AppID(未填 = Mock 模式)
-    WECHAT_APP_SECRET: str = ""       # 公众号 AppSecret
-    WECHAT_TEMPLATE_ID: str = ""      # 模板消息模板 ID
-    WECHAT_MCH_ID: str = ""           # 微信支付商户号(未填 = Mock 支付)
-    WECHAT_API_V3_KEY: str = ""       # 支付 APIv3 密钥
-    WECHAT_MCH_SERIAL_NO: str = ""    # 商户证书序列号
+    WECHAT_APP_ID: str = ""  # 公众号 AppID(未填 = Mock 模式)
+    WECHAT_APP_SECRET: str = ""  # 公众号 AppSecret
+    WECHAT_TEMPLATE_ID: str = ""  # 模板消息模板 ID
+    WECHAT_MCH_ID: str = ""  # 微信支付商户号(未填 = Mock 支付)
+    WECHAT_API_V3_KEY: str = ""  # 支付 APIv3 密钥
+    WECHAT_MCH_SERIAL_NO: str = ""  # 商户证书序列号
     WECHAT_MCH_PRIVATE_KEY_PATH: str = ""  # 商户私钥文件路径
-    WECHAT_PAY_NOTIFY_URL: str = ""   # 支付回调地址(上云后填)
-    WECHAT_OAUTH_REDIRECT_URL: str = ""    # OAuth 回调地址(上云后填)
+    WECHAT_PAY_NOTIFY_URL: str = ""  # 支付回调地址(上云后填)
+    WECHAT_OAUTH_REDIRECT_URL: str = ""  # OAuth 回调地址(上云后填)
 
     # ---- 阿里云 OSS（诱发图片库 + 我方视频备份，私有Bucket）----
     OSS_BACKUP_ENABLED: bool = False
@@ -88,6 +90,8 @@ class Settings(BaseSettings):
     OSS_ACCESS_KEY_SECRET: str = ""
     OSS_ENDPOINT: str = ""
     OSS_BUCKET_NAME: str = ""
+    # Reports/attachments are independent of raw video retention.
+    REPORT_STORAGE_MODE: str = "local"  # local | oss
 
     # ---- 公共运行时静态资源（独立于保存测评/报告的私有 OSS Bucket）----
     ASSET_OSS_ACCESS_KEY_ID: str = ""
@@ -106,9 +110,12 @@ class Settings(BaseSettings):
 
     @property
     def static_asset_endpoint(self) -> str:
-        return (self.ASSET_OSS_ENDPOINT or self.OSS_ENDPOINT).removeprefix(
-            "https://"
-        ).removeprefix("http://").rstrip("/")
+        return (
+            (self.ASSET_OSS_ENDPOINT or self.OSS_ENDPOINT)
+            .removeprefix("https://")
+            .removeprefix("http://")
+            .rstrip("/")
+        )
 
     @property
     def static_asset_bucket_name(self) -> str:
@@ -120,10 +127,7 @@ class Settings(BaseSettings):
         if cdn_base:
             return cdn_base
         if self.static_asset_bucket_name and self.static_asset_endpoint:
-            return (
-                f"https://{self.static_asset_bucket_name}."
-                f"{self.static_asset_endpoint}"
-            )
+            return f"https://{self.static_asset_bucket_name}.{self.static_asset_endpoint}"
         return ""
 
     @model_validator(mode="after")
@@ -134,6 +138,17 @@ class Settings(BaseSettings):
         REPORT_TOKEN_PEPPER 保护查询码哈希——任何一个用默认值上生产
         都等于裸奔，这里直接 fail-fast。
         """
+        if self.REPORT_STORAGE_MODE not in {"local", "oss"}:
+            raise ValueError("REPORT_STORAGE_MODE 必须是 local 或 oss")
+        if self.REPORT_STORAGE_MODE == "oss" and not all(
+            (
+                self.OSS_ACCESS_KEY_ID,
+                self.OSS_ACCESS_KEY_SECRET,
+                self.OSS_BUCKET_NAME,
+                self.OSS_ENDPOINT,
+            )
+        ):
+            raise ValueError("报告 OSS 存储已启用，但 OSS 配置不完整")
         if self.ENV == "prod":
             weak = []
             if self.SECRET_KEY == "change-me":

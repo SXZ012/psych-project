@@ -109,10 +109,10 @@ async def test_used_session_rejected_on_second_submit(db, client):
     assert second.json()["id"] == first.json()["id"]
     # 仍然只有一条测评记录
     rows = (
-        await db.execute(
-            select(Assessment).where(Assessment.scene == "community")
-        )
-    ).scalars().all()
+        (await db.execute(select(Assessment).where(Assessment.scene == "community")))
+        .scalars()
+        .all()
+    )
     assert len(rows) == 1
 
 

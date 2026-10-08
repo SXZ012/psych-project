@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import NavigationButton from '../common/NavigationButton.vue'
+import PrivacyIdleGuard from '../common/PrivacyIdleGuard.vue'
+
 /**
  * 报告查询入口（触控友好）：员工编号 + 报告查询码 → 状态/报告。
  *
@@ -45,6 +48,7 @@ function onExit() {
 </script>
 
 <template>
+  <PrivacyIdleGuard v-if="!submitted" @expire="onExit" />
   <main class="terminal-shell lookup" :class="{ 'lookup--wide': submitted }">
     <section v-if="submitted" class="lookup__report-card">
       <ReportWaiting :lookup="lookup" @exit="onExit" />
@@ -66,7 +70,7 @@ function onExit() {
         <button class="primary" type="submit" :disabled="lookup.loading.value || reportId.trim().length !== 8">
           {{ lookup.loading.value ? MESSAGES.report.querying : MESSAGES.report.submitButton }}
         </button>
-        <button class="lookup__back" type="button" @click="onExit">{{ MESSAGES.report.backHome }}</button>
+        <NavigationButton class="lookup__back" @click="onExit">{{ MESSAGES.report.backHome }}</NavigationButton>
       </form>
     </section>
   </main>
@@ -91,9 +95,8 @@ function onExit() {
 .lookup__error{margin:0;color:#fca5a5;font-size:var(--fs-caption,14px)}
 .lookup__back{min-height:52px;border:0;background:transparent;color:#c5dce8;font-size:clamp(17px,1.35vw,19px);font-weight:600;text-decoration:underline;text-underline-offset:4px}
 @media(max-width:760px){.lookup--wide{padding:0}.lookup__report-card{height:100dvh;padding:14px}.lookup__card{transform:translateY(-16px)}}
-</style>
 
-<style scoped>
+
 /* 保持既有查询布局，仅换为明亮、可信的服务卡片。 */
 .lookup__report-card,.lookup__card{background:rgba(255,255,255,.96);border-color:#d7e2e3;box-shadow:0 14px 36px rgba(38,55,70,.12)}
 .lookup__report-card{box-shadow:none}

@@ -23,18 +23,20 @@ def _seed_rows() -> list[tuple[Pair, Image]]:
     for i in range(3):
         image = Image(oss_key=f"local/aviation/pool-img-{i}.jpg", url=f"/static/x{i}.jpg")
         for j in range(4):
-            rows.append((
-                Pair(
-                    image=image,
-                    question=f"题{i}-{j}",
-                    option_a="甲",
-                    option_b="乙",
-                    dimension=f"维度{i % 2}",
-                    scenario="情境",
-                    scene="aviation",
-                ),
-                image,
-            ))
+            rows.append(
+                (
+                    Pair(
+                        image=image,
+                        question=f"题{i}-{j}",
+                        option_a="甲",
+                        option_b="乙",
+                        dimension=f"维度{i % 2}",
+                        scenario="情境",
+                        scene="aviation",
+                    ),
+                    image,
+                )
+            )
     return rows
 
 
@@ -54,9 +56,7 @@ async def test_aviation_pool_returns_more_than_dimension_count(
     assert len(set(pair_ids)) == 12, "题目互不重复"
 
 
-async def test_aviation_pool_prefers_unique_images(
-    client: AsyncClient, db: AsyncSession
-) -> None:
+async def test_aviation_pool_prefers_unique_images(client: AsyncClient, db: AsyncSession) -> None:
     for pair, _image in _seed_rows():
         db.add(pair)
     await db.commit()
@@ -67,9 +67,7 @@ async def test_aviation_pool_prefers_unique_images(
     assert len(image_ids) == 3, "count≤图片数时图片不重复"
 
 
-async def test_community_session_rules_unaffected(
-    client: AsyncClient, db: AsyncSession
-) -> None:
+async def test_community_session_rules_unaffected(client: AsyncClient, db: AsyncSession) -> None:
     """社区 /pairs/session 场景隔离不变；抽题两遍：维度多样优先，图片绝不复用。"""
     for pair, _image in _seed_rows():
         db.add(pair)
@@ -88,9 +86,7 @@ async def test_community_session_rules_unaffected(
     assert len({p["pair_id"] for p in pairs}) == 3, "同一会话题目不得复用"
 
 
-async def test_submit_client_token_idempotent_retry(
-    client: AsyncClient, db: AsyncSession
-) -> None:
+async def test_submit_client_token_idempotent_retry(client: AsyncClient, db: AsyncSession) -> None:
     """同 token 重试：更新同一条记录并 +1 retry_count，不新建。"""
     form = {
         "name": "张三",

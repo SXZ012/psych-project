@@ -1,4 +1,5 @@
 """V3 Provider 抽象层 + 工厂（按 PROVIDER_MODE 切换 mock / real）。"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

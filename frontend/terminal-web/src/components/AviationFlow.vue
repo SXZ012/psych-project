@@ -67,7 +67,7 @@ watch(
     :index="flow.practiceIndex.value" :total="AVIATION_CONFIG.practiceCount"
     :native="flow.native.available.value" :camera-message="cameraMessage"
     :face-level="flow.faceReady.value ? 'ok' : (flow.faceNotice.value.level === 'error' ? 'error' : flow.faceNotice.value.level === 'warn' ? 'warn' : 'fail')"
-    @select-demo="(id, option) => flow.selectPractice(option)"
+    @select-demo="(_id, option) => flow.selectPractice(option)"
     @start-countdown="flow.startCountdown" @skip-all="flow.skipPractice"
   />
   <!-- 3 秒倒计时：准备/练习/倒计时均不计入正式 60 秒 -->
@@ -88,7 +88,7 @@ watch(
     :camera-message="cameraMessage"
     :face-level="flow.interrupting.value ? 'warn' : (flow.faceReady.value ? 'ok' : (flow.faceNotice.value.level === 'error' ? 'error' : flow.faceNotice.value.level === 'warn' ? 'warn' : 'fail'))"
     :native="flow.native.available.value"
-    @select="(id, option) => flow.select(option)"
+    @select="(_id, option) => flow.select(option)"
   />
   <CapturedNotice v-else-if="flow.phase.value==='captured'" :sim-mode="flow.simMode" />
   <CapturedNotice v-else-if="flow.phase.value==='loading'" :sim-mode="flow.simMode" />

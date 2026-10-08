@@ -23,12 +23,12 @@ import {
 } from '@report-kit/mapping'
 import { MESSAGES } from '@/aviation/messages'
 
-const props = defineProps<{ payload: ReportPayload }>()
+const props = withDefaults(defineProps<{ payload: ReportPayload; audience?: 'aviation' | 'community' }>(), { audience: 'aviation' })
 
 const TABS = REPORT_TABS
 const active = ref<ReportTab>('overview')
 
-const source = computed(() => toReportSource(props.payload))
+const source = computed(() => ({ ...toReportSource(props.payload), scene: props.audience }))
 const overview = computed(() => resultOverview(source.value))
 const coreViews = computed(() => coreMetricViews(source.value))
 const screeningViews = computed(() => screeningMetricViews(source.value))
@@ -105,7 +105,7 @@ const qualityValue = (item: { value: number | null; percent: boolean }) =>
 
     <!-- ═══ 页1 总览 ═══ -->
     <section v-show="active === 'overview'" class="preport__page" role="tabpanel">
-      <div class="page-guide"><h3>本次状态与复核重点</h3><span>先了解本次结果重点，再查看各项指标和数据质量。</span></div>
+      <div class="page-guide"><h3>{{ audience === 'community' ? '本次状态与阅读重点' : '本次状态与复核重点' }}</h3><span>先了解本次结果重点，再查看各项指标和数据质量。</span></div>
       <div class="preport__hero">
         <h3>{{ headline }}</h3>
         <p>{{ narratives[0] }}</p>
@@ -158,7 +158,7 @@ const qualityValue = (item: { value: number | null; percent: boolean }) =>
           <div class="rangescale"><span>0</span><b v-for="tick in rangeTicks(item)" :key="tick.left" :style="{ left: `${tick.left}%` }">{{ tick.value }}</b><span>100</span></div>
         </template>
         <p class="panel-note">{{ item.definition }}</p>
-        <p class="panel-note interpretation">{{ item.aviationMeaning }}</p>
+        <p class="panel-note interpretation">{{ audience === 'community' ? item.plainMeaning : item.aviationMeaning }}</p>
         <p class="panel-note muted">{{ item.limitation }}</p>
       </div>
       </div>
@@ -228,7 +228,7 @@ const qualityValue = (item: { value: number | null; percent: boolean }) =>
           <header><h4>{{ item.name }}</h4><span class="lv" :class="`lv--${statusTone(item.level)}`">{{ item.level }}</span></header>
           <strong>{{ item.score == null ? '—' : displayNumber(item.score) }}<small v-if="hasPartnerThresholds(item)">参考区间 {{ standardRangeText(item) }}</small></strong>
           <template v-if="hasPartnerThresholds(item) && item.score != null"><div class="rangebar"><i :style="normalStyle(item)"></i><b :style="{ left: markerLeft(item.score) }"></b></div><div class="rangescale"><span>0</span><b v-for="tick in rangeTicks(item)" :key="tick.left" :style="{ left: `${tick.left}%` }">{{ tick.value }}</b><span>100</span></div></template>
-          <p class="panel-note">{{ item.definition }}</p><p class="panel-note interpretation">{{ item.aviationMeaning }}</p><p class="panel-note muted">{{ item.limitation }}</p>
+          <p class="panel-note">{{ item.definition }}</p><p class="panel-note interpretation">{{ audience === 'community' ? item.plainMeaning : item.aviationMeaning }}</p><p class="panel-note muted">{{ item.limitation }}</p>
         </article>
       </div>
     </section>
@@ -321,9 +321,8 @@ const qualityValue = (item: { value: number | null; percent: boolean }) =>
 .rec-list li.rec-list--attention{background:rgba(245,190,80,.08)}
 .rec-list b{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--tx-strong,#eff6fc)}
 .rec-list p{margin:0;font-size:13px;line-height:1.7;color:var(--tx-soft,#a6bed3)}
-</style>
 
-<style scoped>
+
 /* 个人报告与页面保持同一浅色服务体系，四页结构不变。 */
 .preport__eyebrow,.preport__time{color:#72848b}.preport__head h2{color:#294354}
 .chip--ok,.lv--success{color:#347064;background:#e5f2ed}.chip--warn,.lv--warning{color:#9a6824;background:#fbf1dc}.lv--danger{color:#a85454;background:#f8e8e8}.lv--neutral{color:#5e737c;background:#eef2f2}

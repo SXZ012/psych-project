@@ -66,18 +66,16 @@ const emit = defineEmits<{
 .image-question__skip{margin-left:auto;min-height:44px;padding:0 22px;border:1px solid var(--aq-option-border,#a7c1d64d);border-radius:999px;background:transparent;color:var(--tx-soft,#a6bed3);font-size:var(--fs-caption,14px)}
 .image-question__skip:active{background:var(--aq-option-bg,#ffffff0b)}
 @media(max-height:700px){.image-question{padding:18px;gap:22px}.image-question>img{min-height:210px;max-height:310px}.image-question h1{font-size:21px;margin-bottom:12px}.image-question button{min-height:60px;padding:10px 14px;font-size:16px}}
-</style>
 
-<style scoped>
+
 /* 预训练与正式答题共用：白色题卡配深色文字，确保题干、选项和反馈清晰。 */
 .image-question{background:#f9fcfc;border-color:#d0e0df;box-shadow:0 12px 28px rgba(35,68,73,.15)}
 .image-question__body{color:#203e4d}.image-question__body>p{color:#45626e}.image-question h1{color:#203e4d;font-weight:650}
 .image-question button{color:#203e4d;background:#fff;border-color:#b9cfce;font-weight:560}
 .image-question button b{color:#2c665f;background:#e4f0ed}.image-question button.selected{color:#1f514b;background:#e1f0ea;border-color:#4f8d82}
 .image-question__actions small{color:#4b6570;font-size:14px;font-weight:500}.image-question__skip{color:#285d75;background:#f4f8f8}
-</style>
 
-<style scoped>
+
 /* 预训练与正式测评使用同一题卡：题目/图片长短均不改变卡片外轮廓。 */
 .image-question{height:clamp(330px,46vh,420px);grid-template-rows:minmax(0,1fr)}
 .image-question>img{height:100%;min-height:0;max-height:none}.image-question__body{min-height:0}

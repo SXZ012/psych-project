@@ -11,13 +11,17 @@ import type { DeviceSceneConfig } from '@/types/community'
  *   query 里的 device_id 只用于"首次绑定设备标识"，绑定后立即写入
  *   localStorage 并从 URL 清除。
  * - 未绑定设备标识的终端按 aviation 处理（与既有航空设备行为完全一致）。
- * - 已绑定但配置拉取失败时，先安全回退到默认航空首页；不会自动进入社区、
- *   不会绕过支付。这样后端短暂不可达或设备配置失效时，终端也不会卡死在错误页。
+ * - 已绑定但配置拉取失败时保留场景，显示可重试的错误页，不静默切换商业服务。
  */
 
 const DEVICE_STORAGE_KEY = 'psych.device_id'
 const DEVICE_TOKEN_STORAGE_KEY = 'psych.device_token'
 const CONFIG_REQUEST_TIMEOUT_MS = 4500
+const TEST_SCENE_KEY = 'psych.test_scene'
+function testScene(fallback: 'aviation' | 'community') {
+  const saved = SCENE_SWITCHER_ENABLED ? sessionStorage.getItem(TEST_SCENE_KEY) : null
+  return saved === 'aviation' || saved === 'community' ? saved : fallback
+}
 
 export type DeviceLoadStatus = 'loading' | 'ready' | 'error'
 
@@ -67,7 +71,7 @@ async function load() {
 
   // 未绑定设备标识：按航空终端处理（历史行为，兼容存量航空设备）
   if (!id) {
-    scene.value = 'aviation'
+    scene.value = testScene('aviation')
     configuredScene.value = 'aviation'
     config.value = null
     status.value = 'ready'
@@ -105,17 +109,13 @@ async function load() {
       phases: Array.isArray(body.phases) ? body.phases.map(String) : [],
     } satisfies DeviceSceneConfig
     configuredScene.value = parsed.scene
-    scene.value = parsed.scene
+    scene.value = testScene(parsed.scene)
     config.value = parsed
     status.value = 'ready'
   } catch (e) {
     error.value = e instanceof Error ? e.message : '设备配置获取失败'
-    // 设备配置只决定“能否额外进入社区场景”，不能阻塞默认测评终端。
-    // config 保持为空，因此即使回退首页也没有进入社区或绕过支付的可能。
-    configuredScene.value = 'aviation'
-    scene.value = 'aviation'
-    config.value = null
-    status.value = 'ready'
+    // Preserve the last known scene; do not silently start a different service.
+    status.value = 'error'
   }
 }
 
@@ -139,6 +139,7 @@ function exitToAviation() {
  */
 function switchTestScene(nextScene: 'aviation' | 'community') {
   if (!SCENE_SWITCHER_ENABLED) return false
+  sessionStorage.setItem(TEST_SCENE_KEY, nextScene)
   scene.value = nextScene
   return true
 }

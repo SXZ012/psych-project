@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import NavigationButton from '../common/NavigationButton.vue'
+
 /**
  * 提交成功页（查询凭证）：只在服务端持久化测评与后台任务后出现。
  *
@@ -7,7 +9,6 @@
  * - 查询码为大字号便于抄录（本轮不做纸质打印/二维码——见交接文档）；
  * - 隐私自动退出倒计时，指针活动重置。
  */
-import { MESSAGES } from '@/aviation/messages'
 
 defineProps<{
   reportId: string | null
@@ -38,7 +39,7 @@ const emit = defineEmits<{ finish: []; activity: [] }>()
       <p v-if="!simMode && reportId" class="credential__photo">请使用手机拍照保存报告编号</p>
       <p v-else-if="simMode" class="credential__sim">（开发模拟模式：未提交任何数据，无报告编号）</p>
 
-      <button class="primary credential__done" @click="emit('finish')">完成并返回首页</button>
+      <NavigationButton class="primary credential__done" @click="emit('finish')">完成并返回首页</NavigationButton>
       <small class="credential__countdown">为保护您的隐私，本页面将在 {{ countdown }} 秒后自动返回首页</small>
     </section>
   </main>
@@ -59,9 +60,8 @@ const emit = defineEmits<{ finish: []; activity: [] }>()
 .credential__sim{margin:0;color:#f5be50;font-size:var(--fs-caption,13px)}
 .credential__done{min-width:280px;margin-top:6px}
 .credential__countdown{color:#aab3cc99;font-size:var(--fs-micro,12px)}
-</style>
 
-<style scoped>
+
 /* 查询码页采用高对比白色凭证卡，拍照时也能清楚识别。 */
 .credential{background:#edf5f4}.credential__card{background:#fff;border-color:#d2e2df;box-shadow:0 16px 38px rgba(35,68,73,.14)}
 .credential__icon{color:#fff;background:#328b76;border:3px solid #dff3ea}.credential h1{color:#203e4d;font-weight:650}.credential__body{color:#42616d;font-size:16px;font-weight:500}

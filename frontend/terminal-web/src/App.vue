@@ -6,10 +6,11 @@
  * 连点热区只出现在航空首页（AviationHome 内），唤起 StaffGate 认证，
  * 认证通过后才能执行设备配置（服务端口令校验，前端不隐藏按钮代替鉴权）。
  */
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AviationApp from '@/components/AviationApp.vue'
 import CommunityFlow from '@/components/CommunityFlow.vue'
 import DevGallery from '@/components/dev/DevGallery.vue'
+import CommunityPreview from '@/components/dev/CommunityPreview.vue'
 import { useDeviceConfig } from '@/composables/useDeviceConfig'
 import { SCENE_SWITCHER_ENABLED } from '@/config/sceneSwitcher'
 
@@ -17,10 +18,34 @@ const device = useDeviceConfig()
 // 开发演示入口：?demo=1 查看各阶段与异常状态（不录像/不提交）
 const demoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('demo')
 const atSceneEntry = ref(true)
+const communityPreview = SCENE_SWITCHER_ENABLED && new URLSearchParams(window.location.search).get('demo') === 'community'
 
 function switchTestScene(scene: 'aviation' | 'community') {
   device.switchTestScene(scene)
 }
+
+// A kiosk stays open across deployments. Refresh only at the home entry, never during a paid session.
+let versionTimer: ReturnType<typeof setInterval> | undefined
+let checkingVersion = false
+async function checkClientVersion() {
+  if (import.meta.env.DEV || checkingVersion || !atSceneEntry.value || document.hidden || device.status.value !== 'ready') return
+  const current = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src
+  if (!current) return
+  checkingVersion = true
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 3000)
+  try {
+    const response = await fetch('/login/', { cache: 'no-store', signal: controller.signal })
+    if (!response.ok) return
+    const html = new DOMParser().parseFromString(await response.text(), 'text/html')
+    const src = html.querySelector('script[type="module"][src]')?.getAttribute('src')
+    if (src && atSceneEntry.value && !document.hidden && new URL(src, location.origin).href !== current) location.reload()
+  } catch { /* Network interruption is handled by the existing resource gate. */ }
+  finally { clearTimeout(timeout); checkingVersion = false }
+}
+onMounted(() => { versionTimer = setInterval(() => { void checkClientVersion() }, 60000) })
+watch(atSceneEntry, value => { if (value) void checkClientVersion() })
+onBeforeUnmount(() => clearInterval(versionTimer))
 
 let nativeSplashNotified = false
 
@@ -62,6 +87,7 @@ watch(() => device.status.value, async currentStatus => {
   </main>
 
   <!-- 启动时按后台绑定的设备场景进入航空测评或社区服务。 -->
+  <CommunityPreview v-else-if="communityPreview" />
   <CommunityFlow
     v-else-if="device.scene.value === 'community'"
     :device-id="device.deviceId.value || ''"

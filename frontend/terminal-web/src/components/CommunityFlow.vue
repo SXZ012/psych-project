@@ -1,20 +1,22 @@
 <script setup lang="ts">
+import NavigationButton from './common/NavigationButton.vue'
+import SessionRecovery from './community/SessionRecovery.vue'
+
 /**
  * 社区场景外壳：按 v6 状态机路由，统一挂顶部阶段进度条。
  * welcome → brief(测评与隐私说明·合并页) → payment_mock → consent ⇄ assets_loading
- * → opening(10 秒·可跳过) → face_ready(就位检查) → practice(3 道预训练·可跳过)
+ * → face_ready(就位检查) → practice(3 道预训练·可跳过)
  * → countdown(3 秒) → capturing(60 秒有效采集·自定节奏)
  * → closing(整理) → report_processing → complete
  * 失败态（assets/device/quality/submit）均可恢复、均显示编号、结束不新建支付。
  * 测评内核（就位 → 预训练 → 倒计时 → 60 秒采集）与航空完全同构。
  */
-import { computed, nextTick, onMounted, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import CommunityWelcome from '@/components/community/CommunityWelcome.vue'
 import CommunityBrief from '@/components/community/CommunityBrief.vue'
 import ExperienceConfirm from '@/components/community/ExperienceConfirm.vue'
 import CommunityConsent from '@/components/community/CommunityConsent.vue'
 import AssetsLoading from '@/components/community/AssetsLoading.vue'
-import CinematicOpening from '@/components/community/CinematicOpening.vue'
 import FaceReady from '@/components/community/FaceReady.vue'
 import CommunityPractice from '@/components/community/CommunityPractice.vue'
 import CommunityCountdown from '@/components/community/CommunityCountdown.vue'
@@ -31,6 +33,7 @@ import { PHASE_STEP } from '@/community/flowSteps'
 const props = defineProps<{ deviceId: string; questionCount?: number }>()
 const emit = defineEmits<{ 'entry-state': [atEntry: boolean] }>()
 const flow = useCommunityFlow(props.deviceId, props.questionCount ?? COMMUNITY_QUESTION_CONFIG.poolRequestCount)
+const recovering = ref(false)
 
 const showTopBar = computed(() => PHASE_STEP[flow.phase.value] !== null)
 
@@ -51,30 +54,32 @@ watch(() => flow.phase.value, async phase => {
 }, { immediate: true })
 </script>
 <template>
-  <CommunityTopBar v-if="showTopBar" :phase="flow.phase.value" @home="flow.finish" />
+  <SessionRecovery v-if="recovering" :resume="flow.resumeSession" @close="recovering=false" @exit="recovering=false; flow.finish()" />
+  <SessionRecovery v-if="flow.exitRequested.value" :code="flow.recoveryCode.value" @close="flow.exitRequested.value=false" @exit="flow.finish" />
+  <div :inert="recovering || flow.exitRequested.value ? true : undefined" style="display:contents">
+  <CommunityTopBar v-if="showTopBar" :phase="flow.phase.value" @home="flow.requestExit" />
 
   <!-- 1. 欢迎 -->
   <CommunityWelcome v-if="flow.phase.value === 'welcome'" @start="flow.startFromWelcome" @entry-state="emit('entry-state', $event)" />
   <!-- 2. 测评与隐私说明（合并页） -->
-  <CommunityBrief v-else-if="flow.phase.value === 'brief'" @next="flow.onBriefDone" />
+  <CommunityBrief v-else-if="flow.phase.value === 'brief'" @next="flow.onBriefDone" @resume="recovering=true" />
   <!-- 3. 体验确认（支付占位） -->
   <ExperienceConfirm
     v-else-if="flow.phase.value === 'payment_mock'"
     :status="flow.payStatus.value" :qr-url="flow.payQrUrl.value" :amount-fen="flow.amountFen.value"
     :countdown="flow.payCountdown.value" :error="flow.payError.value" :mock="flow.payMock.value"
-    :mock-busy="flow.payMockBusy.value"
-    @confirm="flow.confirmExperience" @mock-pay="flow.mockPayNow" @restart="flow.restartPayment"
+    :mock-busy="flow.payMockBusy.value" :assets-ready="flow.assetsReady.value"
+    :assets-error="flow.assetsError.value" :assets-progress="flow.assetsProgress.value" :assets-total="flow.assetsTotal.value"
+    @confirm="flow.confirmExperience" @mock-pay="flow.mockPayNow" @restart="flow.restartPayment" @retry-assets="flow.retryAssets"
   />
-  <!-- 4. 知情同意（素材并行准备） -->
+  <!-- 4. 图片题库齐备后进入知情同意 -->
   <CommunityConsent
     v-else-if="flow.phase.value === 'consent'"
     :assets-ready="flow.assetsReady.value" :assets-error="flow.assetsError.value"
     @retry-assets="flow.retryAssets" @confirm="flow.onConsentConfirm"
   />
   <!-- 4b. 素材准备过渡（确认后未就绪时才显示） -->
-  <AssetsLoading v-else-if="flow.phase.value === 'assets_loading'" :progress="{ loaded: flow.assetsProgress.value, total: flow.total.value }" />
-  <!-- 5. 社区开场短片（10 秒 · 可跳过） -->
-  <CinematicOpening v-else-if="flow.phase.value === 'opening'" @done="flow.onOpeningDone" />
+  <AssetsLoading v-else-if="flow.phase.value === 'assets_loading'" :progress="{ loaded: flow.assetsProgress.value, total: flow.assetsTotal.value }" />
   <!-- 6. 就位检查（三检查点通过后由用户确认） -->
   <FaceReady
     v-else-if="flow.phase.value === 'face_ready'"
@@ -87,7 +92,9 @@ watch(() => flow.phase.value, async phase => {
     v-else-if="flow.phase.value === 'practice'"
     :native="flow.native.available.value" :camera-message="flow.cameraMessage.value"
     :face-level="practiceFaceLevel"
-    @start="flow.beginCountdown"
+    :image-urls="flow.practiceImages.value"
+    @start="flow.beginCountdown" @question="flow.speakPracticeQuestion"
+    @answer="flow.stopPracticeQuestion" @finished="flow.onPracticeFinished"
   />
   <!-- 8. 3 秒倒计时（只显示 3/2/1） -->
   <CommunityCountdown
@@ -108,12 +115,13 @@ watch(() => flow.phase.value, async phase => {
   <!-- 10. 整理本次体验（真实状态驱动） -->
   <JourneyClosing
     v-else-if="flow.phase.value === 'closing'"
-    :step="flow.closingStep.value" :uploading="flow.uploading.value" :error="flow.closingError.value"
+    :uploading="flow.uploading.value" :error="flow.closingError.value"
   />
   <!-- 12. 报告生成中（可离开·扫码·报告编号） -->
   <ReportProcessing
     v-else-if="flow.phase.value === 'report_processing'"
-    :session-id="flow.sessionId.value" :session-code="flow.sessionCode.value" :submitted-at-text="''"
+    :error="flow.reportError.value" :delayed="flow.reportDelayed.value" @retry="flow.pollReportReady"
+    :session-id="flow.sessionId.value" :session-code="flow.sessionCode.value" :submitted-at-text="''" :needs-attention="flow.reportNeedsAttention.value"
     @finish="flow.finish"
   />
   <!-- 提交失败（编号 + 重试 + 结束） -->
@@ -131,7 +139,7 @@ watch(() => flow.phase.value, async phase => {
       <p>刚才的记录没有被采用。别担心，重新坐好再来一次就好。</p>
       <div class="de2-actions">
         <button class="primary" @click="flow.retryCapture">重新采集</button>
-        <button class="secondary-button" @click="flow.endSession">返回首页</button>
+        <NavigationButton class="secondary-button" @click="flow.requestExit">返回首页</NavigationButton>
       </div>
       <small>重新采集不需要再次确认，你的体验不受影响</small>
       <p v-if="flow.sessionCode.value" class="de2-code">编号 <b>{{ flow.sessionCode.value }}</b>（向工作人员求助时报这个编号）</p>
@@ -147,7 +155,7 @@ watch(() => flow.phase.value, async phase => {
       <p>{{ flow.failure.value }}</p>
       <div class="de2-actions">
         <button class="primary" @click="flow.retryAssets">再试一次</button>
-        <button class="secondary-button" @click="flow.endSession">返回首页</button>
+        <NavigationButton class="secondary-button" @click="flow.requestExit">返回首页</NavigationButton>
       </div>
       <p v-if="flow.sessionCode.value" class="de2-code">编号 <b>{{ flow.sessionCode.value }}</b>（向工作人员求助时报这个编号）</p>
     </section>
@@ -162,7 +170,7 @@ watch(() => flow.phase.value, async phase => {
       <p>{{ flow.failure.value }}</p>
       <div class="de2-actions">
         <button class="primary" @click="flow.retryCapture">再试一次</button>
-        <button class="secondary-button" @click="flow.endSession">返回首页</button>
+        <NavigationButton class="secondary-button" @click="flow.requestExit">返回首页</NavigationButton>
       </div>
       <small>多次失败时，请联系现场工作人员</small>
       <p v-if="flow.sessionCode.value" class="de2-code">编号 <b>{{ flow.sessionCode.value }}</b>（向工作人员求助时报这个编号）</p>
@@ -173,6 +181,7 @@ watch(() => flow.phase.value, async phase => {
     v-else :session-id="flow.sessionId.value" :session-code="flow.sessionCode.value"
     @finish="flow.finish"
   />
+  </div>
 </template>
 <style scoped>
 .device-error-view{display:grid;place-items:center}

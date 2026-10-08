@@ -1,7 +1,15 @@
 import { http } from './http'
 import type { AssessmentDetail,AssessmentListItem,AssessmentQuery,ReviewStatus } from '@/types/assessment'
-// 此后台当前服务航空高责任岗位场景；社区用户报告走独立 H5/PDF 链路。
-export async function listAssessments(params:AssessmentQuery={}):Promise<AssessmentListItem[]>{const{data}=await http.get<AssessmentListItem[]>('/assessments',{params:{limit:100,scene:'aviation',...params}});return data}
+export interface AssessmentPage { items: AssessmentListItem[]; total: number }
+export async function listAssessments(params: AssessmentQuery = {}): Promise<AssessmentPage> {
+  const { data, headers } = await http.get<AssessmentListItem[]>('/assessments', { params: { limit: 100, scene: 'all', ...params } })
+  const rawTotal = headers['x-total-count']
+  const total = Number(rawTotal)
+  if (rawTotal == null || !Number.isSafeInteger(total) || total < 0) throw new Error('报告总数加载失败，请刷新重试。')
+  return { items: data, total }
+}
+export async function generateCommunityPdf(id:string):Promise<void>{await http.post(`/admin/assessments/${id}/regenerate-pdf`,undefined,{timeout:120000})}
+export function communityPdfUrl(id:string,download=false):string{return `/api/v1/admin/assessments/${encodeURIComponent(id)}/pdf?download=${download}`}
 export async function getAssessment(id:string):Promise<AssessmentDetail>{const{data}=await http.get<AssessmentDetail>(`/assessments/${id}`);return data}
 export async function updateReviewStatus(id:string,review_status:ReviewStatus):Promise<void>{await http.patch(`/admin/assessments/${id}/review-status`,{review_status})}
 export async function updateNote(id:string,admin_note:string|null):Promise<void>{await http.patch(`/admin/assessments/${id}/note`,{admin_note})}

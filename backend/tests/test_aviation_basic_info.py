@@ -1,4 +1,5 @@
 """终端四项基础信息：工号/性别/年龄的提交、落库、详情暴露与旧式兼容。"""
+
 from uuid import UUID
 
 from app.core.config import settings
@@ -39,8 +40,14 @@ async def test_detail_exposes_basic_info(db, client):
     await _login_admin(client)
     created = await client.post(
         "/api/v1/assessments/submit",
-        data={"name": "李四", "subject_id": "2048", "gender": "女", "age": "41",
-              "selections": "[]", "duration_seconds": "60"},
+        data={
+            "name": "李四",
+            "subject_id": "2048",
+            "gender": "女",
+            "age": "41",
+            "selections": "[]",
+            "duration_seconds": "60",
+        },
         files={"video": fake_video()},
     )
     assert created.status_code == 201
@@ -53,9 +60,14 @@ async def test_legacy_submit_without_new_fields_unchanged(db, client):
     """旧终端（只传姓名+身份证号）行为完全不变；非法性别/年龄被忽略。"""
     legacy = await client.post(
         "/api/v1/assessments/submit",
-        data={"name": "旧终端", "id_card": "110101199001011234",
-              "selections": "[]", "duration_seconds": "60",
-              "gender": "未知", "age": "abc"},
+        data={
+            "name": "旧终端",
+            "id_card": "110101199001011234",
+            "selections": "[]",
+            "duration_seconds": "60",
+            "gender": "未知",
+            "age": "abc",
+        },
         files={"video": fake_video()},
     )
     assert legacy.status_code == 201

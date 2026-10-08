@@ -1,0 +1,33 @@
+import fs from 'node:fs'
+const pages=await (await fetch('http://127.0.0.1:49618/json')).json()
+const page=pages.find(p=>p.type==='page'); console.log(page.url)
+const ws=new WebSocket(page.webSocketDebuggerUrl);await new Promise(r=>ws.onopen=r)
+let seq=0;const pending=new Map();ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){pending.get(m.id)?.(m);pending.delete(m.id)}}
+const send=(method,params={})=>new Promise(resolve=>{const id=++seq;pending.set(id,resolve);ws.send(JSON.stringify({id,method,params}))})
+const ev=async expression=>(await send('Runtime.evaluate',{expression,returnByValue:true})).result?.result?.value
+console.log(await ev(`JSON.stringify([innerWidth,innerHeight,document.body.innerText.slice(0,300)])`))
+await ev(`[...document.querySelectorAll('button')].find(b=>b.textContent.trim().startsWith('查看报告'))?.click()`)
+await new Promise(r=>setTimeout(r,3000))
+const screenshot=await send('Page.captureScreenshot',{format:'png'})
+fs.writeFileSync('outputs/report-center-qa/terminal-physical-lookup.png',Buffer.from(screenshot.result.data,'base64'))
+console.log(await ev('document.body.innerText.slice(0,500)'))
+await ev('location.reload()');await new Promise(r=>setTimeout(r,2500))
+for (const c of 'F0345906') await ev(`[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===${JSON.stringify(c)})?.click()`)
+await ev(`[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='查看报告')?.click()`)
+await new Promise(r=>setTimeout(r,2500))
+for (let i=0;i<4;i++) {
+ await ev(`document.querySelectorAll('[role="tab"]')[${i}]?.click()`);await new Promise(r=>setTimeout(r,300))
+ const shot=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(`outputs/report-center-qa/physical-report-${i+1}.png`,Buffer.from(shot.result.data,'base64'))
+}
+await ev(`[...document.querySelectorAll('button')].find(b=>b.textContent.includes('手机查看 / 下载'))?.click()`)
+await new Promise(r=>setTimeout(r,400))
+const share=await send('Page.captureScreenshot',{format:'png'});fs.writeFileSync('outputs/report-center-qa/physical-share.png',Buffer.from(share.result.data,'base64'))
+const response=await fetch('http://10.0.0.3:8000/api/v1/community/report-center/lookup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({report_id:'F0345906'})})
+const receipt=await response.json()
+const pdf=await fetch(`http://10.0.0.3:8000/api/v1/community/report-center/pdf?token=${encodeURIComponent(receipt.access_token)}&download=true`)
+if(!pdf.ok||!pdf.headers.get('content-type').includes('application/pdf'))throw Error('LAN PDF failed')
+console.log('LAN PDF',pdf.status,(await pdf.arrayBuffer()).byteLength)
+await ev(`[...document.querySelectorAll('button')].find(b=>b.textContent.includes('关闭 ×'))?.click()`)
+await ev(`[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='退出报告')?.click()`)
+console.log('CLEARED',await ev(`!document.querySelector('.preport')&&!document.querySelector('#report-number')?.value`))
+ws.close()

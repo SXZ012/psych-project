@@ -3,6 +3,6 @@ export type ReviewStatus='pending'|'following'|'closed'
 export type ReviewFilter='all'|'pending'|'viewed'
 export interface AssessmentResult{algorithm_version:string|null;overall_score:number|null;overall_level_label:string|null;depression_classification:string|null;depression_label:string|null;depression_score:number|null;anxiety_classification:string|null;anxiety_label:string|null;anxiety_score:number|null;summary_json:Record<string,unknown>|null;timeline_json:Record<string,unknown>|null;qwen_report:string|null}
 export interface AssessmentListItem{id:string;subject_id:string|null;name:string|null;id_card:string|null;status:AssessmentStatus;provider_mode:string;created_at:string;completed_at:string|null;video_status:string|null;backup_status:string|null;partner_upload_status:string|null;duration_seconds:number|null;retry_count:number;error_code:string|null;error_message:string|null;result_valid:boolean|null;review_status:ReviewStatus;admin_note:string|null;scene?:'aviation'|'community'}
-export interface AssessmentDetail extends AssessmentListItem{result:AssessmentResult|null;video_qa_json:Record<string,unknown>|null;basic_info?:Record<string,unknown>|null;capture_quality?:{effective_duration_seconds?:number;paused_count?:number}|null}
-// 列表接口限定 aviation：详情/报告页后端硬过滤 aviation，放行 community 只会点进去 404
-export interface AssessmentQuery{limit?:number;offset?:number;name?:string;id_card?:string;scene?:'aviation'}
+export interface AssessmentDetail extends AssessmentListItem{result:AssessmentResult|null;video_qa_json:Record<string,unknown>|null;basic_info?:Record<string,unknown>|null;capture_quality?:{effective_duration_seconds?:number;paused_count?:number}|null;report_status?:string;has_pdf?:boolean}
+export type SceneFilter='all'|'aviation'|'community'
+export interface AssessmentQuery{q?:string;limit?:number;offset?:number;name?:string;id_card?:string;scene?:SceneFilter}

@@ -382,8 +382,7 @@ export function useAviationFlow() {
     formalScheduler.start(0)
     lastPlayedInstance.formal = 0
     card.value = { ...formalScheduler.card }
-    // 倒计时尾音可能仍占用音轨；正式首题优先，先清空提示音再立即播题。
-    audio.stopAll()
+    // 短开始提示音结束后由协调器立即接续首题，避免互相打断。
     playCurrentQuestionAudio('formal')
     clearTimers()
     setTimer(window.setInterval(captureTick, TICK_MS))
@@ -411,10 +410,9 @@ export function useAviationFlow() {
     if (controller.state !== 'recording') return    // sealed/invalid 已由回调接管
     captureElapsedMs.value = controller.elapsedMs
     captureRemainingSec.value = Math.max(0, Math.ceil((AVIATION_CONFIG.requiredMs - controller.elapsedMs) / 1000))
-    if (!finalReminderAnnounced && captureRemainingSec.value > 0 && captureRemainingSec.value <= 5) {
+    if (!finalReminderAnnounced && captureRemainingSec.value > 0 && captureRemainingSec.value <= 5 && audio.playCue('finishing')) {
       finalReminderAnnounced = true
-      // 终端原生语音只播一次；页面同时显示不遮挡当前题目的收尾提示。
-      native.speakPrompt('本轮采集即将结束，请完成当前选择')
+      // 预加载语音只播一次；位置提醒优先，不依赖设备系统 TTS。
     }
     formalScheduler?.update(controller.elapsedMs)
     card.value = formalScheduler ? { ...formalScheduler.card } : { kind: 'none' }

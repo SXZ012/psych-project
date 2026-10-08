@@ -2,23 +2,25 @@
 
 联调阶段使用 Mock(不需要微信商户号)；商户号下来后将 Mock 替换为真实微信调用。
 """
+
+import hmac
 import logging
 import time
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.base import get_db
 from app.models.assessment import Assessment
-from app.models.community import Customer, Device, PaymentOrder
+from app.models.community import AssessmentSession, Customer, Device, PaymentOrder
 from app.services.community import (
     COMMUNITY_PRICE_FEN,
     SessionBindingError,
@@ -33,6 +35,7 @@ from app.services.community import (
     start_assessment,
     verify_jwt,
 )
+from app.services.session_recovery import recovery_code
 
 logger = logging.getLogger("app.routes.community")
 
@@ -97,18 +100,13 @@ class AuthResponse(BaseModel):
 
 
 @router.post("/auth", response_model=AuthResponse)
-async def wechat_auth(
-    body: AuthRequest, request: Request, db: AsyncSession = DB
-) -> AuthResponse:
+async def wechat_auth(body: AuthRequest, request: Request, db: AsyncSession = DB) -> AuthResponse:
     """H5 页面 OAuth 回调：code 换 OpenID + 签发 JWT。
 
     Mock 模式(未配置 AppID): 用 code 生成假 OpenID。
     真实模式(配置了 AppID): 调微信 OAuth API 换取 OpenID。
     """
     client_ip = request.client.host if request.client else "unknown"
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        client_ip = forwarded.split(",")[0].strip()
     _check_auth_rate_limit(client_ip)
     if not body.code:
         raise HTTPException(status_code=400, detail="code 不能为空")
@@ -167,6 +165,8 @@ async def create_payment_session(
     只信任后端设备配置：设备必须已注册、启用且 scene=community，
     终端自行声明的场景一律无效。
     """
+    if settings.ENV == "prod":
+        raise HTTPException(503, "当前未开通正式支付，请联系工作人员")
     device = (
         await db.execute(select(Device).where(Device.device_id == body.device_id))
     ).scalar_one_or_none()
@@ -196,12 +196,11 @@ class SessionStatusResponse(BaseModel):
     status: str  # created|awaiting_payment|authorized|assessing|submitted|expired
     paid: bool
     openid_masked: str | None = None
+    recovery_code: str | None = None
 
 
 @router.get("/session/{session_id}/status", response_model=SessionStatusResponse)
-async def get_session_status(
-    session_id: UUID, db: AsyncSession = DB
-) -> SessionStatusResponse:
+async def get_session_status(session_id: UUID, db: AsyncSession = DB) -> SessionStatusResponse:
     """终端轮询支付状态(建议 3 秒一次)。"""
     session = await get_session(db, session_id)
     if session is None:
@@ -222,6 +221,7 @@ async def get_session_status(
     if session.customer_id:
         masked = str(session.customer_id)[:8] + "..."
     return SessionStatusResponse(
+        recovery_code=recovery_code(session.id) if paid and settings.ENV != "prod" else None,
         session_id=str(session.id),
         status=session.status,
         paid=paid,
@@ -249,6 +249,65 @@ async def start_session_assessment(session_id: UUID, db: AsyncSession = DB) -> d
 
 class PayRequest(BaseModel):
     session_id: str
+
+
+class ResumeRequest(BaseModel):
+    device_id: str = Field(min_length=1, max_length=64)
+    code: str = Field(pattern=r"^\d{12}$")
+
+
+@router.post("/session/resume")
+async def resume_session(body: ResumeRequest, request: Request, db: AsyncSession = DB):
+    # This recovery channel belongs to the simulated flow. Production recovery
+    # requires the paying customer's verified identity.
+    if settings.ENV == "prod":
+        raise HTTPException(403, "请使用测评时登录的手机身份恢复测评")
+    from app.services.report_access import (
+        RateLimited,
+        check_lookup_rate_limit,
+        record_lookup_failure,
+    )
+
+    ip = request.client.host if request.client else "unknown"
+    try:
+        await check_lookup_rate_limit("session-resume", ip)
+    except RateLimited as exc:
+        raise HTTPException(429, "尝试过于频繁，请稍后重试") from exc
+    rows = (
+        (
+            await db.execute(
+                select(AssessmentSession)
+                .join(Device)
+                .where(
+                    AssessmentSession.device_id == body.device_id,
+                    Device.is_active.is_(True),
+                    Device.scene == "community",
+                    AssessmentSession.status.in_(["authorized", "assessing", "submitted"]),
+                    AssessmentSession.created_at >= datetime.now(timezone.utc) - timedelta(days=7),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    matches = [row for row in rows if hmac.compare_digest(recovery_code(row.id), body.code)]
+    if len(matches) != 1:
+        await record_lookup_failure("session-resume", ip)
+        raise HTTPException(401, "恢复凭证有误、已过期或不属于这台终端")
+    session = matches[0]
+    paid_order = (
+        await db.execute(
+            select(PaymentOrder.id)
+            .where(
+                PaymentOrder.assessment_session_id == session.id,
+                PaymentOrder.status.in_(["paid", "assessing", "analyzing", "completed", "failed"]),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    if paid_order is None:
+        raise HTTPException(401, "本次体验资格不可用，请联系工作人员")
+    return {"session_id": str(session.id), "status": session.status}
 
 
 class PayResponse(BaseModel):
@@ -323,9 +382,8 @@ async def create_payment(
             amount_fen=COMMUNITY_PRICE_FEN,
             description="心理测评服务",
         )
-    except NotImplementedError:
-        # 真实模式未实现时回退到 Mock
-        params = build_mock_pay_params(order.id)
+    except NotImplementedError as exc:
+        raise HTTPException(503, "当前未开通正式支付，请联系工作人员") from exc
 
     return PayResponse(
         timeStamp=params["timeStamp"],
@@ -341,6 +399,7 @@ async def create_payment(
 
 class MockPayNotifyRequest(BaseModel):
     """Mock 回调请求体(联调用)。"""
+
     order_id: str
     wechat_txn_id: str | None = None
 
@@ -348,10 +407,13 @@ class MockPayNotifyRequest(BaseModel):
 @router.post("/pay/mock-notify")
 async def mock_pay_notify(body: MockPayNotifyRequest, db: AsyncSession = DB) -> dict:
     """Mock 支付回调(仅联调阶段使用，生产环境移除或加鉴权)。"""
-    if settings.WECHAT_MCH_ID:
+    if settings.ENV == "prod" or settings.WECHAT_MCH_ID:
         # 配置真实商户号后关闭该入口，防止伪造回调标记订单已支付
         raise HTTPException(status_code=404, detail="Mock 回调仅在开发模式可用")
-    order_id = UUID(body.order_id)
+    try:
+        order_id = UUID(body.order_id)
+    except ValueError as exc:
+        raise HTTPException(422, "订单编号格式有误") from exc
     ok = await handle_payment_callback(db, order_id, body.wechat_txn_id)
     if not ok:
         raise HTTPException(status_code=404, detail="订单不存在")
@@ -391,6 +453,8 @@ button:disabled{opacity:.5}
 const params = new URLSearchParams(location.search);
 const sessionId = params.get("session_id") || "";
 const state = document.getElementById("state");
+document.querySelector(".report-link").href =
+  "/community/reports?session_id=" + encodeURIComponent(sessionId);
 async function api(path, body, token) {
   const res = await fetch(path, {
     method: "POST",
@@ -421,7 +485,12 @@ async function doPay() {
     // 这样支付手机随后打开 /community/reports 能看到自己的报告。
     localStorage.setItem("psych.community.customer_token", auth.token);
     document.getElementById("card").classList.add("ok");
-    state.textContent = "支付成功！请回到终端继续测评。";
+    const recovery = await fetch('/api/v1/community/session/' + sessionId + '/status')
+      .then(r => r.json());
+    state.textContent = '确认成功！请保存此页面。12 位测评恢复码：'
+      + (recovery.recovery_code || '暂未取得，请保留此页面并联系工作人员')
+      + '。如测评中途退出或断电，7 天内可在原终端选择“已支付 · 恢复未完成测评”，'
+      + '输入此码核验原订单，无需重复支付。此码不是报告编号。现在请回到终端继续测评。';
   } catch (e) {
     state.textContent = "失败：" + e.message;
     btn.disabled = false;
@@ -436,7 +505,7 @@ async def mock_pay_page(session_id: str = Query(default="")) -> HTMLResponse:
 
     仅在未配置真实微信商户号(即 Mock 支付模式)时可用。
     """
-    if settings.WECHAT_MCH_ID:
+    if settings.ENV == "prod" or settings.WECHAT_MCH_ID:
         raise HTTPException(status_code=404, detail="Mock 支付页仅在开发模式可用")
     if not session_id:
         raise HTTPException(status_code=422, detail="缺少 session_id 参数")
@@ -446,83 +515,14 @@ async def mock_pay_page(session_id: str = Query(default="")) -> HTMLResponse:
 # ================== 社区 H5 报告页（Mock 联调；真实服务号阶段替换为 OAuth） ==================
 
 
-@router.get("/h5/report", response_class=HTMLResponse, include_in_schema=False)
-async def community_h5_report(
-    session_id: str = Query(default=""), db: AsyncSession = DB
-) -> HTMLResponse:
-    """社区用户版报告领取页：终端完成页二维码指向这里。
+@router.get("/h5/report", include_in_schema=False)
+async def community_h5_report(session_id: UUID):
+    """旧二维码统一进入报告中心，仅定位本次会话。"""
+    from fastapi.responses import RedirectResponse
 
-    Mock 阶段按支付会话定位用户（无需微信授权）；配置真实微信后此页
-    改为 OAuth 静默授权换取 OpenID 再查报告。
-    """
-    if settings.WECHAT_MCH_ID or settings.WECHAT_APP_ID:
-        raise HTTPException(status_code=404, detail="正式环境请通过微信公众号查看报告")
-    try:
-        parsed = UUID(session_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail="缺少有效的 session_id") from exc
-
-    from app.models.community import Customer
-
-    session = await get_session(db, parsed)
-    if session is None:
-        raise HTTPException(status_code=404, detail="会话不存在或已过期")
-
-    rows_html = ""
-    if session.customer_id:
-        customer = await db.get(Customer, session.customer_id)
-        if customer:
-            token = issue_jwt(str(customer.id), customer.openid)
-            reports = await get_customer_reports(db, customer.id)
-            for r in reports:
-                color_map = {"completed": "#16a34a", "failed": "#dc2626"}
-                status_color = color_map.get(r["status"], "#d97706")
-                file_url = f"/api/v1/community/me/reports/{r['id']}/file?token={token}"
-                action = (
-                    f'<a class="btn" href="{file_url}">查看报告</a>'
-                    if r["has_pdf"]
-                    else '<span class="btn btn--disabled">生成中…</span>'
-                )
-                created = (r.get("created_at") or "")[:16].replace("T", " ")
-                rows_html += (
-                    f'<div class="report"><div><b>测评记录</b>'
-                    f'<small>{created}</small></div>'
-                    f'<span class="status" style="color:{status_color}">'
-                    f'{r["status_label"]}</span>{action}</div>'
-                )
-    if not rows_html:
-        rows_html = '<div class="empty">完成测评后，这里会显示你的报告</div>'
-
-    html = """<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>我的测评报告</title>
-<style>
-body{margin:0;min-height:100vh;background:linear-gradient(180deg,#eaf3ee,#f6faf7);color:#263c35;
-  font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;padding:28px 18px}
-.wrap{max-width:420px;margin:0 auto}
-h1{font-size:20px;margin:0 0 4px}
-.sub{margin:0 0 22px;color:#6c8b7d;font-size:13px}
-.report{display:flex;align-items:center;gap:10px;padding:16px 14px;margin-bottom:12px;
-  border-radius:14px;
-  background:#fff;box-shadow:0 6px 18px #17352b14}
-.report b{display:block;font-size:15px}
-.report small{color:#8aa89b;font-size:11px}
-.report>div{flex:1}
-.status{font-size:12px;font-weight:650;white-space:nowrap}
-.btn{display:inline-block;padding:9px 14px;border-radius:999px;
-  background:linear-gradient(135deg,#668d7e,#3e7367);
-  color:#fff;text-decoration:none;font-size:13px;font-weight:650;white-space:nowrap}
-.btn--disabled{background:#e3ece6;color:#8aa89b}
-.empty{padding:36px 0;text-align:center;color:#8aa89b;font-size:14px}
-.foot{margin-top:26px;text-align:center;color:#9db3a7;font-size:11px;line-height:1.7}
-</style></head><body><div class="wrap">
-<h1>我的测评报告</h1>
-<p class="sub">AI视觉心理评估 · 社区版</p>
-__ROWS__
-<div class="foot">报告仅供个人参考，不构成临床诊断。<br>如有持续困扰，建议寻求专业帮助。</div>
-</div></body></html>"""
-    return HTMLResponse(html.replace("__ROWS__", rows_html))
+    if settings.WECHAT_MCH_ID or settings.WECHAT_APP_ID or settings.ENV == "prod":
+        raise HTTPException(status_code=404, detail="请通过已验证的手机身份查看报告")
+    return RedirectResponse(f"/community/reports?session_id={session_id}")
 
 
 # TODO: 真实微信回调(商户号下来后启用)
@@ -565,6 +565,7 @@ class CommunityReportResponse(BaseModel):
 
     不返回 V3 原始结果、Qwen 后台解读、管理员备注或调试信息。
     """
+
     id: str
     created_at: str | None = None
     status: str
@@ -639,14 +640,16 @@ async def get_download_url(
     if not assessment.report_pdf_key:
         raise HTTPException(status_code=400, detail="报告尚未生成")
 
-    if assessment.report_pdf_key.startswith("/"):
+    if Path(assessment.report_pdf_key).is_absolute():
         # 本地文件模式：把调用方自己的 JWT 回填成直链(仅 Mock/开发用)
         raw_token = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
         base = str(request.base_url).rstrip("/")
         url = f"{base}/api/v1/community/me/reports/{report_id}/file?token={raw_token}"
     else:
         # TODO: 接入 OSS 后生成真实签名 URL
-        url = f"https://oss.example.com/{assessment.report_pdf_key}?mock=true"
+        from app.services.oss.client import OSSClient
+
+        url = OSSClient().presigned_url(assessment.report_pdf_key, expires=86400)
 
     return DownloadUrlResponse(
         url=url,
@@ -679,7 +682,7 @@ async def download_report_file(
         raise HTTPException(status_code=400, detail="报告尚未生成")
 
     pdf_path = Path(assessment.report_pdf_key)
-    if not assessment.report_pdf_key.startswith("/") or not pdf_path.is_file():
+    if not Path(assessment.report_pdf_key).is_absolute() or not pdf_path.is_file():
         raise HTTPException(status_code=404, detail="报告文件不在本地(非 Mock 模式请走 OSS 下载)")
 
     return FileResponse(

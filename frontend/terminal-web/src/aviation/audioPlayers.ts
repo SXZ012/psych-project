@@ -16,7 +16,7 @@ class HtmlAudioPlayer implements AudioPlayer {
   private settle: ((result: AudioPlaybackResult) => void) | null = null
   private playing = false
 
-  constructor(private readonly url: string) {
+  constructor(url: string) {
     this.element = new Audio()
     this.element.preload = 'auto'
     this.element.src = url

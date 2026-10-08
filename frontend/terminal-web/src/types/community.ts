@@ -4,7 +4,6 @@ export type CommunityPhase =
   | 'payment_mock'
   | 'consent'
   | 'assets_loading'
-  | 'opening'
   | 'face_ready'
   | 'practice'
   | 'countdown'

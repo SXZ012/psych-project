@@ -1,0 +1,82 @@
+import { createRequire } from 'node:module'
+import fs from 'node:fs'
+const require = createRequire('C:/Users/Administrator/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/_entry.js')
+const { chromium } = require('playwright')
+const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream'] })
+const context = await browser.newContext({ viewport: {width:960,height:600}, permissions: ['camera'] })
+const page = await context.newPage()
+let sessionId = ''; page.on('response',async r => { if(r.url().endsWith('/api/v1/community/session') && r.request().method()==='POST') sessionId = (await r.json()).session_id })
+const out = 'outputs/report-center-qa'
+fs.mkdirSync(out,{recursive:true})
+const shot = async name => { await page.screenshot({path:`${out}/${name}.png`}); console.log('SCREEN',name) }
+const click = async text => { await page.getByRole('button',{name:text,exact:true}).click(); console.log('CLICK',text) }
+try {
+ await page.goto('http://localhost:8001/login/?device_id=report-qa-terminal')
+ await page.waitForTimeout(3000)
+ console.log((await page.locator('body').innerText()).slice(0,2400))
+ await shot('01-home')
+ await click('开始测评')
+ await click('继续')
+ await page.waitForTimeout(2000)
+ console.log('PAY',await page.locator('body').innerText())
+ await shot('02-payment')
+ const phone = await context.newPage()
+ await phone.goto(`http://localhost:8001/api/v1/community/mock-pay?session_id=${sessionId}`)
+ await phone.getByRole('button',{name:'确认并模拟支付'}).click()
+ await phone.getByText('成功',{exact:false}).first().waitFor({timeout:20000})
+ console.log('PHONE PAID')
+ await page.locator('.consent-body').waitFor({timeout:20000})
+ await page.locator('.consent-body').evaluate(e=>{e.scrollTop=e.scrollHeight;e.dispatchEvent(new Event('scroll'))})
+ await page.getByRole('checkbox').check()
+ await page.getByRole('button',{name:'同意并继续'}).click({timeout:60000})
+ await page.waitForTimeout(12000)
+ await shot('03-face')
+ await click('测试：模拟人脸已就位')
+ await click('开始操作体验')
+ await shot('04-practice')
+ for (let i=0;i<3;i++) { await page.locator('.pd-options button').first().click(); await page.waitForTimeout(350) }
+ await click('开始正式测评')
+ await page.locator('.community-assess').waitFor({timeout:15000})
+ await shot('05-capture')
+ const started = Date.now(); let answers = 0
+ while (Date.now()-started < 61000 && await page.locator('.community-assess').count()) {
+   const options = page.locator('.community-assess button:enabled')
+   if (await options.count()) { await options.first().click(); answers++ }
+   await page.waitForTimeout(1700)
+ }
+ const captureSeconds=(Date.now()-started)/1000; console.log('CAPTURE', {seconds:captureSeconds,answers})
+ await page.locator('.receipt-shell').waitFor({timeout:30000})
+ await shot('06-submitted')
+ const r = await (await page.request.get(`http://localhost:8001/api/v1/community/report-center/session/${sessionId}`)).json()
+ console.log('RECEIPT',r.report_id,r.status)
+ await phone.goto(`http://localhost:8001/community/reports?session_id=${sessionId}`)
+ if (r.status === 'processing') await phone.getByRole('heading',{name:'分析中',exact:true}).waitFor({timeout:5000})
+ await phone.screenshot({path:`${out}/07-phone-processing.png`})
+ await phone.locator('.preport').waitFor({timeout:30000})
+ const token = new URLSearchParams(new URL(phone.url()).hash.slice(1)).get('access')
+ const reportId = r.report_id
+ await click('完成并返回首页')
+ await page.getByRole('button',{name:/^查看报告/}).click()
+ await page.getByRole('heading',{name:/查看自己的/}).waitFor()
+ await shot('08-lookup')
+ for (const c of reportId) await page.getByRole('button',{name:c,exact:true}).click()
+ await page.getByRole('button',{name:/^查看报告/}).click()
+ await page.locator('.preport').waitFor()
+ for (let i=0;i<4;i++) { await page.getByRole('tab').nth(i).click(); await shot(`09-terminal-report-${i+1}`) }
+ await click('手机查看 / 下载')
+ await shot('10-share')
+ await click('关闭 ×')
+ await phone.setViewportSize({width:390,height:844})
+ for(let i=0;i<4;i++){await phone.getByRole('tab').nth(i).click();await phone.screenshot({path:`${out}/11-mobile-report-${i+1}.png`})}
+ const preview = await phone.request.get(`http://localhost:8001/api/v1/community/report-center/pdf?token=${encodeURIComponent(token)}`)
+ if(!preview.ok() || !preview.headers()['content-disposition'].includes('inline')) throw Error('PDF preview failed')
+ const downloaded = await phone.request.get(`http://localhost:8001/api/v1/community/report-center/pdf?token=${encodeURIComponent(token)}&download=true`)
+ if(!downloaded.ok() || !downloaded.headers()['content-disposition'].includes('attachment')) throw Error('PDF download failed')
+ fs.writeFileSync(`${out}/community-report-demo.pdf`,await downloaded.body())
+ await click('退出报告')
+ if(await page.locator('.preport').count()) throw Error('report not cleared')
+ const input = await page.locator('#report-number').inputValue()
+ if(input) throw Error('report ID not cleared')
+ fs.writeFileSync(`${out}/qa-summary.json`, JSON.stringify({sessionId,reportId,answers,captureSeconds,pdfBytes:(await downloaded.body()).length,passed:true},null,2))
+ console.log('PASS complete report loop', reportId)
+} finally { await browser.close() }

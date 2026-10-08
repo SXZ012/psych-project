@@ -1,0 +1,24 @@
+/* Identical camera geometry and question surface across community rehearsal/capture. */
+.pd-stage,.community-assess{height:100%;min-height:0;display:flex;align-items:center;box-sizing:border-box;padding:330px 0 62px;background:#e9f0e9}
+:deep(.camera-monitor.stage-top),:deep(.camera-monitor.stage-top.expanded){top:46px;width:360px}
+:deep(.image-question){height:clamp(280px,42vh,400px);border:0;box-shadow:none}
+.pd-finish-overlay{z-index:1;padding:330px 28px 30px;justify-content:center}
+.pd-note{color:#4a6351}
+.pd-progress i{background:#c3d4bd}.pd-progress i.active{background:#447953}.pd-progress i.done{background:#86a781}
+.pd-badge{background:#dbe9d6;color:#355d41;backdrop-filter:none}
+.pd-skip{background:#dae7d5;color:#355d41;border:0;backdrop-filter:none}
+.community-assess>header{max-width:250px;top:72px;left:32px}.community-assess>.time{top:72px;right:32px}
+@media(max-height:680px){
+  .pd-stage,.community-assess{padding:282px 0 58px}
+  :deep(.camera-monitor.stage-top),:deep(.camera-monitor.stage-top.expanded){width:300px;top:46px}
+  :deep(.image-question){height:260px;padding:16px;gap:20px}
+  :deep(.image-question h1){font-size:20px;margin-bottom:10px}
+  :deep(.image-question__body>p){margin-bottom:6px;font-size:13px}
+  :deep(.image-question button){height:54px;min-height:54px;padding:8px 14px}
+  :deep(.image-question__options){gap:9px}
+  :deep(.image-question__actions){margin-top:8px}
+  .pd-finish-overlay{padding-top:290px;gap:10px}
+  .pd-finish-icon{height:54px;width:54px;font-size:27px}
+  .community-assess>header{max-width:245px;left:28px}.community-assess>header h2{font-size:22px}
+  .community-assess>header small{font-size:14px}
+}

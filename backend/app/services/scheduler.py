@@ -2,10 +2,12 @@
 
 支持双场景：通过 scene 参数筛选航空/社区题库，调度算法完全共用。
 """
+
 from __future__ import annotations
 
 import logging
 import random
+import unicodedata
 from uuid import UUID
 
 from sqlalchemy import select
@@ -14,6 +16,33 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.image_bank import Image, Pair
 
 logger = logging.getLogger(__name__)
+
+
+def question_key(text: str) -> str:
+    """Ignore typography differences when identifying duplicate prompts."""
+    return "".join(
+        c
+        for c in unicodedata.normalize("NFKC", text).casefold()
+        if not c.isspace() and not unicodedata.category(c).startswith("P")
+    )
+
+
+def _community_unique(rows, exclude_questions=None):
+    questions = {question_key(q) for q in (exclude_questions or [])}
+    images = set()
+    result = []
+    for pair, image in rows:
+        key = question_key(pair.question)
+        image_keys = {str(image.id), (image.url or "").split("?", 1)[0].split("#", 1)[0]}
+        if image.oss_key:
+            image_keys.add(image.oss_key)
+        image_keys.discard("")
+        if not key or key in questions or images.intersection(image_keys):
+            continue
+        questions.add(key)
+        images.update(image_keys)
+        result.append((pair, image))
+    return result
 
 
 def _pair_dict(pair: Pair, image: Image) -> dict:
@@ -41,14 +70,8 @@ def _pair_dict(pair: Pair, image: Image) -> dict:
     }
 
 
-async def _active_pairs(
-    db: AsyncSession, scene: str | None = None
-) -> list[tuple[Pair, Image]]:
-    stmt = (
-        select(Pair, Image)
-        .join(Image)
-        .where(Pair.active.is_(True), Image.active.is_(True))
-    )
+async def _active_pairs(db: AsyncSession, scene: str | None = None) -> list[tuple[Pair, Image]]:
+    stmt = select(Pair, Image).join(Image).where(Pair.active.is_(True), Image.active.is_(True))
     if scene:
         stmt = stmt.where(Pair.scene == scene)
     return [(r[0], r[1]) for r in (await db.execute(stmt)).all()]
@@ -75,6 +98,7 @@ async def get_session_pairs(
     count: int = 4,
     scene: str | None = None,
     exclude_image_tags: list[str] | None = None,
+    exclude_questions: list[str] | None = None,
 ) -> list[dict]:
     """随机抽取 count 道互不重复的题目配对包。
 
@@ -97,6 +121,8 @@ async def get_session_pairs(
             if not any(tag and tag in (image.url or "") for tag in exclude_image_tags)
         ]
     random.shuffle(rows)
+    if scene == "community":
+        rows = _community_unique(rows, exclude_questions)
     picked: list[tuple[Pair, Image]] = []
     used_images: set[UUID] = set()
     used_dimensions: set[str] = set()
@@ -125,14 +151,26 @@ async def get_session_pairs(
 
 
 async def get_pairs_by_ids(
-    db: AsyncSession, pair_ids: list[UUID], scene: str | None = None
+    db: AsyncSession,
+    pair_ids: list[UUID],
+    scene: str | None = None,
+    exclude_image_tags: list[str] | None = None,
+    exclude_questions: list[str] | None = None,
 ) -> list[dict]:
     """按会话已固定的顺序恢复题组，刷新终端不会重新随机。"""
     if not pair_ids:
         return []
     rows = await _active_pairs(db, scene=scene)
     by_id = {pair.id: (pair, image) for pair, image in rows}
-    return [_pair_dict(*by_id[pair_id]) for pair_id in pair_ids if pair_id in by_id]
+    ordered = [by_id[pair_id] for pair_id in pair_ids if pair_id in by_id]
+    if scene == "community":
+        ordered = [
+            (p, i)
+            for p, i in ordered
+            if not any(tag and tag in (i.url or "") for tag in (exclude_image_tags or []))
+        ]
+        ordered = _community_unique(ordered, exclude_questions)
+    return [_pair_dict(*row) for row in ordered]
 
 
 async def get_aviation_pool(
@@ -171,6 +209,7 @@ async def get_aviation_pool(
     session = [_pair_dict(*row) for row in picked]
     logger.info(
         "schedule aviation pool | picked=%d image_unique=%d scene=aviation",
-        len(session), len(used_images),
+        len(session),
+        len(used_images),
     )
     return session

@@ -1,4 +1,5 @@
 """持久化合作方报告附件，避免短期签名 URL 过期。"""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,7 +8,12 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.core.config import _REPO_ROOT
+from app.models.storage import StoredAsset
+from app.services.storage import get_storage
 
 logger = logging.getLogger(__name__)
 
@@ -32,14 +38,15 @@ def find_cached_au_image(assessment_id: UUID) -> tuple[Path, str] | None:
 
 
 async def cache_au_image(
-    summary: dict[str, Any], assessment_id: UUID, provider: object
+    summary: dict[str, Any], assessment_id: UUID, provider: object, db: AsyncSession | None = None
 ) -> tuple[Path, str] | None:
     """下载并缓存 AU 标注图；Mock 的 data URL 无需落盘。"""
     cached = find_cached_au_image(assessment_id)
     if cached:
+        await publish_au_image(cached, assessment_id, db)
         return cached
 
-    visual = (((summary.get("modules") or {}).get("au") or {}).get("visualization") or {})
+    visual = ((summary.get("modules") or {}).get("au") or {}).get("visualization") or {}
     if not isinstance(visual, dict):
         return None
     image_url = visual.get("image_url")
@@ -67,4 +74,29 @@ async def cache_au_image(
     target = root / f"{assessment_id}{suffix}"
     await asyncio.to_thread(target.write_bytes, data)
     logger.info("assessment %s AU图片已本地持久化: %s", assessment_id, target.name)
+    await publish_au_image((target, content_type), assessment_id, db)
     return target, content_type
+
+
+async def publish_au_image(
+    cached: tuple[Path, str], assessment_id: UUID, db: AsyncSession | None
+) -> str | None:
+    storage = get_storage()
+    if db is None or storage.name != "oss":
+        return None
+    existing = await db.scalar(
+        select(StoredAsset.object_key).where(
+            StoredAsset.assessment_id == assessment_id, StoredAsset.category == "au_image"
+        )
+    )
+    if existing:
+        return existing
+    path, content_type = cached
+    return await storage.publish(
+        path,
+        f"report-assets/au/{assessment_id.hex}{path.suffix}",
+        db=db,
+        category="au_image",
+        assessment_id=assessment_id,
+        content_type=content_type,
+    )

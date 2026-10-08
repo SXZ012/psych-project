@@ -8,6 +8,7 @@
 生产部署应替换为公司 SSO/RBAC；当前以口令区分角色，会话仅存内存
 （重启即失效，属可接受的安全衰减）。
 """
+
 import secrets
 import time
 from collections import defaultdict, deque
@@ -38,7 +39,9 @@ def check_login_rate_limit(client_ip: str) -> None:
     if len(bucket) >= _LOGIN_MAX_FAILURES:
         raise LoginRateLimited()
     if len(_LOGIN_BUCKETS) > 10_000:
-        stale = [k for k, v in _LOGIN_BUCKETS.items() if not v or now - v[0] > _LOGIN_WINDOW_SECONDS]
+        stale = [
+            k for k, v in _LOGIN_BUCKETS.items() if not v or now - v[0] > _LOGIN_WINDOW_SECONDS
+        ]
         for k in stale:
             _LOGIN_BUCKETS.pop(k, None)
 

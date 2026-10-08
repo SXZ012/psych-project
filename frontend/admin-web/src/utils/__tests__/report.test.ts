@@ -3,6 +3,8 @@ import type { AssessmentDetail } from '@/types/assessment'
 import type { DetailedMetricView } from '@/types/report'
 import {
   confidenceConcerns,
+  coreMetricViews,
+  screeningMetricViews,
   dataQualityVerdict,
   isAttentionMetric,
   isStableMetric,
@@ -36,6 +38,19 @@ const baseView = (overrides: Partial<DetailedMetricView>): DetailedMetricView =>
 
 const reportWith = (summary: Record<string, unknown>) =>
   ({ id: 't', result: { summary_json: summary } }) as unknown as AssessmentDetail
+
+it('社区沿用相同分数与阈值，实际解读使用日常含义', () => {
+  const report = reportWith({ core_indicators: { stress_load: { score: 65, grade_thresholds: [10, 20, 30, 40] } } })
+  for (const map of [coreMetricViews, screeningMetricViews]) {
+    const aviation = map({ ...report, scene: 'aviation' })
+    const community = map({ ...report, scene: 'community' })
+    community.forEach((item, index) => {
+      expect(item.aviationMeaning).toBe(item.plainMeaning)
+      expect(item.score).toBe(aviation[index]!.score)
+      expect(item.thresholds).toEqual(aviation[index]!.thresholds)
+    })
+  }
+})
 
 describe('isAttentionMetric（severity 优先）', () => {
   it('severity>=1 判为重点查看，severity=0 不判', () => {

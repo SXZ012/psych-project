@@ -11,6 +11,7 @@
 处理中阶段文案：终端不出现"合作方/算法/任务/上传"等技术表述，
 统一为两档用户文案（已提交，正在处理 / 报告生成中）。
 """
+
 from __future__ import annotations
 
 from app.models.assessment import Assessment, AssessmentResult
@@ -47,15 +48,15 @@ REPORT_TEMPLATE_VERSION = "personal-report-v2"
 # 注意：modules 下只放行 eye_tracking.status（眼动是否采集），
 # modules.au.visualization 含文件 id/图片地址，一律不放行。
 _SUMMARY_WHITELIST: dict[str, dict | set | None] = {
-    "clinical_screening": None,             # 方向筛查（抑郁/焦虑）用户域字段
-    "core_indicators": None,                # 四项核心指标（分数/档位/阈值/解释）
-    "small_indicators": None,               # 证据指标（AU/rPPG/Vibra/眼动代理）
+    "clinical_screening": None,  # 方向筛查（抑郁/焦虑）用户域字段
+    "core_indicators": None,  # 四项核心指标（分数/档位/阈值/解释）
+    "small_indicators": None,  # 证据指标（AU/rPPG/Vibra/眼动代理）
     "product_logic_summary": {"state_severity", "positioning"},
-    "confidence": None,                     # 整体置信度（档位/分数/构成项）
-    "quality": None,                        # 采集质量（人脸有效率/质量/干扰/丢帧）
+    "confidence": None,  # 整体置信度（档位/分数/构成项）
+    "quality": None,  # 采集质量（人脸有效率/质量/干扰/丢帧）
     "rppg_quality_gate": {"physiology_available", "unavailable_reasons", "reasons"},
-    "formal_segment_status": None,          # 正式段可解释性（clinical_eligible/段数）
-    "clinical_notice": None,                # 专业定位与使用限制（面向用户的说明）
+    "formal_segment_status": None,  # 正式段可解释性（clinical_eligible/段数）
+    "clinical_notice": None,  # 专业定位与使用限制（面向用户的说明）
     "modules": {"eye_tracking": {"status"}},
 }
 
@@ -154,11 +155,16 @@ def build_report_view(assessment: Assessment, result: AssessmentResult) -> dict:
         # 兼容 v1 字段（老终端仍可读最小三层）；v2 终端以子集驱动四页报告
         "indicators": [
             {
-                "key": "overall", "label": "综合状态指数",
-                "value": result.overall_score, "unit": "分",
-                "level_label": result.overall_level_label, "reference": None,
+                "key": "overall",
+                "label": "综合状态指数",
+                "value": result.overall_score,
+                "unit": "分",
+                "level_label": result.overall_level_label,
+                "reference": None,
             },
-        ] if isinstance(result.overall_score, (int, float)) else [],
+        ]
+        if isinstance(result.overall_score, (int, float))
+        else [],
         "advice": {
             "needs_review_attention": assessment.review_status != "closed",
             "review_note": None,

@@ -22,7 +22,7 @@ import { MESSAGES } from './messages.ts'
 const PRIORITY: Record<string, number> = {
   invalid: 40,
   deviation: 30, near: 30, far: 30,
-  start: 20, 'complete': 20, 'practice-complete': 20, 'practice-skipped': 20,
+  start: 20, 'complete': 20, 'practice-complete': 20, 'practice-skipped': 20, finishing: 20,
   question: 10,
 }
 
@@ -93,10 +93,10 @@ export class AudioCoordinator {
   }
 
   /** 播放提示类 cue（start/complete/practice-complete）。 */
-  playCue(cue: 'start' | 'complete' | 'practice-complete' | 'practice-skipped', after?: () => void): void {
-    if (this.disposed) return
+  playCue(cue: 'start' | 'complete' | 'practice-complete' | 'practice-skipped' | 'finishing', after?: () => void): boolean {
+    if (this.disposed) return false
     if (cue !== 'start') this.suspendedQuestion = null
-    this.startPlayback(cue, cueUrl(cue), after)
+    return this.startPlayback(cue, cueUrl(cue), after)
   }
 
   /**
@@ -148,15 +148,15 @@ export class AudioCoordinator {
     url: string,
     after?: () => void,
     opts: { critical?: boolean; questionInstance?: QuestionInstance } = {},
-  ): void {
+  ): boolean {
     const player = this.cache.get(url)
     if (!player) {
       // 预加载遗漏（或 URL 配置错误）：按播放失败处理，不悬挂
       this.o.onPlaybackError?.(cue)
-      return
+      return false
     }
     const priority = PRIORITY[cue] ?? 0
-    if (this.active && this.active.priority > priority) return       // 低不让高
+    if (this.active && this.active.priority > priority) return false // 低不让高
     const isReminder = cue === 'deviation' || cue === 'near' || cue === 'far'
     if (this.active) {
       // 位置提醒打断题目语音 → 记录恢复目标（提醒结束后只恢复仍有效的当前题）
@@ -175,12 +175,13 @@ export class AudioCoordinator {
       this.active = null
       if (result === 'ended') {
         after?.()
-        if (isReminder) this.maybeResumeQuestion()
+        if (isReminder || cue === 'start') this.maybeResumeQuestion()
       } else if (result === 'failed') {
         this.o.onPlaybackError?.(cue)
       }
       // 'cancelled'：主动停止，无回调——避免取消后回调串入新阶段
     })
+    return true
   }
 
   private cancelActive(): void {

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """V3 独立联调工具：校验配置，或上传一个视频并保存真实结果。"""
+
 from __future__ import annotations
 
 import argparse

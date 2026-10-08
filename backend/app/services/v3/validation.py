@@ -5,6 +5,7 @@
 拿到 V3 结果后调用本函数：若时长为 0 或异常，则该结果不可作为正式可解释报告。
 注意：不依据 ``sampled_frames / sample_fps`` 推断完整分析时长。
 """
+
 from __future__ import annotations
 
 

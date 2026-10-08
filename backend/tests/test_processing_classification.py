@@ -6,6 +6,7 @@
 任务 dead、状态被覆写 failed，报告页显示"暂未生成"。
 本文件锁定：枚举成员与裸字符串都能正确分类。
 """
+
 from __future__ import annotations
 
 import pytest
@@ -56,8 +57,8 @@ async def _run_with_outcome(db_engine, monkeypatch, outcome):
 @pytest.mark.parametrize(
     "outcome",
     [
-        AssessmentStatus.completed,   # 事故根因：枚举成员
-        "completed",                  # 裸字符串（修复后 run_assessment 的返回）
+        AssessmentStatus.completed,  # 事故根因：枚举成员
+        "completed",  # 裸字符串（修复后 run_assessment 的返回）
         AssessmentStatus.invalid_result,
         "qa_failed",
     ],
@@ -71,7 +72,7 @@ async def test_terminal_outcomes_mark_task_done(db_engine, monkeypatch, outcome)
 async def test_failure_outcome_schedules_retry(db_engine, monkeypatch):
     fresh, _ = await _run_with_outcome(db_engine, monkeypatch, "failed")
     assert fresh is not None
-    assert fresh.status == "failed"      # 额度内退避重试
+    assert fresh.status == "failed"  # 额度内退避重试
     assert fresh.attempts == 1
     assert fresh.last_error
 

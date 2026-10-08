@@ -13,6 +13,7 @@ export function usePauseableCountdown(seconds: number, onExpire: () => void, opt
   const remaining = ref(seconds)
   const paused = ref(false)
   let timer: number | null = null
+  const hosts = new Set<HTMLElement>()
   const resetOnActivity = opts.resetOnActivity !== false
 
   function start() {
@@ -30,20 +31,29 @@ export function usePauseableCountdown(seconds: number, onExpire: () => void, opt
 
   // 绑定到宿主元素：按下暂停、抬起恢复
   function bind(el: HTMLElement) {
+    if (hosts.has(el)) return
+    hosts.add(el)
     el.addEventListener('pointerdown', pause)
     el.addEventListener('pointerup', resume)
+    el.addEventListener('pointercancel', resume)
     el.addEventListener('pointerleave', resume)
     el.addEventListener('touchstart', pause, { passive: true })
     el.addEventListener('touchend', resume)
+    el.addEventListener('touchcancel', resume)
+    el.addEventListener('keydown', reset)
   }
   function unbind(el: HTMLElement) {
+    hosts.delete(el)
     el.removeEventListener('pointerdown', pause)
     el.removeEventListener('pointerup', resume)
+    el.removeEventListener('pointercancel', resume)
     el.removeEventListener('pointerleave', resume)
     el.removeEventListener('touchstart', pause)
     el.removeEventListener('touchend', resume)
+    el.removeEventListener('touchcancel', resume)
+    el.removeEventListener('keydown', reset)
   }
 
-  onBeforeUnmount(stop)
+  onBeforeUnmount(() => { stop(); hosts.forEach(unbind) })
   return { remaining, paused, start, stop, reset, bind, unbind }
 }

@@ -3,6 +3,7 @@
 定位：V3 = 客观事实层；QwenPlus = 后台专业化表达层。
 只做"解读"，绝不重算分数/档位；严格遵守筛查≠诊断等合规口径。
 """
+
 from __future__ import annotations
 
 import json
@@ -91,15 +92,21 @@ def build_user_prompt(
             "depression_screening": dep.get("classification_label", "未知"),
             "anxiety_screening": anx.get("classification_label", "未知"),
             "core_dimensions": [
-                _core_line(ci, "stress_load"), _core_line(ci, "fatigue_recovery"),
-                _core_line(ci, "physiological_arousal"), _attention_line(summary, ci),
+                _core_line(ci, "stress_load"),
+                _core_line(ci, "fatigue_recovery"),
+                _core_line(ci, "physiological_arousal"),
+                _attention_line(summary, ci),
             ],
         },
         "core": {
             "stress_load": _core_line(ci, "stress_load"),
             "fatigue_recovery": _core_line(ci, "fatigue_recovery"),
             "physiological_arousal": _core_line(ci, "physiological_arousal"),
-            ("visual_attention_status" if eye_status in {"not_collected", "not_collected_in_upload_report"} else "attention_focus"): _attention_line(summary, ci),
+            (
+                "visual_attention_status"
+                if eye_status in {"not_collected", "not_collected_in_upload_report"}
+                else "attention_focus"
+            ): _attention_line(summary, ci),
         },
         "screening": {
             "depression": _screen_line("抑郁方向筛查", dep),
@@ -109,13 +116,25 @@ def build_user_prompt(
         },
         "evidence": {
             "au": compact_group("au"),
-            "rppg": {"unavailable": rppg_gate.get("physiology_available") is False, "facts": compact_group("rppg")},
+            "rppg": {
+                "unavailable": rppg_gate.get("physiology_available") is False,
+                "facts": compact_group("rppg"),
+            },
             "vibra": compact_group("vibra"),
-            "eye": {"unavailable": eye_status in {"not_collected", "not_collected_in_upload_report"}, "facts": compact_group("eye_tracking")},
+            "eye": {
+                "unavailable": eye_status in {"not_collected", "not_collected_in_upload_report"},
+                "facts": compact_group("eye_tracking"),
+            },
         },
-        "clinical_positioning": notice.get("positioning", "心理生理状态辅助评估，不作为独立诊断依据。"),
+        "clinical_positioning": notice.get(
+            "positioning", "心理生理状态辅助评估，不作为独立诊断依据。"
+        ),
     }
-    lines = ["以下JSON是本次报告唯一允许引用的事实白名单：", json.dumps(facts, ensure_ascii=False), "【免责声明约束】各页 constraint 必须遵守 clinical_positioning。"]
+    lines = [
+        "以下JSON是本次报告唯一允许引用的事实白名单：",
+        json.dumps(facts, ensure_ascii=False),
+        "【免责声明约束】各页 constraint 必须遵守 clinical_positioning。",
+    ]
     if subject_context:
         lines += ["", f"【被测者背景】{subject_context}"]
     lines += ["", "请按系统提示的格式与铁律生成后台专业报告。"]
@@ -126,20 +145,44 @@ def _fallback_report(summary: dict[str, Any]) -> dict[str, Any]:
     """模型输出不可用时的保守兜底；不产生新的心理学结论。"""
     cs = summary.get("clinical_screening") or {}
     core = summary.get("core_indicators") or {}
+
     def label(key: str) -> str:
         item = core.get(key) or {}
         return item.get("grade_label") or (item.get("level") or {}).get("label") or "未提供"
+
     dep = (cs.get("depression") or {}).get("classification_label", "未知")
     anx = (cs.get("anxiety") or {}).get("classification_label", "未知")
     eye_status = ((summary.get("modules") or {}).get("eye_tracking") or {}).get("status")
     eye_missing = eye_status in {"not_collected", "not_collected_in_upload_report"}
     rppg_missing = (summary.get("rppg_quality_gate") or {}).get("physiology_available") is False
-    return {"schema_version": "qwen_page_summaries_v2", "source": "rule_fallback", "pages": {
-        "overview": {"summary": f"本次抑郁方向筛查为{dep}，焦虑方向筛查为{anx}；压力负荷为{label('stress_load')}，疲劳恢复负荷为{label('fatigue_recovery')}，生理唤醒为{label('physiological_arousal')}。", "constraint": "筛查结果不是医学诊断，需结合量表、访谈及实际情况综合判断。"},
-        "core": {"summary": f"核心状态中，压力负荷为{label('stress_load')}，疲劳恢复负荷为{label('fatigue_recovery')}，生理唤醒为{label('physiological_arousal')}；各项定义、分档依据和参考区间以下方合作方结果为准。", "constraint": "短时状态受测评情境和采集质量影响，不据此推断稳定人格或岗位胜任。"},
-        "screening": {"summary": f"本次抑郁方向筛查为{dep}，焦虑方向筛查为{anx}。需要关注的分类应结合标准量表、访谈和近期实际情境进一步确认。", "constraint": "筛查不是诊断，严禁写作已患抑郁或焦虑。"},
-        "evidence": {"summary": "本页保留AU面部动作与Vibra微振动依据；" + ("rPPG生理节律数据未通过解释条件；" if rppg_missing else "同时保留质量门控后的rPPG生理节律证据；") + ("眼动未采集。" if eye_missing else "并保留眼动代理证据。"), "constraint": "底层多模态指标只用于结果追溯，不能脱离核心分类与质量门控单独形成心理结论。"},
-    }}
+    return {
+        "schema_version": "qwen_page_summaries_v2",
+        "source": "rule_fallback",
+        "pages": {
+            "overview": {
+                "summary": f"本次抑郁方向筛查为{dep}，焦虑方向筛查为{anx}；压力负荷为{label('stress_load')}，疲劳恢复负荷为{label('fatigue_recovery')}，生理唤醒为{label('physiological_arousal')}。",
+                "constraint": "筛查结果不是医学诊断，需结合量表、访谈及实际情况综合判断。",
+            },
+            "core": {
+                "summary": f"核心状态中，压力负荷为{label('stress_load')}，疲劳恢复负荷为{label('fatigue_recovery')}，生理唤醒为{label('physiological_arousal')}；各项定义、分档依据和参考区间以下方合作方结果为准。",
+                "constraint": "短时状态受测评情境和采集质量影响，不据此推断稳定人格或岗位胜任。",
+            },
+            "screening": {
+                "summary": f"本次抑郁方向筛查为{dep}，焦虑方向筛查为{anx}。需要关注的分类应结合标准量表、访谈和近期实际情境进一步确认。",
+                "constraint": "筛查不是诊断，严禁写作已患抑郁或焦虑。",
+            },
+            "evidence": {
+                "summary": "本页保留AU面部动作与Vibra微振动依据；"
+                + (
+                    "rPPG生理节律数据未通过解释条件；"
+                    if rppg_missing
+                    else "同时保留质量门控后的rPPG生理节律证据；"
+                )
+                + ("眼动未采集。" if eye_missing else "并保留眼动代理证据。"),
+                "constraint": "底层多模态指标只用于结果追溯，不能脱离核心分类与质量门控单独形成心理结论。",
+            },
+        },
+    }
 
 
 def _validate_model_report(text: str) -> dict[str, Any] | None:

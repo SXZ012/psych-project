@@ -1,31 +1,75 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import NavigationButton from '../common/NavigationButton.vue'
+
+import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { useDeviceConfig } from '@/composables/useDeviceConfig'
+import { fetchWithTimeout } from '@/utils/net'
 import qrcode from 'qrcode-generator'
 import CommunityToolDialog from './CommunityToolDialog.vue'
 import RelaxGame from './RelaxGame.vue'
+import RelaxSession from './RelaxSession.vue'
+import BodyRelaxSession from './BodyRelaxSession.vue'
+import KnowledgeLibrary from './KnowledgeLibrary.vue'
+import KnowledgeArtwork from './KnowledgeArtwork.vue'
+import { knowledgePresentation } from './knowledgePresentation'
+import { communityLibrary, loadCommunityLibrary } from '@/community/library'
+import type { SelfCategory, ResourceKind, OfficialResource } from '@/config/community/libraryContent'
+const selfScales = computed(() => communityLibrary.value.selfScales)
+const officialResources = computed(() => communityLibrary.value.officialResources)
+const scienceDetails = computed(() => communityLibrary.value.scienceDetails)
+const windBackground = '/static/assets/community/relax/wind-meadow-carolina.jpg'
+const bodyBackground = '/static/assets/community/relax/body-lake.webp'
 
 const emit = defineEmits<{ start: []; 'entry-state': [atHome: boolean] }>()
+const device = useDeviceConfig()
+const serviceAvailable = ref(false)
+const checkingService = ref(true)
+let serviceTimer: number | undefined
+let mounted = true
+async function checkService() {
+  try {
+    const response = await fetchWithTimeout('/health', { cache: 'no-store' }, 5000)
+    if (mounted) serviceAvailable.value = response.ok
+  } catch { if (mounted) serviceAvailable.value = false }
+  finally { if (mounted) checkingService.value = false }
+}
+const serviceLabel = computed(() => checkingService.value ? '正在检查服务' : !serviceAvailable.value ? '测评服务暂不可用 · 免费工具可用' : !device.deviceId.value ? '演示浏览 · 测评需绑定设备' : '测评服务已连接')
+onMounted(() => { void loadCommunityLibrary(); void checkService(); serviceTimer = window.setInterval(() => void checkService(), 30000); window.addEventListener('online', checkService); window.addEventListener('offline', checkService) })
+onBeforeUnmount(() => { mounted = false; clearInterval(serviceTimer); window.removeEventListener('online', checkService); window.removeEventListener('offline', checkService) })
 type Section = 'home' | 'report' | 'relax' | 'self' | 'knowledge' | 'help'
 const active = ref<Section>('home')
 const selected = ref(0)
-type SelfCategory = '综合状态' | '焦虑' | '抑郁' | '躯体感受' | '生活习惯' | '老年关怀'
-type SelfScaleCard = { title: string; short: string; description: string; meta: string; category: SelfCategory; tone: string; kind: '快速筛查' | '完整筛查' | '专项筛查'; featured?: boolean }
 const selfCategory = ref<SelfCategory>('综合状态')
 const selfCategories: SelfCategory[] = ['综合状态', '焦虑', '抑郁', '躯体感受', '生活习惯', '老年关怀']
 const showAllScales = ref(false)
-const selfScales: SelfScaleCard[] = [
-  { title:'PHQ-4 情绪筛查', short:'PHQ-4', description:'快速了解焦虑与抑郁两个方向', meta:'4 题 · 约 1 分钟 · 近两周', category:'综合状态', tone:'teal', kind:'快速筛查', featured:true },
-  { title:'K6 心理困扰筛查', short:'K6', description:'了解整体心理困扰程度', meta:'6 题 · 约 1 分钟 · 近30天', category:'综合状态', tone:'teal', kind:'完整筛查' },
-  { title:'GAD-2 焦虑快筛', short:'GAD-2', description:'两题快速了解焦虑方向', meta:'2 题 · 约 30 秒 · 近两周', category:'焦虑', tone:'blue', kind:'快速筛查' },
-  { title:'GAD-7 焦虑筛查', short:'GAD-7', description:'完整了解焦虑症状频率', meta:'7 题 · 约 2 分钟 · 近两周', category:'焦虑', tone:'blue', kind:'完整筛查' },
-  { title:'PHQ-2 抑郁快筛', short:'PHQ-2', description:'两题快速了解抑郁方向', meta:'2 题 · 约 30 秒 · 近两周', category:'抑郁', tone:'violet', kind:'快速筛查' },
-  { title:'PHQ-9 抑郁筛查', short:'PHQ-9', description:'完整了解抑郁症状频率', meta:'9 题 · 约 2 分钟 · 近两周', category:'抑郁', tone:'violet', kind:'完整筛查' },
-  { title:'PHQ-15 躯体筛查', short:'PHQ-15', description:'了解常见躯体困扰', meta:'15 题 · 约 3 分钟 · 近四周', category:'躯体感受', tone:'amber', kind:'专项筛查' },
-  { title:'AUDIT-C 饮酒风险快筛', short:'AUDIT-C', description:'了解饮酒方式是否存在风险', meta:'3 题 · 约 1 分钟 · 近一年', category:'生活习惯', tone:'green', kind:'快速筛查' },
-  { title:'GDS-15 老年情绪筛查', short:'GDS-15', description:'面向老年人了解近期情绪状态', meta:'15 题 · 约 3 分钟 · 近一周', category:'老年关怀', tone:'rose', kind:'专项筛查' },
-]
-type ResourceKind = 'science' | 'course' | 'service'
-type OfficialResource = { kind: ResourceKind; title: string; source: string; meta: string; summary: string; url: string; image: string; points?: string[]; action?: string }
+const largeReading = ref(false)
+const readerBody = ref<HTMLElement | null>(null)
+const knowledgeScroll = ref(0)
+const readingSection = ref('overview')
+function updateReadingSection() {
+  const body = readerBody.value
+  if (!body) return
+  const top = body.getBoundingClientRect().top
+  let current = 'overview'
+  for (const section of body.querySelectorAll<HTMLElement>('section[id]')) {
+    if (section.getBoundingClientRect().top <= top + 64) current = section.id
+  }
+  if (body.scrollTop + body.clientHeight >= body.scrollHeight - 4 && currentResource.value.action) current = 'action'
+  readingSection.value = current
+}
+function readSection(id: string) {
+  const body = readerBody.value
+  const section = body?.querySelector<HTMLElement>(`[id="${id}"]`)
+  if (!body || !section) return
+  body.scrollTo({ top: body.scrollTop + section.getBoundingClientRect().top - body.getBoundingClientRect().top - 12, behavior: 'instant' })
+  readingSection.value = id
+}
+async function nextResource() {
+  resourceIndex.value=(resourceIndex.value+1)%visibleResources.value.length
+  await nextTick()
+  readerBody.value?.scrollTo({top:0, behavior:'instant'})
+  readingSection.value='overview'
+}
 const resourceKind = ref<ResourceKind>('science')
 const resourceIndex = ref(0)
 const resourceQrOpen = ref(false)
@@ -38,101 +82,18 @@ const relaxGameOpen = ref(false)
  * 官方内容索引：标题、来源和摘要均取自对应政府/国家平台公开页面。
  * 终端提供可直接阅读的整理内容；原始页面入口保留为补充查证渠道。
  */
-const officialResources: OfficialResource[] = [
-  { kind:'science', title:'心理健康素养十条', source:'国家卫生健康委发布 · 政府网站转载', meta:'心理健康基础知识', summary:'了解身心健康、运动、睡眠、主动求助和科学缓解压力等核心知识。', url:'https://www.yantai.gov.cn/art/2024/6/20/art_93485_3200966.html', image:'/static/assets/community/ux/38239121.jpg', points:['心理健康是整体健康的重要组成部分，身体和心理会相互影响。','适量运动有助于情绪健康；睡眠问题也值得重视。','出现心理困扰时主动求助，是负责任的健康行为。','焦虑、抑郁等问题可以防治，应科学认识并尽早评估。','缓解压力要采用运动、沟通、休息和专业支持等积极方法。'], action:'今天可以从规律作息、适量活动，或与可信任的人谈一谈开始。' },
-  { kind:'science', title:'健康中国行动：心理健康促进行动', source:'国家卫生健康委员会', meta:'国家行动指南', summary:'掌握情绪与压力管理方法，培养规律作息和主动求助习惯。', url:'https://www.nhc.gov.cn/xcs/c100122/201907/d21c1320a6ea4175a9e7b954f363e5ab.shtml', image:'/static/assets/community/ux/28945280.jpg', points:['心理健康素养包括知识、重视心理健康的意识以及自我调适技能。','每个人一生中都可能遇到心理困扰，不必因此羞耻或自责。','保持规律睡眠、适量运动、兴趣爱好和稳定的人际联系，有助于维护心理健康。','持续的消极情绪若已影响工作、学习或生活，应及时寻求专业帮助。'], action:'把“能识别、会调节、愿求助”作为日常心理健康管理的三个步骤。' },
-  { kind:'science', title:'正确认识焦虑与抑郁', source:'中国公民健康素养 · 国家卫生健康委员会', meta:'情绪与求助', summary:'区分短期情绪反应与需要专业评估的持续困扰。', url:'https://www.nhc.gov.cn/cms-search/downFiles/bab2c48185d24a4a8aa13ff85b66b402.pdf', image:'/static/assets/community/ux/33500208.jpg', points:['短期焦虑或低落是常见情绪反应，可通过休息、沟通和自我调适得到缓解。','如果情绪持续存在、逐渐加重，或明显影响睡眠、工作、学习与人际交往，需要进一步评估。','不要仅凭一次自测给自己下诊断，也不要因为病耻感延误求助。','规范评估和治疗应由精神科、心理科或精神卫生专业机构完成。'], action:'若出现伤害自己或他人的紧迫危险，请立即拨打 110、120，并让可信任的人陪同。' },
-  { kind:'science', title:'睡眠健康核心信息', source:'全国爱卫办 · 国家卫生健康委员会', meta:'睡眠健康', summary:'了解良好睡眠的表现、规律作息和需要及时就医的情况。', url:'https://www.nhc.gov.cn/guihuaxxs/c100133/202503/70d5836afe804a858b899ee951a24a13.shtml', image:'/static/assets/community/ux/37443455.jpg', points:['成年人通常需要每天 7 至 8 小时睡眠，但个体之间存在差异。','睡醒后精神充沛、情绪稳定、注意力较好，是评价睡眠质量的重要表现。','保持相对固定的入睡和起床时间，营造安静、避光、温度适宜的睡眠环境。','睡前减少电子产品、酒精、浓茶咖啡和剧烈运动的影响。','长期睡不好或已经明显影响白天功能时，应及时就医，不要自行长期服用助眠药。'], action:'先连续一周记录上床、入睡、醒来和白天精神状况，再有针对性地调整。' },
-  { kind:'science', title:'运动与心理健康', source:'中国公民健康素养 · 国家卫生健康委员会', meta:'健康生活方式', summary:'适量运动有助于释放压力、改善情绪并增强心理韧性。', url:'https://www.gov.cn/lianbo/bumen/202405/P020240530783730074981.pdf', image:'/static/assets/community/ux/28945280.jpg', points:['体育活动既维护身体健康，也能帮助调节情绪和释放压力。','选择适合自身健康状况、能够长期坚持的活动，比短期高强度运动更实用。','散步、骑行、慢跑、球类、舞蹈等都可以成为规律活动方式。','运动可以作为心理健康支持的一部分，但不能替代必要的专业诊疗。'], action:'从今天安排一次 10 至 20 分钟的舒适活动开始，循序渐进形成规律。' },
-  { kind:'course', title:'心理健康传播与普及', source:'国家高等教育智慧教育平台 · 西南交通大学', meta:'在线课程', summary:'围绕心理健康科学传播、心理疏导方法和社会心理服务开展系统学习。', url:'https://higher.smartedu.cn/course/6883ff2e16c43a09c0000168', image:'/static/assets/community/ux/37443455.jpg' },
-  { kind:'course', title:'大学生心理健康教育', source:'国家高等教育智慧教育平台 · 中国矿业大学', meta:'16 章在线课程', summary:'覆盖生命、生活和生涯教育，帮助学习者提升自助与主动求助能力。', url:'https://higher.smartedu.cn/course/69811c3195df98bb27c3c188', image:'/static/assets/community/ux/28945280.jpg' },
-  { kind:'course', title:'老年护理学：心理卫生与精神护理', source:'国家高等教育智慧教育平台 · 福建医科大学', meta:'老年关怀课程', summary:'包含老年心理特点、常见心理问题、睡眠指导与心理卫生等学习章节。', url:'https://higher.smartedu.cn/course/64f11879374ed23bd755d6e9', image:'/static/assets/community/ux/38239121.jpg' },
-  { kind:'course', title:'大学生心理健康', source:'国家高等教育智慧教育平台 · 福建师范大学', meta:'心理调适课程', summary:'涵盖情绪管理、人际交往、压力与挫折应对、生命教育和主动求助。', url:'https://higher.smartedu.cn/course/68d46915a9f4619f8f64c2ea', image:'/static/assets/community/ux/33500208.jpg' },
-  { kind:'service', title:'全国统一心理援助热线 12356', source:'国家卫生健康委员会', meta:'心理援助服务', summary:'可拨打 12356 获取心理健康教育、心理咨询、心理疏导和心理危机干预等服务。', url:'https://www.nhc.gov.cn/yzygj/c100068/202412/49a1a65386cd4be582d4702fd0926ee8.shtml', image:'/static/assets/community/ux/37443455.jpg' },
-  { kind:'service', title:'心理问题何时需要专业帮助', source:'国家卫生健康委新闻发布会', meta:'就医与求助指引', summary:'当心理困扰持续、明显影响生活或出现危险时，应及时联系专业人员、医疗机构或紧急服务。', url:'https://www.nhc.gov.cn/xcs/c100122/202501/5039a41e26d240b09c3f625f879961d5.shtml', image:'/static/assets/community/ux/33500208.jpg' },
-]
-type ReadingSection = { title: string; paragraphs: string[]; bullets?: string[] }
-const scienceDetails: Record<string, ReadingSection[]> = {
-  '心理健康素养十条': [
-    { title:'心理健康不只是“没有心理疾病”', paragraphs:['心理健康是人在认知、情绪、行为和社会适应方面保持相对良好状态的能力。一个心理健康的人同样会紧张、难过或生气，区别在于能否识别这些感受、采取合适的调节方式，并在需要时获得支持。','身体和心理会相互影响。长期疼痛、睡眠不足或慢性疾病可能影响情绪；持续压力和焦虑也可能表现为心慌、胃口变化、头痛或疲劳。因此，维护健康时需要同时关注身体感受与心理状态。'] },
-    { title:'日常维护心理健康的四个支点', paragraphs:['心理健康很少依赖某一种“速效方法”，更有效的是建立稳定、可持续的生活基础。规律睡眠、适量运动、可靠的人际联系和有节奏的工作休息，能够共同提升面对压力时的恢复能力。'], bullets:['尽量保持相对固定的入睡和起床时间。','选择能够长期坚持的运动，从散步、骑行或舒展开始。','保留与家人、朋友或同事真实交流的时间。','把大任务拆成小步骤，为每天安排短暂的恢复时间。'] },
-    { title:'主动求助是一种健康能力', paragraphs:['当自我调节已经难以缓解困扰，主动求助能够减少问题持续和加重的风险。求助对象可以从可信任的亲友、社区工作人员开始，也可以直接联系心理咨询师、综合医院心理科或精神科。','专业人员会结合症状持续时间、严重程度、生活功能和身体情况进行综合判断。一次网络测试或终端自测只能提供线索，不能代替专业诊断。'] },
-    { title:'常见误区', paragraphs:['心理困扰不是意志薄弱，也不是简单地“想开一点”就能解决。对心理疾病患者的责备、排斥和标签会增加求助阻力。药物治疗需要遵医嘱，不应自行加量、减量或停药。科学认识、理解陪伴和及时治疗，比隐瞒或硬扛更有帮助。'] },
-  ],
-  '健康中国行动：心理健康促进行动': [
-    { title:'什么是心理健康素养', paragraphs:['心理健康素养包括三个部分：知道基本的心理健康知识，愿意重视和维护心理健康，以及掌握识别、调节和求助的基本技能。它并不要求每个人成为心理专家，而是帮助人在遇到困扰时知道下一步可以做什么。'] },
-    { title:'学会观察自己的状态变化', paragraphs:['可以从情绪、睡眠、身体、思维和日常功能五个方面观察变化。偶尔紧张、低落或睡不好很常见；如果变化持续存在、越来越重，或者已经影响工作、学习、照顾家庭和正常交往，就需要给予更多关注。'], bullets:['情绪：低落、焦虑、易怒是否持续出现。','睡眠：是否长期难入睡、早醒或白天困倦。','身体：是否反复心慌、疲劳、胃口改变。','思维：是否难以集中注意，反复担忧或自责。','功能：是否明显回避工作、社交或日常责任。'] },
-    { title:'建立个人的压力应对工具箱', paragraphs:['面对压力时，可以同时使用问题解决和情绪调节两类方法。能改变的问题，先梳理优先级、拆分步骤并寻求资源；暂时不能改变的部分，则通过规律作息、运动、呼吸放松、表达感受和获得社会支持降低消耗。','不建议长期依赖饮酒、熬夜、暴食、冲动消费或沉迷网络来回避压力，这些方式可能带来新的健康问题。'] },
-    { title:'从自助走向专业支持', paragraphs:['如果自助方法效果有限，可以先咨询社区心理服务、学校或单位心理服务人员。症状较重、持续时间较长或伴有明显身体不适时，应到正规医疗机构接受评估。出现伤害自己或他人的想法、计划或行为时，应立即联系身边可信任的人，并拨打110、120或前往急诊。'] },
-  ],
-  '正确认识焦虑与抑郁': [
-    { title:'情绪反应与心理障碍并不相同', paragraphs:['焦虑是面对不确定性、风险或重要任务时常见的警觉反应，适度焦虑有时能帮助人集中注意、提前准备。抑郁情绪通常表现为难过、失望或动力下降，也可能在遭遇挫折后短暂出现。','当焦虑或低落没有明确原因却反复发生，持续时间较长，并伴随明显痛苦或生活功能受损时，就需要考虑接受专业评估。是否属于心理障碍，不能只依据某一个症状或一次自测结果。'] },
-    { title:'值得留意的持续表现', paragraphs:['焦虑方向可能出现难以控制的担忧、坐立不安、容易疲劳、注意力下降、肌肉紧张、心慌和睡眠问题。抑郁方向可能出现兴趣减少、持续低落、精力下降、食欲或睡眠改变、自我评价下降以及对未来悲观。'], bullets:['症状是否持续两周左右或更久。','是否在多数日子反复出现。','是否影响工作、学习、人际或自我照顾。','是否伴随强烈绝望、自伤或自杀想法。'] },
-    { title:'可以先做什么', paragraphs:['记录情绪出现的时间、诱因、持续多久以及对生活的影响，有助于看清变化趋势。保持基本作息和饮食，减少酒精和过量咖啡因，安排适度活动，并把自己的真实感受告诉可信任的人。','这些方法可以提供支持，但如果困扰持续或已经明显影响生活，应尽快预约专业评估，不要因为害怕标签而拖延。'] },
-    { title:'紧急情况如何处理', paragraphs:['如果已经出现明确的自伤、自杀或伤害他人的想法、计划、准备行为，应把安全放在第一位：不要独处，暂时移开可能造成伤害的物品，请可信任的人陪同，立即拨打110、120或前往最近的急诊。也可拨打全国统一心理援助热线12356获得支持。'] },
-  ],
-  '睡眠健康核心信息': [
-    { title:'怎样理解“睡得好”', paragraphs:['睡眠时长是重要参考，但不是唯一标准。成年人通常需要每天7至8小时睡眠，个体之间会有差异。醒来后是否精神恢复、白天能否保持清醒和注意力、情绪是否相对稳定，同样是判断睡眠质量的重要依据。','偶尔一晚没睡好不必过度紧张。对睡眠过分监测和担忧，反而可能增加入睡压力。更适合观察一到两周的整体规律，而不是只看某一晚。'] },
-    { title:'建立有利于睡眠的日常节律', paragraphs:['稳定的起床时间有助于维持生物节律。白天接受适量自然光并进行活动，晚上逐渐降低环境亮度和兴奋程度，可以帮助身体形成明确的昼夜信号。'], bullets:['每天尽量在接近的时间起床，包括周末。','睡前减少手机、平板和持续刺激的信息。','下午或晚上减少浓茶、咖啡和能量饮料。','避免把饮酒当作助眠方式。','卧室保持安静、避光、温度适宜。'] },
-    { title:'睡不着时怎么办', paragraphs:['如果躺下较长时间仍很清醒，可以暂时离开床，到光线较暗的地方做安静、单调的活动，出现困意后再回到床上。不要反复查看时间，也不必强迫自己立刻入睡。','白天长时间补觉可能进一步打乱节律。午休可根据个人情况安排，但不宜过晚或过长。规律运动有助于睡眠，但临睡前应避免高强度活动。'] },
-    { title:'什么时候需要就医', paragraphs:['经常入睡困难、夜间反复醒来、白天无法保持清醒、鼾声响亮并伴随呼吸暂停，或睡眠问题已经明显影响健康与工作生活时，应到医疗机构接受评估。不同睡眠障碍的原因和处理方式不同，不建议自行长期服用安眠药。'] },
-  ],
-  '运动与心理健康': [
-    { title:'运动为什么能支持心理健康', paragraphs:['规律活动可以帮助释放压力、改善情绪，并为生活提供节奏感和可完成的目标。运动时对呼吸、动作和身体感受的关注，也能让注意力暂时从反复担忧中转移出来。','运动不是越累越好。能够根据身体状况循序渐进、长期坚持，比偶尔进行一次高强度训练更有价值。'] },
-    { title:'选择适合自己的活动', paragraphs:['散步、慢跑、骑行、游泳、舞蹈、球类、太极和简单力量训练都可以成为日常活动。对于长期久坐的人，可以先从每次10至20分钟开始，再逐渐增加频率和时间。'], bullets:['选择自己相对喜欢、场地容易获得的活动。','把运动安排到日程中，而不是等待“有空再做”。','与家人朋友一起活动，增加坚持的可能。','运动后关注精神、睡眠和身体恢复，而不只看消耗。'] },
-    { title:'安全和边界', paragraphs:['开始运动前应考虑年龄、既往疾病、疼痛和体能状况。运动过程中出现胸痛、明显呼吸困难、眩晕或其他不适时应立即停止，必要时就医。','运动能够支持心理健康，但不能替代对焦虑症、抑郁症或其他精神心理问题的专业评估与治疗。已经接受治疗的人，应根据医生建议安排运动。'] },
-    { title:'一个容易执行的开始', paragraphs:['今天选择一种舒适活动进行10分钟，结束后记录心情和身体感受。连续一周在相对固定的时间完成，再根据恢复情况逐步延长。目标是建立稳定习惯，而不是一次达到很高强度。'] },
-  ],
-  '心理健康传播与普及': [
-    { title:'这门课程主要学习什么', paragraphs:['课程围绕心理健康教育的基本原理、常见心理困扰、心理调适方法和社会心理服务展开，帮助学习者形成科学、理性、无污名的心理健康观。它既讨论个人如何认识自己、管理情绪，也关注如何向他人传播准确的心理健康知识。'], bullets:['心理健康的基本概念与判断边界。','自我认知、情绪管理和压力应对。','人际沟通、学习适应和网络使用。','心理咨询、心理测评与心理健康服务的基本原则。'] },
-    { title:'适合哪些人学习', paragraphs:['适合希望系统了解心理健康知识的普通公众、社区工作人员、教育工作者和服务志愿者。课程并不等同于临床培训，完成学习后不能据此为他人诊断或治疗，但可以提升识别问题、正确沟通和合理转介的能力。'] },
-    { title:'怎样把知识用到生活中', paragraphs:['学习时可以结合真实生活记录：遇到压力时自己有哪些身体和情绪反应，通常采用什么方式应对，哪些方法有效，哪些方法只带来短暂逃避。把抽象概念对应到具体场景，更容易形成可持续的调适能力。','与他人讨论心理健康时，应尊重隐私，避免随意贴标签，也不要把个人经验当作适用于所有人的结论。'] },
-    { title:'学习边界与进一步支持', paragraphs:['在线课程适合知识普及，不能替代个人化评估。如果自己或他人已经出现持续痛苦、明显功能受损、自伤或伤人风险，应及时联系正规心理或精神卫生专业服务。'] },
-  ],
-  '大学生心理健康教育': [
-    { title:'课程覆盖的成长主题', paragraphs:['课程从生命、生活和生涯三个方向讨论大学阶段常见的适应任务，包括认识自我、情绪调节、学习管理、人际交往、亲密关系、压力与挫折、生涯规划和生命教育。重点是提升自助能力，也帮助学习者知道何时应主动求助。'] },
-    { title:'大学阶段常见的心理挑战', paragraphs:['进入新的学习和生活环境后，角色变化、学业要求、人际关系、经济压力和职业选择可能同时出现。短期的不适应并不罕见，但如果长期回避、睡眠紊乱、情绪持续低落或焦虑，并明显影响上课、社交和生活，就需要认真对待。'], bullets:['建立相对稳定的作息和学习节奏。','把目标拆分为可完成的小任务。','主动建立同伴、教师和家庭支持。','了解学校心理中心和医疗服务入口。'] },
-    { title:'如何提高学习效果', paragraphs:['建议按主题学习后完成一次自我反思，例如记录本周主要压力源、自动出现的想法、情绪强度和实际采取的行动。通过反复练习识别和调整，而不是只记忆概念，才能把课程内容转化为实际能力。'] },
-    { title:'遇到危机时怎么办', paragraphs:['当出现强烈绝望、自伤或自杀想法时，不要独自承受，也不要只依赖网络课程。应立即告诉可信任的同学、老师或家人，联系学校心理中心、12356心理援助热线，存在紧迫危险时拨打110、120或前往急诊。'] },
-  ],
-  '老年护理学：心理卫生与精神护理': [
-    { title:'理解老年期心理变化', paragraphs:['退休、身体功能变化、慢性疾病、丧亲和社会联系减少，都可能影响老年人的情绪与生活适应。正常老化不等于必然抑郁、失眠或认知障碍，对明显变化应当观察和评估，而不是简单归因于“年纪大了”。'] },
-    { title:'值得家人留意的信号', paragraphs:['持续兴趣下降、反复诉说无价值感、明显食欲或睡眠变化、拒绝社交、记忆和行为突然改变，都值得进一步关注。老年人的心理困扰有时更多表现为身体不适、疼痛或反复就医，沟通时应耐心倾听。'], bullets:['观察变化出现的时间和发展速度。','记录药物、睡眠、饮食和日常功能变化。','避免指责、争辩或强迫其“想开”。','及时联系全科、老年医学、心理科或精神科。'] },
-    { title:'日常支持可以怎么做', paragraphs:['保持规律生活、适量活动、力所能及的家庭角色和稳定社会联系，有助于维护身心功能。家人可以提供陪伴和选择，而不是完全替代老年人做决定。对存在跌倒风险、认知下降或用药问题的人，还应加强环境与用药安全。'] },
-    { title:'照护者也需要支持', paragraphs:['长期照护可能带来疲劳、焦虑和内疚。照护者需要安排休息、分担任务并获得社区或医疗资源支持。只有照护者得到基本恢复，才能提供更稳定的照护。'] },
-  ],
-  '大学生心理健康': [
-    { title:'从认识自己开始', paragraphs:['自我认知包括了解自己的优势、限制、价值观、情绪规律和应对方式。客观看待自己并不等于否定不足，而是在现实基础上确定可以改变的部分，并接纳暂时无法改变的部分。'] },
-    { title:'情绪、压力与挫折应对', paragraphs:['情绪本身没有好坏之分，它提示我们正在经历什么。有效调节不是压住所有负面情绪，而是先识别和命名感受，再选择表达、解决问题、暂时休息或寻求支持。面对挫折时，把一次结果与对自我整体价值的评价分开，有助于恢复行动。'], bullets:['用具体词语描述感受，而不是只说“很烦”。','区分事实、猜测和对自己的评价。','先完成一个最小可行步骤。','持续受困时主动使用学校和医疗资源。'] },
-    { title:'建设健康的人际关系', paragraphs:['良好关系需要表达、倾听、边界和协商。既要尊重他人，也要允许自己拒绝不合理要求。冲突并不一定意味着关系失败，关键在于能否围绕具体事情沟通，而不是攻击人格或长期回避。'] },
-    { title:'把求助当作成长能力', paragraphs:['心理咨询提供的是专业、保密和有边界的支持。主动预约咨询不代表问题严重，也不代表个人软弱。若症状持续、生活功能明显下降或出现安全风险，应进一步接受医疗评估。'] },
-  ],
-  '全国统一心理援助热线 12356': [
-    { title:'12356可以提供什么', paragraphs:['12356是全国统一心理援助热线号码，用于向公众提供心理健康教育、心理咨询、心理疏导和心理危机干预等服务。接听人员会了解来电者当前困扰和安全状况，并根据需要提供支持或转介建议。具体接听安排以当地服务为准。'] },
-    { title:'哪些时候可以拨打', paragraphs:['当你感到情绪难以承受、不知道向谁倾诉，或身边的人出现明显心理危机时，都可以尝试拨打。无需等到问题非常严重才求助。热线也可以帮助了解当地有哪些心理咨询或精神卫生服务。'], bullets:['持续焦虑、低落、失眠或强烈压力。','经历突发事件、丧失或关系危机。','出现自伤、自杀或伤人想法。','担心亲友的情绪和安全，但不知道如何处理。'] },
-    { title:'拨打前可以准备什么', paragraphs:['尽量到相对安静、安全的位置，简单说明自己在哪里、发生了什么、目前最难承受的部分，以及是否存在立即伤害自己或他人的危险。即使一时说不清楚，也可以直接告诉接线人员“我现在很难受，需要有人帮助”。'] },
-    { title:'热线与急救的区别', paragraphs:['心理援助热线提供远程支持，但不能替代现场急救。若已经实施伤害、持有明确计划或工具，或无法保证当前安全，应立即拨打110、120，前往最近急诊，并请可信任的人陪同，不要独处。'] },
-  ],
-  '心理问题何时需要专业帮助': [
-    { title:'判断是否需要帮助的四个维度', paragraphs:['可以从持续时间、痛苦程度、生活功能和安全风险四个方面判断。短暂波动可以先观察和自助；如果症状持续数周、逐渐加重，已经影响工作学习、人际交往或自我照顾，就更需要专业支持。'] },
-    { title:'可以选择哪些服务', paragraphs:['轻中度困扰可以从社区心理服务、学校或单位心理咨询开始。需要疾病评估、药物治疗，或伴有明显躯体症状和功能受损时，应选择综合医院心理科、精神科或精神专科医院。紧急风险应直接联系急救和公安。'], bullets:['心理咨询：帮助理解困扰、改善应对和关系模式。','心理治疗：由受过专业训练的人员实施结构化干预。','精神科评估：判断症状、风险和是否需要医学治疗。','社区支持：提供信息、随访、转介和社会资源连接。'] },
-    { title:'第一次求助可以怎么说', paragraphs:['不需要提前准备专业术语。可以说明“从什么时候开始”“最困扰的症状是什么”“睡眠、饮食和工作生活受到什么影响”“自己尝试过哪些方法”“是否有伤害自己或他人的想法”。如正在服药，也应携带药物名称和使用情况。'] },
-    { title:'如果当事人拒绝求助', paragraphs:['先表达关心并倾听，不争辩、不指责，也不要承诺替对方保守涉及生命安全的秘密。可以陪同预约、提供交通或一起拨打热线。存在明确危险时，应优先保障安全并联系110、120或医疗机构。'] },
-  ],
-}
-
 const content = {
-  relax: { title:'情绪放松', intro:'从一段短练习开始，让身体和注意力慢慢安静下来。', items:[['1分钟平稳呼吸','适合暂时紧张或需要安静时','1 分钟'],['自然风声','用自然风声短暂休息','3 分钟'],['肩颈舒展','缓解久坐带来的紧绷感','2 分钟']] },
-  self: { title:'心理自测', intro:'使用公开的标准筛查量表了解近期状态，结果不等于诊断。', items:[['PHQ-4 情绪筛查','快速了解焦虑与抑郁方向','4 题'],['GAD-7 焦虑筛查','了解过去两周焦虑症状频率','7 题'],['PHQ-9 抑郁筛查','了解过去两周抑郁症状频率','9 题'],['GAD-2 焦虑快筛','两题快速筛查焦虑方向','2 题'],['PHQ-2 抑郁快筛','两题快速筛查抑郁方向','2 题'],['PHQ-15 躯体筛查','了解近四周常见躯体困扰','15 题']] },
+  relax: { title:'情绪放松', intro:'从一段短练习开始，让身体和注意力慢慢安静下来。', items:[['1分钟平稳呼吸','适合暂时紧张或需要安静时','1 分钟'],['自然风声','用自然风声短暂休息','3 分钟'],['身体放松','跟随声音，让身体歇一会儿','2 分钟']] },
+  self: { title:'心理自测', intro:'按需要选择状态筛查或生活感受问答，结果不等于诊断。', items:[['PHQ-4 情绪筛查','快速了解焦虑与抑郁方向','4 题'],['GAD-7 焦虑筛查','了解过去两周焦虑症状频率','7 题'],['PHQ-9 抑郁筛查','了解过去两周抑郁症状频率','9 题'],['GAD-2 焦虑快筛','两题快速筛查焦虑方向','2 题'],['PHQ-2 抑郁快筛','两题快速筛查抑郁方向','2 题'],['PHQ-15 躯体筛查','了解近四周常见躯体困扰','15 题']] },
   knowledge: { title:'官方科普与课程', intro:'精选官方健康知识、学习课程与求助指引，可直接阅读。', items:[['心理健康素养','国家卫生健康系统公开内容','官方科普'],['心理健康课程','国家智慧教育平台课程','在线学习'],['求助与服务','全国统一心理援助服务信息','官方指南']] },
   help: { title:'寻求帮助', intro:'选择社区咨询预约，或查看全国统一心理援助热线。', items:[['社区咨询预约','登记服务意向和方便时间','进入预约'],['心理援助热线','全国统一心理援助服务','12356']] },
 } as const
 
 const current = computed(() => active.value === 'relax' || active.value === 'self' || active.value === 'knowledge' || active.value === 'help' ? content[active.value] : null)
-const visibleResources = computed(() => officialResources.filter(item => item.kind === resourceKind.value))
-const visibleSelfScales = computed(() => selfScales.map((scale, index) => ({ ...scale, index })).filter(scale => scale.category === selfCategory.value))
-const currentResource = computed<OfficialResource>(() => visibleResources.value[resourceIndex.value] || visibleResources.value[0] || officialResources[0]!)
-const currentDetails = computed(() => scienceDetails[currentResource.value.title] || [])
+const visibleResources = computed(() => officialResources.value.filter(item => item.kind === resourceKind.value))
+const visibleSelfScales = computed(() => selfScales.value.map((scale, index) => ({ ...scale, index })).filter(scale => scale.category === selfCategory.value))
+const currentResource = computed<OfficialResource>(() => visibleResources.value[resourceIndex.value] || visibleResources.value[0] || officialResources.value[0]!)
+const currentDetails = computed(() => scienceDetails.value[currentResource.value.title] || [])
 const resourceQrSvg = computed(() => {
   if (!resourceQrOpen.value || !currentResource.value) return ''
   try {
@@ -143,24 +104,19 @@ const resourceQrSvg = computed(() => {
   } catch { return '' }
 })
 const relaxActivities = [
-  { title:'平稳呼吸', detail:'跟着舒适的节奏，慢慢放松下来', duration:'1 分钟', cue:'吸气 4 秒 · 呼气 6 秒', image:'/static/assets/community/ux/38239121.jpg', tone:'breath' },
-  { title:'自然风声', detail:'听一会儿轻柔风声，让注意力休息', duration:'3 分钟', cue:'轻柔风声 · 可调节音量', image:'/static/assets/community/ux/37443455.jpg', tone:'sound' },
-  { title:'肩颈舒展', detail:'用几个轻缓动作松开久坐后的紧绷', duration:'2 分钟', cue:'4 个舒缓步骤 · 可随时暂停', image:'/static/assets/community/ux/28945280.jpg', tone:'stretch' },
+  { title:'平稳呼吸', detail:'跟着舒适的节奏，慢慢放松下来', duration:'可选 1 / 2 / 3 分钟', cue:'吸气 4 秒 · 呼气 6 秒', image:'/static/assets/community/ux/38239121.jpg', tone:'breath' },
+  { title:'自然风声', detail:'听一会儿轻柔风声，让注意力休息', duration:'可选 1 / 3 / 5 分钟', cue:'轻柔风声 · 可调节音量', image:windBackground, tone:'sound' },
+  { title:'身体放松', detail:'跟随轻柔引导，让身体歇一会儿', duration:'2 分钟', cue:'坐着聆听 · 可随时暂停', image:'/static/assets/community/ux/28945280.jpg', tone:'stretch' },
 ]
 /** 推荐位固定为 1 分钟的平稳呼吸：进入放松板块后不需要先做选择。 */
 const relaxHero = relaxActivities[0]!
 const relaxSideItems = relaxActivities.slice(1).map((item, index) => ({ ...item, index: index + 1 }))
 
-/** 问候语跟随终端当前时间变化，常来的居民会感觉被回应。 */
-const greeting = computed(() => {
-  const hour = new Date().getHours()
-  const part = hour < 6 ? '夜深了' : hour < 11 ? '上午好' : hour < 14 ? '中午好' : hour < 18 ? '下午好' : '晚上好'
-  return `${part}，今天也照顾一下自己`
-})
+const greeting = '这一刻，给自己一点轻松'
 const headerSubtitle = computed(() => {
   if (active.value === 'home') return '选择一项服务开始体验'
   if (active.value === 'report') return '查询、查看或下载个人测评报告'
-  if (active.value === 'relax') return greeting.value
+  if (active.value === 'relax') return greeting
   return current.value?.intro || ''
 })
 
@@ -170,30 +126,41 @@ function openRelax(index: number) {
   toolDialog.value = { kind: 'relax', index }
 }
 
-watch(active, section => emit('entry-state', section === 'home'), { immediate: true })
-watch(resourceKind, () => { resourceIndex.value = 0 })
-function go(section: Section) { selected.value = 0; selfCategory.value = '综合状态'; showAllScales.value = false; active.value = section }
+watch(active, section => {
+  emit('entry-state', section === 'home')
+  if (section === 'relax') {
+    // Prepare the existing backgrounds while the activity menu is visible.
+    for (const url of [windBackground, bodyBackground]) {
+      const image = new Image()
+      image.src = url
+      void image.decode().catch(() => {})
+    }
+  }
+}, { immediate: true })
+watch(resourceKind, () => { resourceIndex.value = 0; knowledgeScroll.value = 0 })
+function go(section: Section) { readingOpen.value = false; resourceQrOpen.value = false; selected.value = 0; selfCategory.value = '综合状态'; showAllScales.value = false; active.value = section }
 function openReports() { window.location.assign('/community/reports?terminal=1') }
-function showOfficialSource() { readingOpen.value = false; resourceQrOpen.value = true }
-function openResource(index: number) { resourceIndex.value = index; readingOpen.value = true }
+function showOfficialSource() { resourceQrOpen.value = true }
+function openResource(index: number) { resourceIndex.value = index; readingSection.value = 'overview'; readingOpen.value = true }
 </script>
 
 <template>
-  <main class="hub" :class="[{ 'hub--feature': active !== 'home' }, `hub--${active}`]">
-    <section v-if="active === 'knowledge' && readingOpen" class="immersive-reader">
-      <header><button @click="readingOpen=false">← 返回内容列表</button><div><span>{{ currentResource.meta }}</span><h1>{{ currentResource.title }}</h1></div><button class="reader-source-button" @click="showOfficialSource">查看官方原文</button></header>
-      <div class="reader-layout"><aside><b>本篇导读</b><a href="#overview">内容简介</a><a href="#points">阅读重点</a><a v-for="(section,index) in currentDetails" :key="section.title" :href="`#detail-${index}`">{{ section.title }}</a><a v-if="currentResource.action" href="#action">行动建议</a></aside><article><section id="overview" class="reader-hero" :style="{ '--reader-image': `url(${currentResource.image})` }"><div><span>{{ currentResource.source }} · {{ currentResource.meta }}</span><h2>{{ currentResource.title }}</h2><p>{{ currentResource.summary }}</p></div></section><section id="points" class="reader-section"><span>阅读提示</span><h2>先看重点，再了解具体方法</h2><div class="reader-points"><p v-for="(point,index) in currentResource.points || [currentResource.summary]" :key="point"><i>{{ index+1 }}</i>{{ point }}</p></div></section><section v-for="(section,index) in currentDetails" :id="`detail-${index}`" :key="section.title" class="reader-section reader-prose"><span>{{ String(index+1).padStart(2,'0') }} · 专题内容</span><h2>{{ section.title }}</h2><p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p><ul v-if="section.bullets"><li v-for="bullet in section.bullets" :key="bullet">{{ bullet }}</li></ul></section><section v-if="currentResource.action" id="action" class="reader-section"><span>行动清单</span><h2>今天可以怎么做</h2><div class="reader-action">{{ currentResource.action }}</div></section><footer>本文依据公开的官方健康资料整理，用于健康教育，不替代专业诊疗。</footer></article></div>
+  <main :inert="toolDialog || relaxGameOpen ? true : undefined" class="hub" :class="[{ 'hub--feature': active !== 'home' }, `hub--${active}`]">
+    <section v-if="active === 'knowledge' && readingOpen" class="immersive-reader" :class="{'reader--large':largeReading}">
+      <header><NavigationButton @click="readingOpen=false">返回内容列表</NavigationButton><div><h1>科普阅读</h1></div><div class="reader-header-actions"><button :aria-pressed="largeReading" @click="largeReading=!largeReading">{{ largeReading ? '标准字号' : '大字阅读' }}</button><button class="reader-source-button" @click="showOfficialSource">官方原文</button><NavigationButton @click="go('home')">返回首页</NavigationButton></div></header>
+      <div class="reader-layout"><aside><b>本篇导读</b><a href="#overview" :aria-current="readingSection==='overview' ? 'location' : undefined" @click.prevent="readSection('overview')">内容简介</a><a v-if="currentResource.points?.length" href="#points" :aria-current="readingSection==='points' ? 'location' : undefined" @click.prevent="readSection('points')">阅读重点</a><a v-for="(section,index) in currentDetails" :key="section.title" :href="`#detail-${index}`" :aria-current="readingSection===`detail-${index}` ? 'location' : undefined" @click.prevent="readSection(`detail-${index}`)">{{ section.title }}</a><a v-if="currentResource.action" href="#action" :aria-current="readingSection==='action' ? 'location' : undefined" @click.prevent="readSection('action')">行动建议</a></aside><article ref="readerBody" @scroll="updateReadingSection"><section id="overview" class="reader-hero"><div><span class="reader-topic">{{ knowledgePresentation(currentResource.title).topic }}</span><h2>{{ currentResource.title }}</h2><p>{{ currentResource.summary }}</p><span class="reader-source">{{ currentResource.source }}</span></div><KnowledgeArtwork class="reader-cover" :theme="knowledgePresentation(currentResource.title).theme" /></section><section v-if="currentResource.points?.length" id="points" class="reader-section reader-takeaways"><h2>先了解这几件事</h2><div class="reader-points"><p v-for="(point,index) in currentResource.points" :key="point"><i>{{ index+1 }}</i>{{ point }}</p></div></section><section v-for="(section,index) in currentDetails" :id="`detail-${index}`" :key="section.title" class="reader-section reader-prose"><h2><span class="reader-section-number">{{ String(index+1).padStart(2,'0') }}</span>{{ section.title }}</h2><p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p><ul v-if="section.bullets"><li v-for="bullet in section.bullets" :key="bullet">{{ bullet }}</li></ul></section><section v-if="currentResource.action" id="action" class="reader-section"><h2>今天可以怎么做</h2><div class="reader-action">{{ currentResource.action }}</div></section><footer><p>本文依据公开的官方健康资料整理，用于健康教育，不替代专业诊疗。</p><div class="reader-next"><span>继续了解<b>{{ visibleResources[(resourceIndex+1)%visibleResources.length]?.title }}</b></span><button @click="nextResource">阅读下一篇 →</button><NavigationButton @click="readingOpen=false">返回列表</NavigationButton></div></footer></article></div>
     </section>
+    <KnowledgeLibrary v-else-if="active === 'knowledge'" :resources="officialResources" :kind="resourceKind" :scroll-position="knowledgeScroll" @scroll="knowledgeScroll=$event" @home="go('home')" @select="resourceKind=$event" @read="openResource" />
     <section v-else class="hub-main">
-      <header class="hub-top"><button v-if="active !== 'home'" class="feature-back" @click="go('home')">← 返回服务首页</button><div><h1>{{ active === 'home' ? '今天，也关心一下自己的状态' : active === 'report' ? '我的报告' : current?.title }}</h1><p>{{ headerSubtitle }}</p></div><span class="hub-status"><i />设备服务正常</span></header>
+      <header class="hub-top"><NavigationButton v-if="active !== 'home'" class="feature-back" @click="go('home')">返回首页</NavigationButton><div><h1>{{ active === 'home' ? '今天，也关心一下自己的状态' : active === 'report' ? '我的报告' : current?.title }}</h1><p>{{ headerSubtitle }}</p></div><span v-if="active === 'home'" class="hub-status"><i />{{ serviceLabel }}</span></header>
 
       <div v-if="active === 'home'" class="home-grid">
-        <article class="primary-card card-green"><div class="primary-copy"><span class="tag">核心服务</span><h2>心理状态辅助测评</h2><p>通过约 60 秒非接触采集，辅助了解近期心理状态。</p><ul><li>全程约 4 分钟</li><li>无需佩戴设备</li><li>手机查看 PDF 报告</li></ul></div><button @click="emit('start')">开始测评</button><div class="hero-art"><span /><img :src="heroImage" alt="" /></div></article>
-        <article class="report-card card-blue"><span class="tag">个人报告</span><h2>查看我的报告</h2><p>使用手机身份或报告编号，查看结果并下载 PDF。</p><div class="report-preview"><i /><i /><i /><span><b /><b /><b /></span></div><button @click="openReports">查看报告 <b>→</b></button></article>
+        <article class="primary-card card-green"><div class="primary-copy"><span class="tag">核心服务</span><h2>心理状态辅助测评</h2><p>通过 60 秒非接触采集，辅助了解近期心理状态。</p><ul><li>预训练 3 题，可跳过</li><li>采集后约 3–4 分钟出报告</li></ul></div><button :disabled="!serviceAvailable || !device.deviceId.value" @click="emit('start')">开始测评</button><div class="hero-art"><span /><img :src="heroImage" alt="" /></div></article>
+        <article class="report-card card-blue"><span class="tag">个人报告</span><h2>查看我的报告</h2><p>输入报告编号查看结果，也可扫码保存 PDF。</p><div class="report-preview" aria-hidden="true"><i /><i /><i /><span><b /><b /><b /></span></div><button @click="openReports">查看报告 <b>→</b></button></article>
 
         <section class="tools"><header><h2>日常心理工具</h2><span>按需要选择</span></header><div class="tool-row">
           <button class="tool-card peach" @click="go('relax')"><i>◌</i><span><b>情绪放松</b><small>呼吸 · 自然声音</small></span><em>→</em></button>
-          <button class="tool-card violet" @click="go('self')"><i>✓</i><span><b>心理自测</b><small>PHQ-4 · GAD-7 · PHQ-9 等标准量表</small></span><em>→</em></button>
+          <button class="tool-card violet" @click="go('self')"><i>✓</i><span><b>心理自测</b><small>{{ selfScales.length }} 项自测 · 按需选择</small></span><em>→</em></button>
           <button class="tool-card yellow" @click="go('knowledge')"><i>◇</i><span><b>官方科普</b><small>科普文章 · 国家平台课程</small></span><em>→</em></button>
         </div></section>
         <button class="help-strip" @click="go('help')"><span><b>社区心理服务与求助</b><small>查看咨询预约、12356 心理援助和紧急求助指引</small></span><em>查看支持方式 →</em></button>
@@ -216,9 +183,9 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
             <button v-for="item in relaxSideItems" :key="item.title" class="relax-side-card" :class="`relax-side-card--${item.tone}`" @click="openRelax(item.index)">
               <span class="relax-side-card__icon" aria-hidden="true">
                 <svg v-if="item.tone === 'sound'" viewBox="0 0 36 36" width="36" height="36" fill="none"><path d="M8 15v6M14 10v16M20 6v24M26 10v16M32 15v6" stroke="#47809F" stroke-width="2.5" stroke-linecap="round" /></svg>
-                <svg v-else viewBox="0 0 36 36" width="36" height="36" fill="none"><path d="M18 7v22M18 7l-5.5 5.5M18 7l5.5 5.5M18 29l-5.5-5.5M18 29l5.5-5.5" stroke="#C08F3E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                <svg v-else viewBox="0 0 36 36" width="36" height="36" fill="none"><path d="M8 19c0-8 5-12 10-12s10 4 10 12M8 18v8h5v-8H8Zm15 0v8h5v-8h-5ZM23 28c-2 3-5 3-7 2" stroke="#C08F3E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
               </span>
-              <span class="relax-side-card__copy"><b>{{ item.title }}</b><small>{{ item.detail }} · {{ item.duration }}</small></span>
+              <span class="relax-side-card__copy"><b>{{ item.title }}</b><small>{{ item.detail }} <span class="relax-duration-label">{{ item.duration }}</span></small></span>
               <span class="relax-side-card__play" aria-hidden="true">
                 <svg viewBox="0 0 20 20" width="20" height="20"><path d="M7 4.5l9 5.5-9 5.5z" :fill="item.tone === 'sound' ? '#47809F' : '#C08F3E'" /></svg>
               </span>
@@ -234,27 +201,24 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
 
       <div v-else-if="active === 'self'" class="self-page">
         <article class="self-recommend-bar"><div><span>推荐</span><h2>PHQ-4 情绪快速筛查</h2></div><p>同时了解焦虑与抑郁方向</p><div class="recommend-pills"><b>4题</b><b>约1分钟</b></div><button @click="toolDialog={kind:'self',index:0}">开始　→</button></article>
-        <section class="self-library">
-          <header><div><h3>你想了解哪一方面？</h3><p>选择方向后，再选择快速筛查或完整筛查</p></div><button class="all-scales-link" @click="showAllScales=true">查看全部 {{ selfScales.length }} 份量表</button></header>
-          <nav class="self-filters"><button v-for="category in selfCategories" :key="category" :class="{active:selfCategory===category}" @click="selfCategory=category">{{ category }}</button></nav>
+        <section class="self-library" :class="{'self-library--many':visibleSelfScales.length>2}">
+          <header><div><h3>你想了解哪一方面？</h3><p>选择一个方向，按需要了解自己的状态</p></div><button class="all-scales-link" @click="showAllScales=true">查看全部 {{ selfScales.length }} 项自测</button></header>
+          <nav class="self-filters"><button v-for="category in selfCategories" :key="category" type="button" :aria-pressed="selfCategory===category" :class="{active:selfCategory===category}" @click="selfCategory=category">{{ category }}</button></nav>
           <div class="self-category-title"><span>{{ selfCategory }}</span><p>{{ selfCategory==='综合状态'?'适合第一次了解整体状态':selfCategory==='焦虑'||selfCategory==='抑郁'?'可先快筛，再按需要完成完整版':'按近期真实感受完成专项筛查' }}</p></div>
-          <div class="self-cards"><article v-for="scale in visibleSelfScales" :key="scale.short" :class="['self-card',`self-card--${scale.tone}`]"><div class="scale-copy"><h3>{{ scale.title }}</h3><p>{{ scale.description }}</p><small>{{ scale.meta.split(' · ').slice(0,2).join(' · ') }}</small></div><button @click="selected=scale.index; toolDialog={kind:'self',index:scale.index}">开始测评　→</button></article></div>
+          <div class="self-cards"><article v-for="scale in visibleSelfScales" :key="scale.short" :class="['self-card',`self-card--${scale.tone}`, { 'self-card--compact': selfCategory === '生活习惯' || selfCategory === '老年关怀' }]"><div class="scale-copy"><h3>{{ scale.title }}</h3><p>{{ scale.description }}</p><small>{{ scale.meta.split(' · ').slice(0,2).join(' · ') }}</small></div><button @click="selected=scale.index; toolDialog={kind:'self',index:scale.index}">开始测评　→</button></article></div>
         </section>
-        <div v-if="showAllScales" class="scale-catalog" @click.self="showAllScales=false"><section><header><div><span>量表目录</span><h2>全部 {{ selfScales.length }} 份心理自测</h2></div><button @click="showAllScales=false">×</button></header><div><button v-for="(scale,index) in selfScales" :key="scale.short" :class="`catalog-card catalog-card--${scale.tone}`" @click="showAllScales=false; selected=index; toolDialog={kind:'self',index}"><div><b>{{ scale.title }}</b><p>{{ scale.description }}</p><small>{{ scale.category }} · {{ scale.meta }}</small></div><em>开始测评　→</em></button></div><footer>所有结果仅作为状态筛查线索，不构成医学诊断。</footer></section></div>
-      </div>
-
-      <div v-else-if="active === 'knowledge'" class="knowledge-page">
-        <nav class="kind-switch" aria-label="内容分类"><button :class="{active:resourceKind==='science'}" @click="resourceKind='science'"><i>知</i><span><b>健康科普</b><small>{{ officialResources.filter(item=>item.kind==='science').length }} 篇</small></span></button><button :class="{active:resourceKind==='course'}" @click="resourceKind='course'"><i>学</i><span><b>在线课程</b><small>{{ officialResources.filter(item=>item.kind==='course').length }} 门</small></span></button><button :class="{active:resourceKind==='service'}" @click="resourceKind='service'"><i>助</i><span><b>求助指南</b><small>{{ officialResources.filter(item=>item.kind==='service').length }} 项</small></span></button></nav>
-        <section class="knowledge-library" :aria-label="`${current?.title}内容列表`"><article v-for="(item,index) in visibleResources" :key="item.url" class="resource-card"><div class="resource-card__visual" :style="{ '--resource-image': `url(${item.image})` }" /><div class="resource-card__body"><small>{{ item.source }}</small><h3>{{ item.title }}</h3><p>{{ item.summary }}</p><div class="resource-card__actions"><button class="resource-read" @click="openResource(index)">阅读内容 <b>→</b></button><button class="resource-original" @click="resourceIndex=index; showOfficialSource()">官方原文</button></div></div></article></section>
+        <div v-if="showAllScales" class="scale-catalog" @click.self="showAllScales=false"><section><header><div><span>量表目录</span><h2>全部 {{ selfScales.length }} 项心理自测</h2></div><NavigationButton @click="showAllScales=false">返回分类</NavigationButton></header><div><button v-for="(scale,index) in selfScales" :key="scale.short" :class="`catalog-card catalog-card--${scale.tone}`" @click="showAllScales=false; selected=index; toolDialog={kind:'self',index}"><div><b>{{ scale.title }}</b><p>{{ scale.description }}</p><small>{{ scale.category }} · {{ scale.meta }}</small></div><em>开始测评　→</em></button></div><footer>所有结果仅作为状态筛查线索，不构成医学诊断。</footer></section></div>
       </div>
 
       <div v-else-if="active === 'help'" class="help-page">
         <section class="support-simple"><div class="support-actions"><button class="support-action support-action--appointment" @click="toolDialog={kind:'appointment'}"><i>约</i><span><b>社区咨询预约</b><small>登记服务意向和方便时间</small></span><em>进入预约 →</em></button><button class="support-action support-action--hotline" @click="toolDialog={kind:'hotline'}"><i>电</i><span><b>心理援助热线</b><small>全国统一心理援助服务</small></span><strong>12356</strong><em>查看热线 →</em></button></div></section>
       </div>
-      <div v-if="resourceQrOpen" class="resource-modal" @click.self="resourceQrOpen=false"><section><button class="resource-close" @click="resourceQrOpen=false">×</button><div class="resource-qr" v-html="resourceQrSvg" /><h2>{{ currentResource.title }}</h2><p>使用手机扫码，在官方页面查看完整内容</p><small>{{ currentResource.source }}</small></section></div>
-      <CommunityToolDialog v-if="toolDialog" :kind="toolDialog.kind" :index="toolDialog.index" @close="toolDialog=null" />
-      <RelaxGame v-if="relaxGameOpen" @close="relaxGameOpen=false" />
+      <BodyRelaxSession v-if="toolDialog?.kind==='relax' && toolDialog.index===2" @close="toolDialog=null" @home="toolDialog=null; go('home')" />
+      <RelaxSession v-else-if="toolDialog?.kind==='relax'" :key="toolDialog.index" :index="toolDialog.index ?? 0" @close="toolDialog=null" @home="toolDialog=null; go('home')" />
+      <CommunityToolDialog v-else-if="toolDialog" :key="`${toolDialog.kind}-${toolDialog.index}`" @support="toolDialog=null; go('help')" @assessment="toolDialog={kind:'self',index:$event}" :kind="toolDialog.kind" :index="toolDialog.index" @close="toolDialog=null" @home="toolDialog=null; go('home')" />
+      <RelaxGame v-if="relaxGameOpen" @close="relaxGameOpen=false" @home="relaxGameOpen=false; go('home')" />
     </section>
+    <Teleport to="body"><div v-if="resourceQrOpen" class="resource-modal" role="dialog" aria-modal="true" aria-label="官方原文" @click.self="resourceQrOpen=false"><section><button class="resource-close" aria-label="关闭官方原文" @click="resourceQrOpen=false">×</button><div class="resource-qr" v-html="resourceQrSvg" /><h2>{{ currentResource.title }}</h2><p>使用手机扫码，在官方页面查看完整内容</p><small>{{ currentResource.source }}</small></section></div></Teleport>
   </main>
 </template>
 
@@ -471,6 +435,7 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
 .resource-modal p{margin:0 0 7px;color:#61736c}
 .resource-modal small{color:#89958f;font-size:10px}
 .hub--help{background:#f7f6f3}
+.hub--help .hub-main{box-sizing:border-box;grid-template-rows:120px minmax(0,1fr);padding:0 34px 20px}
 .hub--help .hub-top{border-bottom:1px solid #e2e6e2}
 .hub--help .hub-top h1{color:#30473f}
 .hub--help .hub-top p{color:#788780}
@@ -490,6 +455,14 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
 .support-action--hotline{border-color:#d8e2ec}
 .support-action--hotline>i{color:#526f89}
 .support-action--hotline em{color:#526f89}
+.hub--help .help-page{box-sizing:border-box;width:100%;max-width:none;height:100%;margin:0;padding:20px 0;display:grid;place-items:center;background:transparent;border-radius:0}
+.hub--help .support-simple{box-sizing:border-box;width:100%;max-width:none;padding:0;background:transparent;box-shadow:none}
+.hub--help .support-actions{width:100%;gap:24px}
+.hub--help .support-action{box-sizing:border-box;height:250px;min-height:250px;grid-template-columns:62px minmax(0,1fr) auto;grid-template-rows:minmax(0,1fr) auto;align-content:stretch}
+.hub--help .support-action>i{grid-column:1;grid-row:1/3;align-self:center}
+.hub--help .support-action span{grid-column:2;grid-row:1;align-self:center}
+.hub--help .support-action strong{grid-column:3;grid-row:1;align-self:center}
+.hub--help .support-action em{grid-column:2/-1;grid-row:2;align-self:end;margin:0;font-size:16px;line-height:1.4}
 .kind-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
 .kind-switch button{padding:9px 5px!important;border:0!important;text-align:center!important}
 .resource-list{display:grid;gap:5px;max-height:220px;margin-top:10px;overflow:auto}
@@ -641,7 +614,6 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
 .self-library .scale-copy p{margin-bottom:22px;font-size:13px}
 .scale-copy small{font-size:12px}
 .self-library .self-card>button{font-size:13px}
-.self-library .self-card:only-child{grid-column:1/-1;width:calc(50% - 8px)}
 @media (max-width:1050px),(max-height:650px){
   .hub--feature .self-page{grid-template-columns:260px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:14px}
   .self-recommend-bar{min-height:0;padding:25px 22px}
@@ -740,6 +712,24 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
   .hub--self .scale-copy small{font-size:11px}
   .hub--self .self-library .self-card>button{font-size:12px}
 }
+/* 心理自测目录是独立功能页：铺满终端内容区，不套居中窄版模块容器。 */
+.hub--self.hub--feature .hub-main{box-sizing:border-box;width:100%;min-width:0;padding:0 24px 16px;grid-template-rows:120px minmax(0,1fr)}
+.hub--self.hub--feature .hub-top{position:relative;z-index:2;min-height:0;grid-template-columns:190px minmax(0,1fr) 150px;gap:18px}
+.hub--self.hub--feature .hub-top>div p{color:#687a71!important;opacity:1}
+.hub--self.hub--feature .self-page{box-sizing:border-box;width:100%;max-width:none;margin:0;grid-template-columns:minmax(260px,.72fr) minmax(0,1.8fr);gap:22px}
+.hub--self.hub--feature .self-library{min-width:0}
+.hub--self .self-library .self-card--compact{box-sizing:border-box;height:142px!important;min-height:142px!important;max-height:142px!important;padding:15px 20px!important;align-self:start}
+.hub--self .self-library .self-card--compact .scale-copy h3{margin:0 0 6px;font-size:18px;line-height:1.25}
+.hub--self .self-library .self-card--compact .scale-copy p{margin:0 0 8px;font-size:13px;line-height:1.35}
+.hub--self .self-library{align-content:center!important}
+.hub--self .self-library .self-cards{min-height:190px;align-content:center!important}
+.hub--self .self-filters button{-webkit-appearance:none;appearance:none;-webkit-tap-highlight-color:transparent;outline:none;box-shadow:none;transition:background-color .12s ease,color .12s ease}
+.hub--self .self-filters button:focus,.hub--self .self-filters button:focus-visible{outline:none!important;box-shadow:none!important}
+@media (max-width:1050px),(max-height:650px){
+  .hub--self.hub--feature .hub-main{padding:0 16px 12px;grid-template-rows:100px minmax(0,1fr)}
+  .hub--self.hub--feature .hub-top{grid-template-columns:150px minmax(0,1fr) 0;gap:12px}
+  .hub--self.hub--feature .self-page{grid-template-columns:minmax(220px,.68fr) minmax(0,1.8fr);gap:14px}
+}
 /* 2026-09 社区端亲和产品化视觉层：弱化线框，使用完整柔和色块与清晰大字。 */
 .hub{background:#f7f7f2;color:#283f37;font-family:"Microsoft YaHei UI","PingFang SC","Noto Sans CJK SC",sans-serif}
 .hub-main{padding-right:34px;padding-left:34px}
@@ -814,8 +804,8 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
 .resource-list button small{font-size:10px}
 .source-note{border-radius:17px;background:#edf3ef}
 .article-lead button{border-radius:14px;font-size:14px}
-.help-page{background:#f1f3ee}
-.support-simple{border:0;border-radius:31px;background:#fff}
+.help-page{background:transparent}
+.support-simple{border:0;border-radius:0;background:transparent}
 .support-actions{gap:24px}
 .support-action{border:0;border-radius:28px;box-shadow:none}
 .support-action--appointment{background:#e3f0e9}
@@ -1042,6 +1032,7 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
   .hub--relax .relax-side{grid-template-rows:repeat(3,minmax(96px,auto))}
 }
 </style>
+<style scoped src="../../styles/community-service.css"></style>
 
 
 
@@ -1067,3 +1058,13 @@ function openResource(index: number) { resourceIndex.value = index; readingOpen.
 
 
 
+
+<style scoped src="../../styles/knowledge-reader.css"></style>
+
+<style scoped>
+.hub--self{grid-template-rows:minmax(0,1fr)}
+.hub--self .hub-main{min-height:0}
+.hub--self .self-page{min-height:0!important}
+.hub--self .self-library--many{min-height:0;grid-template-rows:auto auto auto minmax(0,1fr)!important;align-content:stretch!important}
+.hub--self .self-library--many .self-cards{min-height:0!important;overflow-y:auto;overscroll-behavior:contain;align-content:start!important;padding-right:4px}
+</style>

@@ -6,6 +6,7 @@
   错误码/任务字段、原始 timeline；
 - 处理中阶段只输出两档用户文案，不出现"合作方/算法/任务/上传"。
 """
+
 from __future__ import annotations
 
 import json
@@ -43,21 +44,30 @@ def _result() -> AssessmentResult:
                 "depression": {"score": 69.26, "classification": "high_attention"},
             },
             "core_indicators": {
-                "stress_load": {"grade_source_score": 40, "classification_label": "参考范围",
-                                 "level": {"label": "参考范围", "severity": 0}},
+                "stress_load": {
+                    "grade_source_score": 40,
+                    "classification_label": "参考范围",
+                    "level": {"label": "参考范围", "severity": 0},
+                },
             },
             "small_indicators": {
                 "eye_tracking": {"attention_focus_score": {"value": 70, "unit": "score"}},
                 "au": {"facial_variability": {"value": 12, "unit": "score"}},
             },
-            "product_logic_summary": {"state_severity": {"stress_load": {"label": "x"}},
-                                       "other_internal": "should-dropped"},
+            "product_logic_summary": {
+                "state_severity": {"stress_load": {"label": "x"}},
+                "other_internal": "should-dropped",
+            },
             "confidence": {"level": {"key": "low", "label": "低"}, "score": 0.5},
             "quality": {"face_valid_ratio": 0.98},
             "modules": {
                 "eye_tracking": {"status": "collected"},
-                "au": {"visualization": {"image_url": "https://oss/example.jpg",
-                                          "image_url_file_id": 123}},
+                "au": {
+                    "visualization": {
+                        "image_url": "https://oss/example.jpg",
+                        "image_url_file_id": 123,
+                    }
+                },
             },
             "internal_only": {"task_id": "should-not-leak"},
         },

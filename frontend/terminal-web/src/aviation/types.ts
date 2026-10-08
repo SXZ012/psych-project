@@ -142,7 +142,7 @@ export interface FaceNotice {
 export type AudioCue =
   | 'invalid'          // 采集失效说明（最高，必须完整播放）
   | 'deviation' | 'near' | 'far'   // 位置提醒
-  | 'start' | 'complete' | 'practice-complete' | 'practice-skipped'
+  | 'start' | 'complete' | 'practice-complete' | 'practice-skipped' | 'finishing'
   | 'question'         // 题目语音（最低）
 
 export type AudioPlaybackResult = 'ended' | 'failed' | 'cancelled'

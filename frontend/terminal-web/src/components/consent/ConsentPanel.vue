@@ -36,11 +36,8 @@ const agreed = ref(false)
 
 <style scoped>
 .consent-card{height:min(680px,calc(100vh - 48px));min-height:0}.consent-body{flex:1 1 auto;min-height:0;overflow-y:scroll;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}.consent-body section{margin:0 0 18px}.consent-body section:last-child{padding-bottom:4px}.consent-body h2{margin:0 0 4px}.consent-body p{margin:0}.consent-body::-webkit-scrollbar{width:7px}.consent-body::-webkit-scrollbar-thumb{border-radius:9px;background:#91aaa0}.asset-state{display:flex;align-items:center;gap:10px;margin:0 0 12px;color:#6e857a;font-size:13px;text-align:left}.asset-state--error{color:#bf5c5c}.asset-state button{margin-left:8px;border:0;background:transparent;color:inherit;text-decoration:underline}.consent-summary{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.consent-summary span{padding:4px 8px;border-radius:999px;background:#edf5f1;color:#426c5b;font-size:11px}
-</style>
 
 
-
-<style scoped>
 /* 连续测评阶段统一舞台色：知情同意 → 采集准备 → 预训练 → 倒计时 → 正式答题。 */
 .consent-shell{background:#8badb1}.consent-shell:before,.consent-shell:after{display:none}
 </style>
