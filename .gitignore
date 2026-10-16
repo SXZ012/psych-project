@@ -100,3 +100,8 @@ tmp-terminal-v2*.png
 artifacts/
 /wind-*.png
 /relax-audit-*.png
+
+# Generated frontend bundles (build from source before serving)
+/backend/app/static/terminal/
+/backend/app/static/admin/
+/backend/app/static/community/
